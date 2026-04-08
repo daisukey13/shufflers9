@@ -124,30 +124,35 @@ export default function TournamentDetailClient({
         </div>
 
         {/* 優勝者（終了後のみ表示） */}
-        {champion && (
-          <div className="p-6 bg-gradient-to-r from-yellow-900/40 to-yellow-700/20 border-2 border-yellow-400 rounded-2xl text-center">
-            <p className="text-yellow-400 text-sm font-bold mb-3">👑 優勝者</p>
-            <div className="flex flex-col items-center gap-3">
-              {champion.avatar_url && (
-                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-yellow-400 avatar-glow mx-auto">
-                  <img src={champion.avatar_url} className="w-full h-full object-cover" />
-                </div>
-              )}
-              <p className="text-3xl font-bold text-yellow-100">{champion.name}</p>
-              <div className="flex gap-4 text-sm">
-                <span className="px-3 py-1 rounded-full bg-purple-900/60 border border-purple-500/40 text-yellow-100">
-                  RP {champion.rating ?? '-'}
-                </span>
-                <span className="px-3 py-1 rounded-full bg-blue-900/60 border border-blue-500/40 text-yellow-100">
-                  HC {champion.hc ?? '-'}
-                </span>
-                <span className="px-3 py-1 rounded-full bg-yellow-900/60 border border-yellow-500/40 text-yellow-100">
-                  #{rankMap.get(champion.id) ?? '-'}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
+{champion && (
+  <div className="p-6 bg-gradient-to-r from-yellow-900/40 to-yellow-700/20 border-2 border-yellow-400 rounded-2xl text-center">
+    <p className="text-yellow-400 text-sm font-bold mb-3">👑 優勝者</p>
+    <div className="flex flex-col items-center gap-3">
+      {champion.avatar_url && (
+        <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-yellow-400 avatar-glow mx-auto">
+          <img src={champion.avatar_url} className="w-full h-full object-cover" />
+        </div>
+      )}
+      <p className="text-3xl font-bold text-yellow-100">{champion.name}</p>
+      <div className="flex gap-4 mt-2">
+        <div className="flex flex-col items-center px-4 py-2 rounded-xl bg-purple-900/60 border border-purple-500/40">
+          <span className="text-xs text-gray-400 mb-1">ランキングポイント</span>
+          <span className="text-2xl font-bold text-yellow-100">{champion.rating ?? '-'}</span>
+        </div>
+        <div className="flex flex-col items-center px-4 py-2 rounded-xl bg-blue-900/60 border border-blue-500/40">
+          <span className="text-xs text-gray-400 mb-1">ハンディキャップ</span>
+          <span className="text-2xl font-bold text-yellow-100">{champion.hc ?? '-'}</span>
+        </div>
+        <div className="flex flex-col items-center px-4 py-2 rounded-xl bg-yellow-900/60 border border-yellow-500/40">
+          <span className="text-xs text-gray-400 mb-1">現在順位</span>
+          <span className="text-2xl font-bold text-yellow-100">
+            {rankMap.get(champion.id) ? `第${rankMap.get(champion.id)}位` : '-'}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* タブ */}
         <div className="flex gap-2 bg-black/20 rounded-lg p-1">
