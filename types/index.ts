@@ -4,10 +4,16 @@ export type Player = {
   name: string
   avatar_url: string | null
   rating: number
+  hc: number
   wins: number
   losses: number
+  total_score: number
+  total_matches: number
   is_active: boolean
   is_admin: boolean
+  full_name: string | null
+  phone: string | null
+  address: string | null
   created_at: string
 }
 
@@ -91,24 +97,5 @@ export type Notice = {
   is_published: boolean
   published_at: string | null
   created_by: string | null
-  created_at: string
-}
-
-export type Player = {
-  id: string
-  user_id: string
-  name: string
-  avatar_url: string | null
-  rating: number
-  hc: number
-  wins: number
-  losses: number
-  total_score: number
-  total_matches: number
-  is_active: boolean
-  is_admin: boolean
-  full_name: string | null
-  phone: string | null
-  address: string | null
   created_at: string
 }
