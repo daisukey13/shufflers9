@@ -14,7 +14,7 @@ export default function MyPageEditClient({
   avatars,
   email,
 }: {
-  player: Player & { full_name?: string; phone?: string; address?: string }
+  player: Player
   avatars: Avatar[]
   email: string
 }) {
