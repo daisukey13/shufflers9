@@ -47,6 +47,8 @@ export default function FinalsClient({
   const router = useRouter()
   const supabase = createClient()
 
+  const isFinalsLocked = tournament.status === 'finished'
+
   const maxRound = finalsMatches.length > 0
     ? Math.max(...finalsMatches.map(m => m.round))
     : 0
@@ -54,7 +56,6 @@ export default function FinalsClient({
   const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
   const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
-  // 勝者を計算
   const calcWinner = (matchSets: { score1: string; score2: string }[]) => {
     let p1wins = 0, p2wins = 0
     matchSets.forEach(s => {
@@ -105,18 +106,93 @@ export default function FinalsClient({
     }
 
     // セット結果を登録
-    if (mode !== 'walkover') {
-      const setsToInsert = sets
-        .map((s, i) => ({
-          match_id: match.id,
-          set_number: i + 1,
-          score1: parseInt(s.score1),
-          score2: parseInt(s.score2),
-        }))
-        .filter(s => !isNaN(s.score1) && !isNaN(s.score2))
+    const setsToInsert = mode !== 'walkover'
+      ? sets
+          .map((s, i) => ({
+            match_id: match.id,
+            set_number: i + 1,
+            score1: parseInt(s.score1),
+            score2: parseInt(s.score2),
+          }))
+          .filter(s => !isNaN(s.score1) && !isNaN(s.score2))
+      : []
 
-      if (setsToInsert.length > 0) {
-        await supabase.from('tournament_finals_sets').insert(setsToInsert)
+    if (setsToInsert.length > 0) {
+      await supabase.from('tournament_finals_sets').insert(setsToInsert)
+    }
+
+    // 通常試合のみRP・HC反映
+    if (mode === 'normal' && winnerId && setsToInsert.length > 0) {
+      const totalScore1 = setsToInsert.reduce((sum, s) => sum + s.score1, 0)
+      const totalScore2 = setsToInsert.reduce((sum, s) => sum + s.score2, 0)
+
+      const { data: p1 } = await supabase
+        .from('players')
+        .select('rating, wins, losses, total_score, total_matches')
+        .eq('id', player1Id)
+        .single()
+      const { data: p2 } = await supabase
+        .from('players')
+        .select('rating, wins, losses, total_score, total_matches')
+        .eq('id', player2Id)
+        .single()
+
+      if (p1 && p2) {
+        const { count: matchesP1 } = await supabase
+          .from('singles_matches')
+          .select('*', { count: 'exact', head: true })
+          .or(`player1_id.eq.${player1Id},player2_id.eq.${player1Id}`)
+        const { count: matchesP2 } = await supabase
+          .from('singles_matches')
+          .select('*', { count: 'exact', head: true })
+          .or(`player1_id.eq.${player2Id},player2_id.eq.${player2Id}`)
+
+        const { data: elo } = await supabase.rpc('calc_elo', {
+          rating_a: p1.rating,
+          rating_b: p2.rating,
+          score_a: totalScore1,
+          score_b: totalScore2,
+          matches_a: matchesP1 ?? 0,
+          matches_b: matchesP2 ?? 0,
+        })
+
+        if (elo?.[0]) {
+          const eloResult = elo[0]
+          const p1wins = winnerId === player1Id
+
+          await supabase.from('players').update({
+            rating: eloResult.new_rating_a,
+            wins: p1wins ? p1.wins + 1 : p1.wins,
+            losses: !p1wins ? p1.losses + 1 : p1.losses,
+            total_score: (p1.total_score ?? 0) + totalScore1,
+            total_matches: (p1.total_matches ?? 0) + 1,
+          }).eq('id', player1Id)
+
+          await supabase.from('players').update({
+            rating: eloResult.new_rating_b,
+            wins: !p1wins ? p2.wins + 1 : p2.wins,
+            losses: p1wins ? p2.losses + 1 : p2.losses,
+            total_score: (p2.total_score ?? 0) + totalScore2,
+            total_matches: (p2.total_matches ?? 0) + 1,
+          }).eq('id', player2Id)
+
+          // HC更新
+          const { data: hc1 } = await supabase.rpc('calc_hc', {
+            p_wins: p1wins ? p1.wins + 1 : p1.wins,
+            p_losses: !p1wins ? p1.losses + 1 : p1.losses,
+            p_total_score: (p1.total_score ?? 0) + totalScore1,
+            p_total_matches: (p1.total_matches ?? 0) + 1,
+          })
+          if (hc1 !== null) await supabase.from('players').update({ hc: hc1 }).eq('id', player1Id)
+
+          const { data: hc2 } = await supabase.rpc('calc_hc', {
+            p_wins: !p1wins ? p2.wins + 1 : p2.wins,
+            p_losses: p1wins ? p2.losses + 1 : p2.losses,
+            p_total_score: (p2.total_score ?? 0) + totalScore2,
+            p_total_matches: (p2.total_matches ?? 0) + 1,
+          })
+          if (hc2 !== null) await supabase.from('players').update({ hc: hc2 }).eq('id', player2Id)
+        }
       }
     }
 
@@ -133,10 +209,11 @@ export default function FinalsClient({
   const allPlayers = qualifiers.map(q => q.winner?.player).filter(Boolean) as Player[]
   const roundsInFinals = Array.from(new Set(finalsMatches.map(m => m.round))).sort()
 
-  // 優勝者
-  const champion = finalsMatches
-    .filter(m => m.round === maxRound && m.winner)
-    .sort((a, b) => b.match_number - a.match_number)[0]?.winner
+  const champion = isFinalsLocked
+    ? finalsMatches
+        .filter(m => m.round === maxRound && m.winner)
+        .sort((a, b) => b.match_number - a.match_number)[0]?.winner
+    : null
 
   return (
     <div className="space-y-8">
@@ -150,7 +227,13 @@ export default function FinalsClient({
         </Link>
       </div>
 
-      {/* 優勝者 */}
+      {isFinalsLocked && (
+        <div className="p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-xl">
+          <p className="text-yellow-400 text-sm">✅ 大会終了済み。試合の編集のみ可能です。</p>
+        </div>
+      )}
+
+      {/* 優勝者（終了後のみ） */}
       {champion && (
         <div className="p-6 bg-gradient-to-r from-yellow-900/40 to-yellow-700/20 border-2 border-yellow-400 rounded-2xl text-center">
           <p className="text-yellow-400 text-sm font-bold mb-2">👑 優勝者</p>
@@ -206,19 +289,17 @@ export default function FinalsClient({
                       <span className="text-xs text-orange-400">1勝アドバンテージ</span>
                     )}
                   </div>
-                  <div className="text-center flex-shrink-0">
-                    <div className="space-y-1">
-                      {match.tournament_finals_sets
-                        .sort((a, b) => a.set_number - b.set_number)
-                        .map(s => (
-                          <p key={s.id} className="text-xs text-gray-300">
-                            第{s.set_number}セット: {s.score1} - {s.score2}
-                          </p>
-                        ))}
-                      {match.mode === 'walkover' && (
-                        <span className="text-xs text-yellow-400">不戦勝</span>
-                      )}
-                    </div>
+                  <div className="text-center flex-shrink-0 space-y-1">
+                    {match.tournament_finals_sets
+                      .sort((a, b) => a.set_number - b.set_number)
+                      .map(s => (
+                        <p key={s.id} className="text-xs text-gray-300">
+                          第{s.set_number}セット: {s.score1} - {s.score2}
+                        </p>
+                      ))}
+                    {match.mode === 'walkover' && (
+                      <span className="text-xs text-yellow-400">不戦勝</span>
+                    )}
                   </div>
                   <div className="flex-1">
                     <p className={`font-semibold ${match.winner_id === match.player2_id ? 'text-white' : 'text-gray-400'}`}>
@@ -238,142 +319,139 @@ export default function FinalsClient({
         </div>
       ))}
 
-      {/* 試合登録 */}
-      <div>
-        <button
-          onClick={() => setShowMatchForm(!showMatchForm)}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition"
-        >
-          {showMatchForm ? 'キャンセル' : '+ 本戦試合を登録'}
-        </button>
+      {/* 試合登録（ロック中は非表示） */}
+      {!isFinalsLocked && (
+        <div>
+          <button
+            onClick={() => setShowMatchForm(!showMatchForm)}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition"
+          >
+            {showMatchForm ? 'キャンセル' : '+ 本戦試合を登録'}
+          </button>
 
-        {showMatchForm && (
-          <div className="mt-4 p-5 bg-purple-900/20 border border-purple-800/30 rounded-2xl space-y-4">
-            {error && (
-              <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
-            )}
+          {showMatchForm && (
+            <div className="mt-4 p-5 bg-purple-900/20 border border-purple-800/30 rounded-2xl space-y-4">
+              {error && (
+                <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
+              )}
 
-            {/* ラウンド選択 */}
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">ラウンド</label>
-              <select
-                value={round}
-                onChange={e => setRound(parseInt(e.target.value))}
-                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {[1, 2, 3, 4, 5].map(r => (
-                  <option key={r} value={r}>{getRoundName(r)}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* モード */}
-            <div className="flex gap-2 bg-black/20 rounded-lg p-1">
-              {(['normal', 'walkover', 'forfeit'] as const).map(m => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMode(m)}
-                  className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${mode === m ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
-                >
-                  {m === 'normal' ? '通常' : m === 'walkover' ? '不戦勝' : '途中棄権'}
-                </button>
-              ))}
-            </div>
-
-            {/* プレーヤー選択 */}
-            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">プレーヤー1</label>
+                <label className="block text-sm text-gray-300 mb-1">ラウンド</label>
                 <select
-                  value={player1Id}
-                  onChange={e => setPlayer1Id(e.target.value)}
-                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  value={round}
+                  onChange={e => setRound(parseInt(e.target.value))}
+                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  <option value="">選択</option>
-                  {allPlayers.filter(p => p.id !== player2Id).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                  {[1, 2, 3, 4, 5].map(r => (
+                    <option key={r} value={r}>{getRoundName(r)}</option>
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">プレーヤー2</label>
-                <select
-                  value={player2Id}
-                  onChange={e => setPlayer2Id(e.target.value)}
-                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                >
-                  <option value="">選択</option>
-                  {allPlayers.filter(p => p.id !== player1Id).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
 
-            {/* 1勝アドバンテージ */}
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">1勝アドバンテージ（DEFAULTブロックからの勝ち上がり）</label>
-              <select
-                value={disadvantageId}
-                onChange={e => setDisadvantageId(e.target.value)}
-                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-              >
-                <option value="">なし</option>
-                {[player1Id, player2Id].filter(Boolean).map(pid => {
-                  const p = allPlayers.find(p => p.id === pid)
-                  return p ? <option key={p.id} value={p.id}>{p.name}</option> : null
-                })}
-              </select>
-            </div>
-
-            {/* セットスコア */}
-            {mode !== 'walkover' && (
-              <div className="space-y-2">
-                <label className="block text-xs text-gray-400">セットスコア（15点先取）</label>
-                {sets.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 w-16">第{i + 1}セット</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="15"
-                      value={s.score1}
-                      onChange={e => {
-                        const updated = [...sets]
-                        updated[i] = { ...updated[i], score1: e.target.value }
-                        setSets(updated)
-                      }}
-                      className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                    />
-                    <span className="text-gray-400">-</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="15"
-                      value={s.score2}
-                      onChange={e => {
-                        const updated = [...sets]
-                        updated[i] = { ...updated[i], score2: e.target.value }
-                        setSets(updated)
-                      }}
-                      className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                    />
-                  </div>
+              <div className="flex gap-2 bg-black/20 rounded-lg p-1">
+                {(['normal', 'walkover', 'forfeit'] as const).map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMode(m)}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${mode === m ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    {m === 'normal' ? '通常' : m === 'walkover' ? '不戦勝' : '途中棄権'}
+                  </button>
                 ))}
               </div>
-            )}
 
-            <button
-              onClick={handleRegisterMatch}
-              disabled={loading}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
-            >
-              {loading ? '登録中...' : '試合結果を登録'}
-            </button>
-          </div>
-        )}
-      </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">プレーヤー1</label>
+                  <select
+                    value={player1Id}
+                    onChange={e => setPlayer1Id(e.target.value)}
+                    className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  >
+                    <option value="">選択</option>
+                    {allPlayers.filter(p => p.id !== player2Id).map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">プレーヤー2</label>
+                  <select
+                    value={player2Id}
+                    onChange={e => setPlayer2Id(e.target.value)}
+                    className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  >
+                    <option value="">選択</option>
+                    {allPlayers.filter(p => p.id !== player1Id).map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">1勝アドバンテージ</label>
+                <select
+                  value={disadvantageId}
+                  onChange={e => setDisadvantageId(e.target.value)}
+                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                >
+                  <option value="">なし</option>
+                  {[player1Id, player2Id].filter(Boolean).map(pid => {
+                    const p = allPlayers.find(p => p.id === pid)
+                    return p ? <option key={p.id} value={p.id}>{p.name}</option> : null
+                  })}
+                </select>
+              </div>
+
+              {mode !== 'walkover' && (
+                <div className="space-y-2">
+                  <label className="block text-xs text-gray-400">セットスコア（15点先取）</label>
+                  {sets.map((s, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 w-16">第{i + 1}セット</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="15"
+                        value={s.score1}
+                        onChange={e => {
+                          const updated = [...sets]
+                          updated[i] = { ...updated[i], score1: e.target.value }
+                          setSets(updated)
+                        }}
+                        className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      />
+                      <span className="text-gray-400">-</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="15"
+                        value={s.score2}
+                        onChange={e => {
+                          const updated = [...sets]
+                          updated[i] = { ...updated[i], score2: e.target.value }
+                          setSets(updated)
+                        }}
+                        className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button
+                onClick={handleRegisterMatch}
+                disabled={loading}
+                className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
+              >
+                {loading ? '登録中...' : '試合結果を登録'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

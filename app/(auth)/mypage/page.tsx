@@ -20,6 +20,7 @@ export default async function MyPage() {
     .from('players')
     .select('id')
     .eq('is_active', true)
+    .eq('is_admin', false)
     .order('rating', { ascending: false })
 
   const rank = (allPlayers?.findIndex(p => p.id === player.id) ?? 0) + 1
@@ -29,6 +30,21 @@ export default async function MyPage() {
     .from('team_members')
     .select('*, team:teams(*)')
     .eq('player_id', player.id)
+
+  // 受付中・エントリー終了の大会を取得
+  const { data: openTournaments } = await supabase
+    .from('tournaments')
+    .select('id, name, status')
+    .in('status', ['open', 'entry_closed', 'qualifying', 'qualifying_done', 'finals'])
+    .order('created_at', { ascending: false })
+
+  // 自分のエントリー状況を取得
+  const { data: myEntries } = await supabase
+    .from('tournament_entries')
+    .select('tournament_id, status, cancel_requested')
+    .eq('player_id', player.id)
+
+  const entryMap = new Map(myEntries?.map(e => [e.tournament_id, e]) ?? [])
 
   const winRate = player.wins + player.losses > 0
     ? Math.round((player.wins / (player.wins + player.losses)) * 100)
@@ -41,24 +57,18 @@ export default async function MyPage() {
       <div className="max-w-2xl mx-auto space-y-6">
 
         {/* ヘッダー */}
-        {/* ヘッダー */}
-<div className="flex items-center justify-between">
-  <h1 className="text-xl font-bold text-gray-300">マイページ</h1>
-  <div className="flex gap-3">
-    <Link
-      href="/mypage/edit"
-      className="text-sm text-purple-400 hover:text-purple-300 transition"
-    >
-      ✏️ 編集
-    </Link>
-    <LogoutButton />
-  </div>
-</div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-300">マイページ</h1>
+          <div className="flex gap-3">
+            <Link href="/mypage/edit" className="text-sm text-purple-400 hover:text-purple-300 transition">
+              ✏️ 編集
+            </Link>
+            <LogoutButton />
+          </div>
+        </div>
 
         {/* プロフィールカード */}
         <div className="bg-[#1a0f35] border border-purple-800/30 rounded-2xl p-6 space-y-5">
-
-          {/* 上部：順位・アバター・名前 */}
           <div className="flex items-center gap-5">
             <div className="relative flex-shrink-0">
               <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center font-bold text-2xl ${
@@ -86,7 +96,6 @@ export default async function MyPage() {
             </div>
           </div>
 
-          {/* RP・HC */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-4 text-center">
               <p className="text-xs text-gray-400 mb-1">🏅 ランキングポイント</p>
@@ -98,7 +107,6 @@ export default async function MyPage() {
             </div>
           </div>
 
-          {/* 勝利・敗北・勝率 */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
               <p className="text-2xl font-bold text-green-400">{player.wins}</p>
@@ -114,7 +122,6 @@ export default async function MyPage() {
             </div>
           </div>
 
-          {/* プログレスバー */}
           <div className="space-y-1">
             <div className="w-full bg-gray-800 rounded-full h-2">
               <div
@@ -125,6 +132,61 @@ export default async function MyPage() {
             <p className="text-xs text-gray-400 text-right">{totalMatches} 試合</p>
           </div>
         </div>
+
+        {/* 大会エントリー */}
+        {openTournaments && openTournaments.length > 0 && (
+          <div className="bg-[#1a0f35] border border-purple-800/30 rounded-2xl p-5 space-y-3">
+            <h2 className="text-sm font-semibold text-gray-300">🏆 大会</h2>
+            <div className="space-y-2">
+              {openTournaments.map(t => {
+                const entry = entryMap.get(t.id)
+                return (
+                  <div key={t.id} className="flex items-center gap-3 p-3 bg-[#12082a] border border-purple-800/30 rounded-xl">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white text-sm truncate">{t.name}</p>
+                      <div className="flex gap-2 mt-0.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          t.status === 'open' ? 'bg-green-900/50 text-green-400' :
+                          t.status === 'entry_closed' ? 'bg-yellow-900/50 text-yellow-400' :
+                          'bg-blue-900/50 text-blue-400'
+                        }`}>
+                          {t.status === 'open' ? '受付中' :
+                           t.status === 'entry_closed' ? 'エントリー終了' :
+                           t.status === 'qualifying' ? '予選中' :
+                           t.status === 'qualifying_done' ? '予選完了' : '本戦中'}
+                        </span>
+                        {entry && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            entry.status === 'cancelled' ? 'bg-gray-700 text-gray-400' :
+                            entry.cancel_requested ? 'bg-red-900/50 text-red-400' :
+                            'bg-purple-900/50 text-purple-400'
+                          }`}>
+                            {entry.status === 'cancelled' ? 'キャンセル済み' :
+                             entry.cancel_requested ? 'キャンセル申請中' : 'エントリー済み'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Link
+                        href={`/tournaments/${t.id}/entry`}
+                        className="text-xs px-3 py-1 bg-purple-700/50 hover:bg-purple-600/50 rounded-lg text-purple-300 transition"
+                      >
+                        {entry ? '確認・変更' : 'エントリー'}
+                      </Link>
+                      <Link
+                        href={`/tournaments/${t.id}`}
+                        className="text-xs px-3 py-1 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg text-gray-300 transition"
+                      >
+                        詳細
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 所属チーム */}
         {teamMemberships && teamMemberships.length > 0 && (

@@ -27,14 +27,22 @@ export default function TournamentDetailClient({
   blocks,
   qualifyingMatches,
   finalsMatches,
+  rankings,
 }: {
   tournament: Tournament
   blocks: Block[]
   qualifyingMatches: QualifyingMatch[]
   finalsMatches: FinalsMatch[]
+  rankings: { id: string; rank: number }[]
 }) {
   const [tab, setTab] = useState<'qualifying' | 'finals'>('qualifying')
+  const [popupPlayer, setPopupPlayer] = useState<Player & { hc?: number; rating?: number } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const rankMap = new Map(rankings.map(r => [r.id, r.rank]))
+
+  const isQualifyingDone = ['qualifying_done', 'finals', 'finished'].includes(tournament.status)
+  const isFinished = tournament.status === 'finished'
 
   const calcBlockStandings = (block: Block) => {
     const blockMatches = qualifyingMatches.filter(m => m.block_id === block.id)
@@ -71,11 +79,31 @@ export default function TournamentDetailClient({
   const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
   const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
-  const champion = finalsMatches
-    .filter(m => m.round === maxRound && m.winner)
-    .sort((a, b) => b.match_number - a.match_number)[0]?.winner
+  const champion = isFinished
+    ? finalsMatches
+        .filter(m => m.round === maxRound && m.winner)
+        .sort((a, b) => b.match_number - a.match_number)[0]?.winner
+    : null
 
   const roundsInFinals = Array.from(new Set(finalsMatches.map(m => m.round))).sort()
+
+  const STATUS_LABELS: Record<string, string> = {
+    open: '受付中',
+    entry_closed: 'エントリー終了',
+    qualifying: '予選中',
+    qualifying_done: '予選完了',
+    finals: '本戦中',
+    finished: '終了',
+  }
+
+  const STATUS_COLORS: Record<string, string> = {
+    open: 'bg-green-900/50 text-green-400',
+    entry_closed: 'bg-yellow-900/50 text-yellow-400',
+    qualifying: 'bg-blue-900/50 text-blue-400',
+    qualifying_done: 'bg-purple-900/50 text-purple-400',
+    finals: 'bg-red-900/50 text-red-400',
+    finished: 'bg-gray-700 text-gray-400',
+  }
 
   return (
     <div className="min-h-screen bg-transparent text-white px-4 py-8">
@@ -90,27 +118,33 @@ export default function TournamentDetailClient({
           {tournament.description && (
             <p className="text-sm text-gray-400 mt-1">{tournament.description}</p>
           )}
-          <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full ${
-            tournament.status === 'finished' ? 'bg-gray-700 text-gray-400' :
-            tournament.status === 'finals' ? 'bg-red-900/50 text-red-400' :
-            tournament.status === 'qualifying' ? 'bg-blue-900/50 text-blue-400' :
-            'bg-green-900/50 text-green-400'
-          }`}>
-            {tournament.status === 'open' ? '受付中' :
-             tournament.status === 'qualifying' ? '予選中' :
-             tournament.status === 'finals' ? '本戦中' : '終了'}
+          <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[tournament.status] ?? 'bg-gray-700 text-gray-400'}`}>
+            {STATUS_LABELS[tournament.status] ?? tournament.status}
           </span>
         </div>
 
-        {/* 優勝者 */}
+        {/* 優勝者（終了後のみ表示） */}
         {champion && (
           <div className="p-6 bg-gradient-to-r from-yellow-900/40 to-yellow-700/20 border-2 border-yellow-400 rounded-2xl text-center">
             <p className="text-yellow-400 text-sm font-bold mb-3">👑 優勝者</p>
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex flex-col items-center gap-3">
               {champion.avatar_url && (
-                <img src={champion.avatar_url} className="w-20 h-20 rounded-full border-2 border-yellow-400 object-cover" />
+                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-yellow-400 avatar-glow mx-auto">
+                  <img src={champion.avatar_url} className="w-full h-full object-cover" />
+                </div>
               )}
               <p className="text-3xl font-bold text-yellow-100">{champion.name}</p>
+              <div className="flex gap-4 text-sm">
+                <span className="px-3 py-1 rounded-full bg-purple-900/60 border border-purple-500/40 text-yellow-100">
+                  RP {champion.rating ?? '-'}
+                </span>
+                <span className="px-3 py-1 rounded-full bg-blue-900/60 border border-blue-500/40 text-yellow-100">
+                  HC {champion.hc ?? '-'}
+                </span>
+                <span className="px-3 py-1 rounded-full bg-yellow-900/60 border border-yellow-500/40 text-yellow-100">
+                  #{rankMap.get(champion.id) ?? '-'}
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -162,21 +196,24 @@ export default function TournamentDetailClient({
                         </thead>
                         <tbody>
                           {standings.map((s, idx) => (
-                            <tr key={s.player.id} className={`border-b border-purple-800/20 ${idx === 0 && !s.is_default ? 'bg-yellow-900/10' : ''}`}>
+                            <tr key={s.player.id} className={`border-b border-purple-800/20 ${idx === 0 && !s.is_default && isQualifyingDone ? 'bg-yellow-900/10' : ''}`}>
                               <td className="py-2 pr-3">
-                                <span className={`font-bold ${idx === 0 ? 'text-yellow-400' : 'text-gray-400'}`}>
-                                  {idx + 1}{idx === 0 && !s.is_default ? ' 👑' : ''}
+                                <span className={`font-bold ${idx === 0 && isQualifyingDone ? 'text-yellow-400' : 'text-gray-400'}`}>
+                                  {idx + 1}{idx === 0 && !s.is_default && isQualifyingDone ? ' 👑' : ''}
                                 </span>
                               </td>
                               <td className="py-2 pr-3">
-                                <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setPopupPlayer(s.player)}
+                                  className="flex items-center gap-2 hover:opacity-80 transition text-left"
+                                >
                                   {s.player.avatar_url && (
                                     <img src={s.player.avatar_url} className="w-7 h-7 rounded-full object-cover" />
                                   )}
-                                  <span className={s.is_default ? 'text-gray-500' : 'text-white'}>
+                                  <span className={`underline decoration-dotted ${s.is_default ? 'text-gray-500' : 'text-white'}`}>
                                     {s.player.name}
                                   </span>
-                                </div>
+                                </button>
                               </td>
                               <td className="text-center py-2 pr-3 text-gray-300">{s.player.hc ?? '-'}</td>
                               <td className="text-center py-2 pr-3 text-green-400 font-bold">{s.wins}</td>
@@ -201,15 +238,21 @@ export default function TournamentDetailClient({
                         <div className="space-y-1">
                           {blockMatches.map(m => (
                             <div key={m.id} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg text-sm">
-                              <span className={`flex-1 text-right ${m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}`}>
+                              <button
+                                onClick={() => setPopupPlayer(m.player1)}
+                                className={`flex-1 text-right hover:opacity-80 ${m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}`}
+                              >
                                 {m.player1.name}
-                              </span>
+                              </button>
                               <span className="text-white font-bold flex-shrink-0">
                                 {m.mode === 'walkover' ? 'W/O' : `${m.score1} - ${m.score2}`}
                               </span>
-                              <span className={`flex-1 ${m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}`}>
+                              <button
+                                onClick={() => setPopupPlayer(m.player2)}
+                                className={`flex-1 hover:opacity-80 ${m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}`}
+                              >
                                 {m.player2.name}
-                              </span>
+                              </button>
                               {m.mode !== 'normal' && (
                                 <span className="text-xs text-yellow-400 flex-shrink-0">
                                   {m.mode === 'walkover' ? '不戦勝' : '棄権'}
@@ -227,14 +270,13 @@ export default function TournamentDetailClient({
           </div>
         )}
 
-        {/* 本戦タブ - スワイプで各ラウンド */}
+        {/* 本戦タブ */}
         {tab === 'finals' && (
           <div className="space-y-6">
             {finalsMatches.length === 0 ? (
               <p className="text-gray-400 text-sm">本戦の試合がありません</p>
             ) : (
               <>
-                {/* スワイプ可能なトーナメント表 */}
                 <div
                   ref={scrollRef}
                   className="overflow-x-auto pb-4"
@@ -252,19 +294,22 @@ export default function TournamentDetailClient({
                           {finalsMatches.filter(m => m.round === r).map(match => (
                             <div key={match.id} className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl">
                               {/* Player1 */}
-                              <div className={`flex items-center gap-3 p-2 rounded-lg mb-2 ${match.winner_id === match.player1_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
+                              <div className={`flex items-center gap-3 p-2 rounded-lg mb-2 ${isFinished && match.winner_id === match.player1_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
                                 {match.player1?.avatar_url && (
                                   <img src={match.player1.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-semibold truncate ${match.winner_id === match.player1_id ? 'text-white' : 'text-gray-400'}`}>
+                                  <button
+                                    onClick={() => match.player1 && setPopupPlayer(match.player1)}
+                                    className={`text-sm font-semibold truncate underline decoration-dotted hover:opacity-80 ${isFinished && match.winner_id === match.player1_id ? 'text-white' : 'text-gray-400'}`}
+                                  >
                                     {match.player1?.name ?? '未定'}
-                                  </p>
+                                  </button>
                                   {match.disadvantage_player_id === match.player1_id && (
-                                    <span className="text-[10px] text-orange-400">1勝アドバンテージ</span>
+                                    <p className="text-[10px] text-orange-400">1勝アドバンテージ</p>
                                   )}
                                 </div>
-                                {match.winner_id === match.player1_id && (
+                                {isFinished && match.winner_id === match.player1_id && (
                                   <span className="text-yellow-400 text-sm">👑</span>
                                 )}
                               </div>
@@ -288,19 +333,22 @@ export default function TournamentDetailClient({
                               )}
 
                               {/* Player2 */}
-                              <div className={`flex items-center gap-3 p-2 rounded-lg ${match.winner_id === match.player2_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
+                              <div className={`flex items-center gap-3 p-2 rounded-lg ${isFinished && match.winner_id === match.player2_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
                                 {match.player2?.avatar_url && (
                                   <img src={match.player2.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-semibold truncate ${match.winner_id === match.player2_id ? 'text-white' : 'text-gray-400'}`}>
+                                  <button
+                                    onClick={() => match.player2 && setPopupPlayer(match.player2)}
+                                    className={`text-sm font-semibold truncate underline decoration-dotted hover:opacity-80 ${isFinished && match.winner_id === match.player2_id ? 'text-white' : 'text-gray-400'}`}
+                                  >
                                     {match.player2?.name ?? '未定'}
-                                  </p>
+                                  </button>
                                   {match.disadvantage_player_id === match.player2_id && (
-                                    <span className="text-[10px] text-orange-400">1勝アドバンテージ</span>
+                                    <p className="text-[10px] text-orange-400">1勝アドバンテージ</p>
                                   )}
                                 </div>
-                                {match.winner_id === match.player2_id && (
+                                {isFinished && match.winner_id === match.player2_id && (
                                   <span className="text-yellow-400 text-sm">👑</span>
                                 )}
                               </div>
@@ -310,7 +358,7 @@ export default function TournamentDetailClient({
                       </div>
                     ))}
 
-                    {/* 優勝者カード */}
+                    {/* 優勝者カード（終了後のみ） */}
                     {champion && (
                       <div
                         className="w-72 flex-shrink-0 flex items-center justify-center"
@@ -319,9 +367,22 @@ export default function TournamentDetailClient({
                         <div className="p-8 bg-gradient-to-b from-yellow-900/40 to-yellow-700/20 border-2 border-yellow-400 rounded-2xl text-center w-full">
                           <p className="text-yellow-400 font-bold mb-4">👑 優勝</p>
                           {champion.avatar_url && (
-                            <img src={champion.avatar_url} className="w-24 h-24 rounded-full border-4 border-yellow-400 object-cover mx-auto mb-4" />
+                            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-yellow-400 avatar-glow mx-auto mb-4">
+                              <img src={champion.avatar_url} className="w-full h-full object-cover" />
+                            </div>
                           )}
-                          <p className="text-2xl font-bold text-yellow-100">{champion.name}</p>
+                          <p className="text-2xl font-bold text-yellow-100 mb-3">{champion.name}</p>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-xs px-2 py-1 rounded-full bg-purple-900/60 border border-purple-500/40 text-yellow-100">
+                              RP {champion.rating ?? '-'}
+                            </span>
+                            <span className="text-xs px-2 py-1 rounded-full bg-blue-900/60 border border-blue-500/40 text-yellow-100">
+                              HC {champion.hc ?? '-'}
+                            </span>
+                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-900/60 border border-yellow-500/40 text-yellow-100">
+                              #{rankMap.get(champion.id) ?? '-'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -333,6 +394,55 @@ export default function TournamentDetailClient({
           </div>
         )}
       </div>
+
+      {/* プレーヤーポップアップ */}
+      {popupPlayer && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4"
+          onClick={() => setPopupPlayer(null)}
+        >
+          <div
+            className="bg-[#1e0f3a] border border-purple-800/50 rounded-2xl p-6 w-full max-w-xs space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-4">
+              {popupPlayer.avatar_url && (
+                <img src={popupPlayer.avatar_url} className="w-16 h-16 rounded-full border-2 border-purple-500 object-cover" />
+              )}
+              <div>
+                <p className="font-bold text-white text-lg">{popupPlayer.name}</p>
+                <Link
+                  href={`/players/${popupPlayer.id}`}
+                  className="text-xs text-purple-400 hover:text-purple-300"
+                  onClick={() => setPopupPlayer(null)}
+                >
+                  プロフィールを見る →
+                </Link>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center p-2 bg-purple-900/40 rounded-xl">
+                <p className="text-xs text-gray-400">RP</p>
+                <p className="font-bold text-yellow-100">{popupPlayer.rating ?? '-'}</p>
+              </div>
+              <div className="text-center p-2 bg-blue-900/40 rounded-xl">
+                <p className="text-xs text-gray-400">HC</p>
+                <p className="font-bold text-yellow-100">{popupPlayer.hc ?? '-'}</p>
+              </div>
+              <div className="text-center p-2 bg-yellow-900/40 rounded-xl">
+                <p className="text-xs text-gray-400">順位</p>
+                <p className="font-bold text-yellow-100">#{rankMap.get(popupPlayer.id) ?? '-'}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setPopupPlayer(null)}
+              className="w-full py-2 bg-gray-800 hover:bg-gray-700 rounded-xl text-sm text-gray-300 transition"
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
