@@ -1,5 +1,4 @@
 'use client'
-
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -7,16 +6,16 @@ const navItems = [
   { href: '/rankings', label: 'ランキング' },
   { href: '/players', label: 'メンバー' },
   { href: '/matches', label: '試合結果' },
+  { href: '/tournaments', label: '大会' },
 ]
 
 export default function Header() {
   const pathname = usePathname()
-
   return (
     <header className="bg-[#12082a]/90 border-b border-purple-900/40 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link href="/" className="text-white font-bold text-lg tracking-wider">🏒</Link>
-        <nav className="flex gap-6">
+        <nav className="flex gap-4 sm:gap-6">
           {navItems.map(item => (
             <Link
               key={item.href}
