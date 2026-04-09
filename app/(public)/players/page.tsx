@@ -1,5 +1,6 @@
 import { getPlayers } from '@/lib/queries/players'
 import { getPlayerRankings } from '@/lib/queries/rankings'
+import TournamentBadges from '@/components/ui/TournamentBadges'
 import Link from 'next/link'
 
 export default async function PlayersPage() {
@@ -45,16 +46,22 @@ export default async function PlayersPage() {
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-  <div className="flex items-center gap-2 flex-wrap">
-    <p className="font-medium text-white truncate">{player.name}</p>
-    {player.address && (
-      <span className="text-xs text-gray-500">📍 {player.address}</span>
-    )}
-  </div>
-  <p className="text-xs text-gray-400">
-    HC {player.hc ?? 36} · {player.wins}勝 {player.losses}敗 · {winRate}%
-  </p>
-</div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-white truncate">{player.name}</p>
+                      {player.address && (
+                        <span className="text-xs text-gray-500">📍 {player.address}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      HC {player.hc ?? 36} · {player.wins}勝 {player.losses}敗 · {winRate}%
+                    </p>
+                    <TournamentBadges
+                      wins={player.tournament_wins ?? 0}
+                      runnerUps={player.tournament_runner_ups ?? 0}
+                      qualifications={player.tournament_qualifications ?? 0}
+                      size="sm"
+                    />
+                  </div>
                   <span className="font-bold text-purple-400 flex-shrink-0">{player.rating} pt</span>
                 </Link>
               )

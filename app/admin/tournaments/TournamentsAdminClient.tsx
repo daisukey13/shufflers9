@@ -45,18 +45,27 @@ export default function TournamentsAdminClient({ tournaments }: { tournaments: T
   const supabase = createClient()
 
   const handleStatusChange = async (tournament: Tournament) => {
-    const next = NEXT_STATUS[tournament.status]
-    if (!next) return
-    if (!confirm(`「${tournament.name}」を「${next.label}」しますか？`)) return
+  const next = NEXT_STATUS[tournament.status]
+  if (!next) return
+  if (!confirm(`「${tournament.name}」を「${next.label}」しますか？`)) return
 
-    setLoading(tournament.id)
-    await supabase
-      .from('tournaments')
-      .update({ status: next.status })
-      .eq('id', tournament.id)
-    setLoading(null)
-    router.refresh()
+  setLoading(tournament.id)
+
+  await supabase
+    .from('tournaments')
+    .update({ status: next.status })
+    .eq('id', tournament.id)
+
+  // 大会終了時に戦績を自動集計
+  if (next.status === 'finished') {
+    await supabase.rpc('update_tournament_stats', {
+      p_tournament_id: tournament.id,
+    })
   }
+
+  setLoading(null)
+  router.refresh()
+}
 
   return (
     <div className="space-y-6">

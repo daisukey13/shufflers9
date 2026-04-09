@@ -4,6 +4,7 @@ import { getPlayerMatches } from '@/lib/queries/matches'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import LogoutButton from '@/components/ui/LogoutButton'
+import TournamentBadges from '@/components/ui/TournamentBadges'
 
 export default async function MyPage() {
   const supabase = await createClient()
@@ -43,6 +44,46 @@ export default async function MyPage() {
     .eq('player_id', player.id)
 
   const entryMap = new Map(myEntries?.map(e => [e.tournament_id, e]) ?? [])
+
+  // 大会戦績を取得
+  const { data: finalsParticipation } = await supabase
+    .from('tournament_finals_matches')
+    .select('*, tournament:tournaments(id, name, status)')
+    .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
+    .order('created_at', { ascending: false })
+
+  // 大会ごとに集計
+  const tournamentMap = new Map<string, {
+    id: string
+    name: string
+    status: string
+    maxRound: number
+    isWinner: boolean
+    isRunnerUp: boolean
+  }>()
+
+  finalsParticipation?.forEach((m: any) => {
+    const tid = m.tournament?.id
+    if (!tid) return
+    const existing = tournamentMap.get(tid)
+    const maxRound = existing ? Math.max(existing.maxRound, m.round) : m.round
+    const isWinner = m.winner_id === player.id
+    const isRunnerUp = !isWinner && m.winner_id !== null && (existing?.maxRound ?? 0) <= m.round
+
+    tournamentMap.set(tid, {
+      id: tid,
+      name: m.tournament?.name ?? '不明',
+      status: m.tournament?.status ?? '',
+      maxRound,
+      isWinner: (existing?.isWinner ?? false) || isWinner,
+      isRunnerUp: (existing?.isRunnerUp ?? false) || isRunnerUp,
+    })
+  })
+
+  const tournamentResults = Array.from(tournamentMap.values())
+
+  const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
+  const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
   const winRate = player.wins + player.losses > 0
     ? Math.round((player.wins / (player.wins + player.losses)) * 100)
@@ -91,13 +132,19 @@ export default async function MyPage() {
                 }
               </div>
               <div>
-  <div className="flex items-center gap-2 flex-wrap">
-    <h2 className="text-2xl font-bold text-white">{player.name}</h2>
-    {player.address && (
-      <span className="text-sm text-gray-400">📍 {player.address}</span>
-    )}
-  </div>
-</div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-2xl font-bold text-white">{player.name}</h2>
+                  {player.address && (
+                    <span className="text-sm text-gray-400">📍 {player.address}</span>
+                  )}
+                </div>
+                <TournamentBadges
+                  wins={player.tournament_wins ?? 0}
+                  runnerUps={player.tournament_runner_ups ?? 0}
+                  qualifications={player.tournament_qualifications ?? 0}
+                  size="sm"
+                />
+              </div>
             </div>
           </div>
 
@@ -138,10 +185,54 @@ export default async function MyPage() {
           </div>
         </div>
 
+        {/* 大会戦績 */}
+        {tournamentResults.length > 0 && (
+          <div className="bg-[#1a0f35] border border-purple-800/30 rounded-2xl p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-gray-300">🏆 大会戦績</h2>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-yellow-100">{tournamentResults.length}</p>
+                <p className="text-xs text-gray-400 mt-1">参加大会数</p>
+              </div>
+              <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-yellow-400">{player.tournament_wins ?? 0}</p>
+                <p className="text-xs text-gray-400 mt-1">🥇 優勝</p>
+              </div>
+              <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-gray-400">{player.tournament_runner_ups ?? 0}</p>
+                <p className="text-xs text-gray-400 mt-1">🥈 準優勝</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {tournamentResults.map(t => (
+                <Link
+                  key={t.id}
+                  href={`/tournaments/${t.id}`}
+                  className="flex items-center gap-3 p-3 bg-[#12082a] border border-purple-800/30 rounded-xl hover:bg-purple-900/20 transition"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-white text-sm truncate">{t.name}</p>
+                    <p className="text-xs mt-0.5">
+                      {t.isWinner ? (
+                        <span className="text-yellow-400">🥇 優勝</span>
+                      ) : t.isRunnerUp ? (
+                        <span className="text-gray-400">🥈 準優勝</span>
+                      ) : (
+                        <span className="text-orange-400">🎖️ 本戦{getRoundName(t.maxRound)}進出</span>
+                      )}
+                    </p>
+                  </div>
+                  <span className="text-xs text-purple-400 flex-shrink-0">詳細 →</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 大会エントリー */}
         {openTournaments && openTournaments.length > 0 && (
           <div className="bg-[#1a0f35] border border-purple-800/30 rounded-2xl p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-gray-300">🏆 大会</h2>
+            <h2 className="text-sm font-semibold text-gray-300">🏆 大会エントリー</h2>
             <div className="space-y-2">
               {openTournaments.map(t => {
                 const entry = entryMap.get(t.id)
