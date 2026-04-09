@@ -319,22 +319,19 @@ export default async function MyPage() {
         )}
 
         {/* クイックアクション */}
-        <div className="grid grid-cols-2 gap-4">
-          <Link
-            href="/matches/register/singles"
-            className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-purple-800/30 rounded-2xl hover:bg-purple-900/30 transition"
-          >
-            <span className="text-3xl">🏒</span>
-            <span className="text-sm font-medium text-purple-300">個人戦を登録</span>
-          </Link>
-          <Link
-            href="/matches/register/teams"
-            className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-purple-800/30 rounded-2xl hover:bg-purple-900/30 transition"
-          >
-            <span className="text-3xl">👥</span>
-            <span className="text-sm font-medium text-green-300">チーム戦を登録</span>
-          </Link>
-        </div>
+<div className="grid grid-cols-2 gap-4">
+  <Link
+    href="/matches/register/singles"
+    className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-purple-800/30 rounded-2xl hover:bg-purple-900/30 transition"
+  >
+    <span className="text-3xl">🏒</span>
+    <span className="text-sm font-medium text-purple-300">個人戦を登録</span>
+  </Link>
+  <div className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-gray-800/30 rounded-2xl opacity-40 cursor-not-allowed">
+    <span className="text-3xl grayscale">👥</span>
+    <span className="text-sm font-medium text-gray-600">チーム戦（準備中）</span>
+  </div>
+</div>
 
         {/* 直近の試合 */}
         <div className="bg-[#1a0f35] border border-purple-800/30 rounded-2xl p-5 space-y-3">

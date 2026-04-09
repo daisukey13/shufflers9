@@ -1,11 +1,8 @@
-import { getPlayerRankings, getTeamRankings } from '@/lib/queries/rankings'
+import { getPlayerRankings } from '@/lib/queries/rankings'
 import Link from 'next/link'
 
 export default async function RankingsPage() {
-  const [players, teams] = await Promise.all([
-    getPlayerRankings(),
-    getTeamRankings(),
-  ])
+  const players = await getPlayerRankings()
 
   const winRate = (w: number, l: number) => {
     const g = w + l
@@ -21,10 +18,18 @@ export default async function RankingsPage() {
 
         <h1 className="text-3xl font-bold text-center text-yellow-100">🏆 ランキング</h1>
 
+        {/* タブ */}
+        <div className="flex gap-2 bg-black/20 rounded-lg p-1">
+          <div className="flex-1 py-2 rounded-md text-sm font-medium text-center bg-purple-600 text-white">
+            個人戦
+          </div>
+          <div className="flex-1 py-2 rounded-md text-sm font-medium text-center text-gray-600 cursor-not-allowed opacity-50 bg-gray-800">
+            ダブルス（準備中）
+          </div>
+        </div>
+
         {/* 個人ランキング */}
         <section>
-          <h2 className="text-xl font-semibold text-gray-300 mb-6">個人</h2>
-
           {players.length === 0 ? (
             <p className="text-gray-400 text-sm">データがありません</p>
           ) : (
@@ -83,9 +88,7 @@ export default async function RankingsPage() {
                     href={`/players/${player.id}`}
                     className="flex items-center gap-4 p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl hover:bg-purple-900/40 transition"
                   >
-                    <span className="text-base font-bold w-8 text-center flex-shrink-0 text-gray-500">
-                      {rank}
-                    </span>
+                    <span className="text-base font-bold w-8 text-center flex-shrink-0 text-gray-500">{rank}</span>
                     <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
                       {player.avatar_url
                         ? <img src={player.avatar_url} className="w-full h-full object-cover" />
@@ -103,42 +106,6 @@ export default async function RankingsPage() {
             </div>
           )}
         </section>
-
-        {/* チームランキング */}
-        <section>
-          <h2 className="text-xl font-semibold text-gray-300 mb-6">チーム</h2>
-          <div className="space-y-2">
-            {teams.length === 0 ? (
-              <p className="text-gray-400 text-sm">データがありません</p>
-            ) : (
-              teams.map((team, index) => (
-                <Link
-                  key={team.id}
-                  href={`/teams/${team.id}`}
-                  className="flex items-center gap-4 p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl hover:bg-purple-900/40 transition"
-                >
-                  <span className={`text-lg font-bold w-8 text-center flex-shrink-0 ${
-                    index === 0 ? 'text-yellow-400' :
-                    index === 1 ? 'text-gray-400' :
-                    index === 2 ? 'text-orange-400' : 'text-gray-500'
-                  }`}>{index + 1}</span>
-                  <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
-                    {team.avatar_url
-                      ? <img src={team.avatar_url} className="w-full h-full object-cover" />
-                      : <span className="text-2xl flex items-center justify-center h-full">👥</span>
-                    }
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-white truncate text-base">{team.name}</p>
-                    <p className="text-xs text-gray-400">{team.wins}勝 {team.losses}敗</p>
-                  </div>
-                  <span className="font-bold text-purple-400 flex-shrink-0 text-lg">{team.rating} pt</span>
-                </Link>
-              ))
-            )}
-          </div>
-        </section>
-
       </div>
     </div>
   )

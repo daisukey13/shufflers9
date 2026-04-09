@@ -56,19 +56,42 @@ export default async function HomePage() {
 </section>
 
       {/* クイックリンク */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-purple-900/20 border-y border-purple-800/30 mb-10">
-        {[
-          { label: 'ランキング', sub: '最新のランキング', href: '/rankings' },
-          { label: 'メンバー', sub: 'クラブメンバーを見る', href: '/players' },
-          { label: 'チーム', sub: 'チーム一覧 & プロフィール', href: '/teams' },
-          { label: '試合結果', sub: '過去の試合をチェック', href: '/matches' },
-        ].map(item => (
-          <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 p-8 bg-[#12082a] hover:bg-purple-900/30 transition">
-            <span className="font-semibold text-white">{item.label}</span>
-            <span className="text-xs text-gray-500">{item.sub}</span>
-          </Link>
-        ))}
-      </section>
+<section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-purple-900/20 border-y border-purple-800/30 mb-10">
+  {[
+    { label: 'ランキング', sub: '最新のランキング', href: '/rankings', disabled: false },
+    { label: 'メンバー', sub: 'クラブメンバーを見る', href: '/players', disabled: false },
+    { label: 'チーム', sub: '準備中', href: '#', disabled: true },
+    { label: '試合結果', sub: '過去の試合をチェック', href: '/matches', disabled: false },
+  ].map(item => (
+    item.disabled ? (
+      <div
+        key={item.href}
+        className="flex flex-col items-center gap-1 p-8 bg-[#12082a] opacity-40 cursor-not-allowed"
+      >
+        <span className="font-semibold text-gray-500">{item.label}</span>
+        <span className="text-xs text-gray-600">{item.sub}</span>
+      </div>
+    ) : (
+      <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 p-8 bg-[#12082a] hover:bg-purple-900/30 transition">
+        <span className="font-semibold text-white">{item.label}</span>
+        <span className="text-xs text-gray-500">{item.sub}</span>
+      </Link>
+    )
+  ))}
+</section>
+
+{/* アクションボタン */}
+<section className="flex flex-wrap justify-center gap-3 px-4 mb-14">
+  <Link href="/register" className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-full text-sm font-medium transition">
+    👥 メンバー登録
+  </Link>
+  <Link href="/matches/register/singles" className="px-5 py-2 bg-purple-600 hover:bg-purple-700 rounded-full text-sm font-medium transition">
+    🏒 個人試合を登録
+  </Link>
+  <span className="px-5 py-2 bg-gray-800 rounded-full text-sm font-medium text-gray-500 cursor-not-allowed opacity-50">
+    👥 チーム試合（準備中）
+  </span>
+</section>
 
       {/* 統計 */}
       <section className="grid grid-cols-3 gap-4 px-4 mb-10 max-w-xl mx-auto">
