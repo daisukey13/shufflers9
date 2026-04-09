@@ -1,7 +1,6 @@
-import { getPresetAvatars } from '@/lib/avatars'
+import { createClient } from '@/lib/supabase/server'
 import RegisterClient from './RegisterClient'
 
 export default async function RegisterPage() {
-  const avatars = await getPresetAvatars()
-  return <RegisterClient avatars={avatars} />
+  return <RegisterClient />
 }

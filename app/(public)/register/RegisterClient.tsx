@@ -2,16 +2,16 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import AvatarPicker from '@/components/ui/AvatarPicker'
 import Turnstile from '@/components/ui/Turnstile'
+import Link from 'next/link'
 
-type Avatar = { id: string; url: string }
 type Step = 'account' | 'verify'
 
-export default function RegisterClient({ avatars }: { avatars: Avatar[] }) {
+export default function RegisterClient() {
   const [step, setStep] = useState<Step>('account')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -19,6 +19,10 @@ export default function RegisterClient({ avatars }: { avatars: Avatar[] }) {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!agreedToTerms) {
+      setError('利用規約に同意してください')
+      return
+    }
     if (!turnstileToken) {
       setError('人間認証を完了してください')
       return
@@ -26,7 +30,6 @@ export default function RegisterClient({ avatars }: { avatars: Avatar[] }) {
     setLoading(true)
     setError(null)
 
-    // Turnstile検証
     const verifyRes = await fetch('/api/turnstile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -117,6 +120,44 @@ export default function RegisterClient({ avatars }: { avatars: Avatar[] }) {
                 />
               </div>
 
+              {/* 利用規約 */}
+              <div className="bg-purple-900/30 border border-purple-700/30 rounded-xl p-4 space-y-3">
+                <div className="h-48 overflow-y-auto text-xs text-gray-400 space-y-3 pr-1">
+                  <p className="font-semibold text-gray-300">利用規約</p>
+                  <p>本規約は、テーブルシャッフルボード豊浦ランキングシステム（以下「本サービス」といいます）の利用に関する条件を定めるものです。利用者は、本規約に同意した上で本サービスを利用するものとします。</p>
+                  <p className="font-medium text-gray-300">第2条（利用登録）</p>
+                  <p>利用登録を希望する者は、本規約に同意の上、当クラブの定める方法によって利用登録を申請し、当クラブがこれを承認することによって、利用登録が完了するものとします。</p>
+                  <p className="font-medium text-gray-300">第3条（個人情報の取り扱い）</p>
+                  <p>本サービスでは、ハンドルネーム・アバター・地域・ランキング情報・試合結果を公開情報として、氏名・メールアドレス・電話番号を非公開情報として収集・管理します。非公開情報は第三者に提供しません。</p>
+                  <p className="font-medium text-gray-300">第4条（禁止事項）</p>
+                  <p>虚偽の情報登録・なりすまし・運営妨害・誹謗中傷・その他当クラブが不適切と判断する行為を禁止します。</p>
+                  <p className="font-medium text-gray-300">第5条（試合結果の登録）</p>
+                  <p>試合結果は正確に登録するものとし、虚偽の結果を登録した場合はアカウントの停止等の措置を取る場合があります。</p>
+                  <p className="font-medium text-gray-300">第6条（免責事項）</p>
+                  <p>本サービスの利用により生じた損害について、当クラブは一切の責任を負いません。</p>
+                  <p className="font-medium text-gray-300">第7条（規約の変更）</p>
+                  <p>当クラブは、必要と判断した場合には本規約を変更することができます。</p>
+                  <p className="font-medium text-gray-300">第8条（準拠法・管轄裁判所）</p>
+                  <p>本規約の解釈にあたっては、日本法を準拠法とします。</p>
+                </div>
+                <div className="border-t border-purple-700/30 pt-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={e => setAgreedToTerms(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-purple-500"
+                    />
+                    <span className="text-sm text-gray-300">
+                      <Link href="/terms" target="_blank" className="text-purple-400 hover:text-purple-300 underline">
+                        利用規約
+                      </Link>
+                      を読み、同意します
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               <Turnstile
                 onVerify={token => setTurnstileToken(token)}
                 onError={() => setError('認証エラーが発生しました')}
@@ -124,7 +165,7 @@ export default function RegisterClient({ avatars }: { avatars: Avatar[] }) {
 
               <button
                 type="submit"
-                disabled={loading || !turnstileToken}
+                disabled={loading || !turnstileToken || !agreedToTerms}
                 className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
               >
                 {loading ? '処理中...' : '次へ →'}
@@ -155,7 +196,7 @@ export default function RegisterClient({ avatars }: { avatars: Avatar[] }) {
                 <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                   <li>メールボックスを確認する</li>
                   <li>「登録を確認しました」リンクをクリック</li>
-                  <li>プロフィール（名前・アバター）を設定する</li>
+                  <li>ログインしてマイページからプロフィールを編集する</li>
                 </ol>
               </div>
               <p className="text-xs text-gray-500">
