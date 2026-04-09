@@ -33,3 +33,19 @@ export async function getPlayerMatches(playerId: string): Promise<SinglesMatch[]
   if (error) throw error
   return data
 }
+export async function getPlayerDoublesMatches(playerId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('doubles_matches')
+    .select(`
+      *,
+      pair1_player1:players!pair1_player1_id(id, name, avatar_url),
+      pair1_player2:players!pair1_player2_id(id, name, avatar_url),
+      pair2_player1:players!pair2_player1_id(id, name, avatar_url),
+      pair2_player2:players!pair2_player2_id(id, name, avatar_url)
+    `)
+    .or(`pair1_player1_id.eq.${playerId},pair1_player2_id.eq.${playerId},pair2_player1_id.eq.${playerId},pair2_player2_id.eq.${playerId}`)
+    .order('played_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}

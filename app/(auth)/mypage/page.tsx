@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getPlayerByUserId } from '@/lib/queries/players'
-import { getPlayerMatches } from '@/lib/queries/matches'
+import { getPlayerMatches, getPlayerDoublesMatches } from '@/lib/queries/matches'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import LogoutButton from '@/components/ui/LogoutButton'
@@ -15,7 +15,10 @@ export default async function MyPage() {
   const player = await getPlayerByUserId(user.id)
   if (!player) redirect('/login')
 
-  const matches = await getPlayerMatches(player.id)
+  const [matches, doublesMatches] = await Promise.all([
+    getPlayerMatches(player.id),
+    getPlayerDoublesMatches(player.id),
+  ])
 
   const { data: allPlayers } = await supabase
     .from('players')
@@ -24,7 +27,15 @@ export default async function MyPage() {
     .eq('is_admin', false)
     .order('rating', { ascending: false })
 
+  const { data: allDoublesPlayers } = await supabase
+    .from('players')
+    .select('id')
+    .eq('is_active', true)
+    .eq('is_admin', false)
+    .order('doubles_rating', { ascending: false })
+
   const rank = (allPlayers?.findIndex(p => p.id === player.id) ?? 0) + 1
+  const doublesRank = (allDoublesPlayers?.findIndex(p => p.id === player.id) ?? 0) + 1
   const totalPlayers = allPlayers?.length ?? 0
 
   const { data: teamMemberships } = await supabase
@@ -45,21 +56,15 @@ export default async function MyPage() {
 
   const entryMap = new Map(myEntries?.map(e => [e.tournament_id, e]) ?? [])
 
-  // 大会戦績を取得
   const { data: finalsParticipation } = await supabase
     .from('tournament_finals_matches')
     .select('*, tournament:tournaments(id, name, status)')
     .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
     .order('created_at', { ascending: false })
 
-  // 大会ごとに集計
   const tournamentMap = new Map<string, {
-    id: string
-    name: string
-    status: string
-    maxRound: number
-    isWinner: boolean
-    isRunnerUp: boolean
+    id: string; name: string; status: string
+    maxRound: number; isWinner: boolean; isRunnerUp: boolean
   }>()
 
   finalsParticipation?.forEach((m: any) => {
@@ -69,25 +74,22 @@ export default async function MyPage() {
     const maxRound = existing ? Math.max(existing.maxRound, m.round) : m.round
     const isWinner = m.winner_id === player.id
     const isRunnerUp = !isWinner && m.winner_id !== null && (existing?.maxRound ?? 0) <= m.round
-
     tournamentMap.set(tid, {
-      id: tid,
-      name: m.tournament?.name ?? '不明',
-      status: m.tournament?.status ?? '',
-      maxRound,
+      id: tid, name: m.tournament?.name ?? '不明',
+      status: m.tournament?.status ?? '', maxRound,
       isWinner: (existing?.isWinner ?? false) || isWinner,
       isRunnerUp: (existing?.isRunnerUp ?? false) || isRunnerUp,
     })
   })
 
   const tournamentResults = Array.from(tournamentMap.values())
-
   const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
   const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
-  const winRate = player.wins + player.losses > 0
-    ? Math.round((player.wins / (player.wins + player.losses)) * 100)
-    : 0
+  const singlesWinRate = player.wins + player.losses > 0
+    ? Math.round((player.wins / (player.wins + player.losses)) * 100) : 0
+  const doublesWinRate = (player.doubles_wins ?? 0) + (player.doubles_losses ?? 0) > 0
+    ? Math.round(((player.doubles_wins ?? 0) / ((player.doubles_wins ?? 0) + (player.doubles_losses ?? 0))) * 100) : 0
 
   const totalMatches = player.wins + player.losses
 
@@ -96,26 +98,25 @@ export default async function MyPage() {
       <div className="max-w-2xl mx-auto space-y-6">
 
         {/* ヘッダー */}
-<div className="flex items-center justify-between">
-  <h1 className="text-xl font-bold text-gray-300">マイページ</h1>
-  <div className="flex gap-3">
-    {player.is_admin && (
-      <Link
-        href="/admin"
-        className="text-sm text-yellow-400 hover:text-yellow-300 transition"
-      >
-        ⚙️ 管理画面
-      </Link>
-    )}
-    <Link href="/mypage/edit" className="text-sm text-purple-400 hover:text-purple-300 transition">
-      ✏️ 編集
-    </Link>
-    <LogoutButton />
-  </div>
-</div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-300">マイページ</h1>
+          <div className="flex gap-3">
+            {player.is_admin && (
+              <Link href="/admin" className="text-sm text-yellow-400 hover:text-yellow-300 transition">
+                ⚙️ 管理画面
+              </Link>
+            )}
+            <Link href="/mypage/edit" className="text-sm text-purple-400 hover:text-purple-300 transition">
+              ✏️ 編集
+            </Link>
+            <LogoutButton />
+          </div>
+        </div>
 
         {/* プロフィールカード */}
         <div className="bg-[#1a0f35] border border-purple-800/30 rounded-2xl p-6 space-y-5">
+
+          {/* アバター・名前・順位 */}
           <div className="flex items-center gap-5">
             <div className="relative flex-shrink-0">
               <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center font-bold text-2xl ${
@@ -133,11 +134,16 @@ export default async function MyPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full border-2 border-purple-500 overflow-hidden bg-gray-800 flex items-center justify-center flex-shrink-0">
-                {player.avatar_url
-                  ? <img src={player.avatar_url} className="w-full h-full object-cover" />
-                  : <span className="text-2xl">👤</span>
-                }
+              <div className="relative flex-shrink-0">
+                <div className="w-16 h-16 rounded-full border-2 border-purple-500 overflow-hidden bg-gray-800 flex items-center justify-center">
+                  {player.avatar_url
+                    ? <img src={player.avatar_url} className="w-full h-full object-cover" />
+                    : <span className="text-2xl">👤</span>
+                  }
+                </div>
+                <div className="absolute -bottom-1 -right-1 bg-purple-700 border border-purple-500 rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  HC{player.hc ?? 36}
+                </div>
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -156,40 +162,62 @@ export default async function MyPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-4 text-center">
-              <p className="text-xs text-gray-400 mb-1">🏅 ランキングポイント</p>
-              <p className="text-4xl font-bold text-white">{player.rating}</p>
+          {/* シングルス成績 */}
+          <div>
+            <p className="text-xs font-semibold text-purple-400 mb-2 flex items-center gap-1.5">
+              <img src="/shuffleboard-puck-blue.png" className="w-4 h-4 object-contain" />
+              シングルス
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center col-span-2">
+                <p className="text-xs text-gray-400 mb-1">ランキングポイント</p>
+                <p className="text-3xl font-bold text-white">{player.rating}</p>
+                <p className="text-xs text-gray-500 mt-1">第{rank}位</p>
+              </div>
+              <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
+                <p className="text-xs text-gray-400 mb-1">勝利</p>
+                <p className="text-2xl font-bold text-green-400">{player.wins}</p>
+              </div>
+              <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
+                <p className="text-xs text-gray-400 mb-1">敗北</p>
+                <p className="text-2xl font-bold text-red-400">{player.losses}</p>
+              </div>
             </div>
-            <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-4 text-center">
-              <p className="text-xs text-gray-400 mb-1">📊 ハンディキャップ</p>
-              <p className="text-4xl font-bold text-white">{player.hc ?? 36}</p>
+            <div className="mt-2 space-y-1">
+              <div className="w-full bg-gray-800 rounded-full h-1.5">
+                <div className="bg-yellow-400 h-1.5 rounded-full" style={{ width: `${singlesWinRate}%` }} />
+              </div>
+              <p className="text-xs text-gray-400 text-right">勝率 {singlesWinRate}% · {totalMatches}試合</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-green-400">{player.wins}</p>
-              <p className="text-xs text-gray-400 mt-1">勝利</p>
+          {/* ダブルス成績 */}
+          <div>
+            <p className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1.5">
+              <img src="/shuffleboard-puck-red.png" className="w-4 h-4 object-contain" />
+              ダブルス
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center col-span-2">
+                <p className="text-xs text-gray-400 mb-1">ランキングポイント</p>
+                <p className="text-3xl font-bold text-white">{player.doubles_rating ?? 1000}</p>
+                <p className="text-xs text-gray-500 mt-1">第{doublesRank}位</p>
+              </div>
+              <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
+                <p className="text-xs text-gray-400 mb-1">勝利</p>
+                <p className="text-2xl font-bold text-green-400">{player.doubles_wins ?? 0}</p>
+              </div>
+              <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
+                <p className="text-xs text-gray-400 mb-1">敗北</p>
+                <p className="text-2xl font-bold text-red-400">{player.doubles_losses ?? 0}</p>
+              </div>
             </div>
-            <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-red-400">{player.losses}</p>
-              <p className="text-xs text-gray-400 mt-1">敗北</p>
+            <div className="mt-2 space-y-1">
+              <div className="w-full bg-gray-800 rounded-full h-1.5">
+                <div className="bg-green-400 h-1.5 rounded-full" style={{ width: `${doublesWinRate}%` }} />
+              </div>
+              <p className="text-xs text-gray-400 text-right">勝率 {doublesWinRate}% · {(player.doubles_wins ?? 0) + (player.doubles_losses ?? 0)}試合</p>
             </div>
-            <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-blue-400">{winRate}%</p>
-              <p className="text-xs text-gray-400 mt-1">勝率</p>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="w-full bg-gray-800 rounded-full h-2">
-              <div
-                className="bg-yellow-400 h-2 rounded-full transition-all"
-                style={{ width: `${winRate}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-400 text-right">{totalMatches} 試合</p>
           </div>
         </div>
 
@@ -318,83 +346,145 @@ export default async function MyPage() {
           </div>
         )}
 
-       {/* クイックアクション */}
-<div className="grid grid-cols-2 gap-4">
-  <Link
-    href="/matches/register/singles"
-    className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-purple-800/30 rounded-2xl hover:bg-purple-900/30 transition"
-  >
-    <span className="text-3xl">🏒</span>
-    <span className="text-sm font-medium text-purple-300">個人戦を登録</span>
-  </Link>
-  <Link
-    href="/matches/register/doubles"
-    className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-purple-800/30 rounded-2xl hover:bg-purple-900/30 transition"
-  >
-    <span className="text-3xl">🎾</span>
-    <span className="text-sm font-medium text-green-300">ダブルスを登録</span>
-  </Link>
-</div>
+        {/* クイックアクション */}
+        <div className="grid grid-cols-2 gap-4">
+          <Link
+            href="/matches/register/singles"
+            className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-purple-800/30 rounded-2xl hover:bg-purple-900/30 transition"
+          >
+            <img src="/shuffleboard-puck-blue.png" className="w-10 h-10 object-contain" />
+            <span className="text-sm font-medium text-purple-300">個人戦を登録</span>
+          </Link>
+          <Link
+            href="/matches/register/doubles"
+            className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-purple-800/30 rounded-2xl hover:bg-purple-900/30 transition"
+          >
+            <img src="/shuffleboard-puck-red.png" className="w-10 h-10 object-contain" />
+            <span className="text-sm font-medium text-green-300">ダブルスを登録</span>
+          </Link>
+        </div>
 
         {/* 直近の試合 */}
-        <div className="bg-[#1a0f35] border border-purple-800/30 rounded-2xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-gray-300">直近の試合</h2>
-          {matches.length === 0 ? (
-            <p className="text-gray-500 text-sm">試合がありません</p>
-          ) : (
-            <div className="space-y-2">
-              {matches.slice(0, 5).map(match => {
-                const isPlayer1 = match.player1_id === player.id
-                const opponent = isPlayer1 ? match.player2 : match.player1
-                const myScore = isPlayer1 ? match.score1 : match.score2
-                const oppScore = isPlayer1 ? match.score2 : match.score1
-                const isWin = match.winner_id === player.id
-                const ratingChange = isPlayer1 ? match.rating_change1 : match.rating_change2
-                const date = new Date(match.played_at)
-                const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+        <div className="bg-[#1a0f35] border border-purple-800/30 rounded-2xl p-5 space-y-5">
 
-                return (
-                  <div
-                    key={match.id}
-                    className={`p-4 rounded-xl border-l-4 ${
-                      isWin ? 'border-green-500 bg-green-900/10' : 'border-red-500 bg-red-900/10'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-400">{dateStr}</p>
-                        <p className="text-sm font-medium text-white mt-0.5">
-                          <span className={isWin ? 'text-green-400' : 'text-red-400'}>
-                            {isWin ? '勝利' : '敗北'}
-                          </span>
-                          ：{opponent?.name ?? '不明'}
-                        </p>
+          {/* シングルス */}
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+              <img src="/shuffleboard-puck-blue.png" className="w-5 h-5 object-contain" />
+              シングルス直近の試合
+            </h2>
+            {matches.length === 0 ? (
+              <p className="text-gray-500 text-sm">試合がありません</p>
+            ) : (
+              <div className="space-y-2">
+                {matches.slice(0, 5).map(match => {
+                  const isPlayer1 = match.player1_id === player.id
+                  const opponent = isPlayer1 ? match.player2 : match.player1
+                  const myScore = isPlayer1 ? match.score1 : match.score2
+                  const oppScore = isPlayer1 ? match.score2 : match.score1
+                  const isWin = match.winner_id === player.id
+                  const ratingChange = isPlayer1 ? match.rating_change1 : match.rating_change2
+                  const date = new Date(match.played_at)
+                  const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+
+                  return (
+                    <div
+                      key={match.id}
+                      className={`p-4 rounded-xl border-l-4 ${
+                        isWin ? 'border-green-500 bg-green-900/10' : 'border-red-500 bg-red-900/10'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-gray-400">{dateStr}</p>
+                          <p className="text-sm font-medium text-white mt-0.5">
+                            <span className={isWin ? 'text-green-400' : 'text-red-400'}>
+                              {isWin ? '勝利' : '敗北'}
+                            </span>
+                            ：{opponent?.name ?? '不明'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-white">{myScore} - {oppScore}</p>
+                          <p className={`text-sm font-medium ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {ratingChange >= 0 ? '+' : ''}{ratingChange}pt
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-white">{myScore} - {oppScore}</p>
-                        <p className={`text-sm font-medium ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {ratingChange >= 0 ? '+' : ''}{ratingChange}pt
-                        </p>
+                      <div className="mt-2 text-right">
+                        <Link href={`/players/${opponent?.id}`} className="text-xs text-purple-400 hover:text-purple-300">
+                          相手プロフィール →
+                        </Link>
                       </div>
                     </div>
-                    <div className="mt-2 text-right">
-                      <Link
-                        href={`/players/${opponent?.id}`}
-                        className="text-xs text-purple-400 hover:text-purple-300"
-                      >
-                        相手プロフィール →
-                      </Link>
+                  )
+                })}
+              </div>
+            )}
+            {matches.length > 5 && (
+              <Link href="/matches" className="block text-center text-sm text-purple-400 hover:text-purple-300 pt-2">
+                試合結果一覧へ →
+              </Link>
+            )}
+          </div>
+
+          {/* ダブルス */}
+          <div className="space-y-3 border-t border-purple-800/30 pt-5">
+            <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+              <img src="/shuffleboard-puck-red.png" className="w-5 h-5 object-contain" />
+              ダブルス直近の試合
+            </h2>
+            {doublesMatches.length === 0 ? (
+              <p className="text-gray-500 text-sm">試合がありません</p>
+            ) : (
+              <div className="space-y-2">
+                {doublesMatches.slice(0, 5).map((match: any) => {
+                  const isPair1 = match.pair1_player1_id === player.id || match.pair1_player2_id === player.id
+                  const isWin = (isPair1 && match.winner_pair === 1) || (!isPair1 && match.winner_pair === 2)
+                  const myScore = isPair1 ? match.score1 : match.score2
+                  const oppScore = isPair1 ? match.score2 : match.score1
+                  const partner = isPair1
+                    ? (match.pair1_player1_id === player.id ? match.pair1_player2 : match.pair1_player1)
+                    : (match.pair2_player1_id === player.id ? match.pair2_player2 : match.pair2_player1)
+                  const opp1 = isPair1 ? match.pair2_player1 : match.pair1_player1
+                  const opp2 = isPair1 ? match.pair2_player2 : match.pair1_player2
+                  const ratingChange = isPair1 ? match.rating_change1 : match.rating_change2
+                  const date = new Date(match.played_at)
+                  const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+
+                  return (
+                    <div
+                      key={match.id}
+                      className={`p-4 rounded-xl border-l-4 ${
+                        isWin ? 'border-green-500 bg-green-900/10' : 'border-red-500 bg-red-900/10'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-gray-400">{dateStr}</p>
+                          <p className="text-sm font-medium text-white mt-0.5">
+                            <span className={isWin ? 'text-green-400' : 'text-red-400'}>
+                              {isWin ? '勝利' : '敗北'}
+                            </span>
+                            ：{opp1?.name ?? '不明'} / {opp2?.name ?? '不明'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            パートナー：{partner?.name ?? '不明'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-white">{myScore} - {oppScore}</p>
+                          <p className={`text-sm font-medium ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {ratingChange >= 0 ? '+' : ''}{ratingChange}pt
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {matches.length > 5 && (
-            <Link href="/matches" className="block text-center text-sm text-purple-400 hover:text-purple-300 pt-2">
-              🏆 試合結果一覧へ
-            </Link>
-          )}
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
       </div>
