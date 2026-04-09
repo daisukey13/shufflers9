@@ -244,7 +244,7 @@ export default function AdminMatchRegisterClient({
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold">🏒 試合結果を登録</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6 bg-purple-900/20 border border-purple-800/30 rounded-2xl p-6">
