@@ -31,67 +31,72 @@ export default async function HomePage() {
     <div className="min-h-screen bg-transparent text-white">
 
       {/* ヒーロー */}
-<section className="relative text-center py-20 px-4 overflow-hidden">
-  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#3b0764_0%,_transparent_70%)] pointer-events-none" />
-  <div className="relative flex justify-center mb-4">
-    <img
-      src="/shuffleboard-puck-blue.png"
-      alt="Shuffleboard Puck"
-      className="w-24 h-24 object-contain opacity-90"
-    />
-  </div>
-  <div className="relative flex justify-center mb-6">
-    <img
-      src="/logo-toyoura-shufflers.png"
-      alt="Toyoura Shufflers Club"
-      className="w-full max-w-2xl h-auto object-contain"
-    />
-  </div>
-  <div className="flex items-center justify-center gap-2 mb-4">
-    <div className="h-px w-12 bg-orange-400/50" />
-    <div className="w-2 h-2 rounded-full bg-orange-400" />
-    <div className="h-px w-12 bg-orange-400/50" />
-  </div>
-  <p className="relative text-gray-400 text-sm">みんなで楽しくテーブルシャッフルボード！</p>
-</section>
+      <section className="relative text-center py-20 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#3b0764_0%,_transparent_70%)] pointer-events-none" />
+        <div className="relative flex justify-center mb-4">
+          <img
+            src="/shuffleboard-puck-blue.png"
+            alt="Shuffleboard Puck"
+            className="w-24 h-24 object-contain opacity-90"
+          />
+        </div>
+        <div className="relative flex justify-center mb-6">
+          <img
+            src="/logo-toyoura-shufflers.png"
+            alt="Toyoura Shufflers Club"
+            className="w-full max-w-2xl h-auto object-contain"
+          />
+        </div>
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <div className="h-px w-12 bg-orange-400/50" />
+          <div className="w-2 h-2 rounded-full bg-orange-400" />
+          <div className="h-px w-12 bg-orange-400/50" />
+        </div>
+        <p className="relative text-gray-400 text-sm">みんなで楽しくテーブルシャッフルボード！</p>
+      </section>
 
       {/* クイックリンク */}
-<section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-purple-900/20 border-y border-purple-800/30 mb-10">
-  {[
-    { label: 'ランキング', sub: '最新のランキング', href: '/rankings', disabled: false },
-    { label: 'メンバー', sub: 'クラブメンバーを見る', href: '/players', disabled: false },
-    { label: 'チーム', sub: '準備中', href: '#', disabled: true },
-    { label: '試合結果', sub: '過去の試合をチェック', href: '/matches', disabled: false },
-  ].map(item => (
-    item.disabled ? (
-      <div
-        key={item.href}
-        className="flex flex-col items-center gap-1 p-8 bg-[#12082a] opacity-40 cursor-not-allowed"
-      >
-        <span className="font-semibold text-gray-500">{item.label}</span>
-        <span className="text-xs text-gray-600">{item.sub}</span>
-      </div>
-    ) : (
-      <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 p-8 bg-[#12082a] hover:bg-purple-900/30 transition">
-        <span className="font-semibold text-white">{item.label}</span>
-        <span className="text-xs text-gray-500">{item.sub}</span>
-      </Link>
-    )
-  ))}
-</section>
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-purple-900/20 border-y border-purple-800/30 mb-10">
+        {[
+          { label: 'ランキング', sub: '最新のランキング', href: '/rankings', disabled: false },
+          { label: 'メンバー', sub: 'クラブメンバーを見る', href: '/players', disabled: false },
+          { label: 'チーム', sub: '準備中', href: '#', disabled: true },
+          { label: '試合結果', sub: '過去の試合をチェック', href: '/matches', disabled: false },
+        ].map(item => (
+          item.disabled ? (
+            <div
+              key={item.label}
+              className="flex flex-col items-center gap-1 p-8 bg-[#12082a] opacity-40 cursor-not-allowed"
+            >
+              <span className="font-semibold text-gray-500">{item.label}</span>
+              <span className="text-xs text-gray-600">{item.sub}</span>
+            </div>
+          ) : (
+            <Link key={item.href} href={item.href} className="flex flex-col items-center gap-1 p-8 bg-[#12082a] hover:bg-purple-900/30 transition">
+              <span className="font-semibold text-white">{item.label}</span>
+              <span className="text-xs text-gray-500">{item.sub}</span>
+            </Link>
+          )
+        ))}
+      </section>
 
-{/* アクションボタン */}
-<section className="flex flex-wrap justify-center gap-3 px-4 mb-14">
-  <Link href="/register" className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-full text-sm font-medium transition">
-    👥 メンバー登録
-  </Link>
-  <Link href="/matches/register/singles" className="px-5 py-2 bg-purple-600 hover:bg-purple-700 rounded-full text-sm font-medium transition">
-    🏒 個人試合を登録
-  </Link>
-  <span className="px-5 py-2 bg-gray-800 rounded-full text-sm font-medium text-gray-500 cursor-not-allowed opacity-50">
-    👥 チーム試合（準備中）
-  </span>
-</section>
+      {/* アクションボタン（1箇所のみ） */}
+      <section className="flex flex-wrap justify-center gap-3 px-4 mb-10">
+        <Link href="/register" className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-full text-sm font-medium transition">
+          👥 メンバー登録
+        </Link>
+        <Link href="/matches/register/singles" className="flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 rounded-full text-sm font-medium transition">
+          <img src="/shuffleboard-puck-blue.png" className="w-5 h-5 object-contain" />
+          シングルス登録
+        </Link>
+        <Link href="/matches/register/doubles" className="flex items-center gap-2 px-5 py-2 bg-green-700 hover:bg-green-600 rounded-full text-sm font-medium transition">
+          <img src="/shuffleboard-puck-red.png" className="w-5 h-5 object-contain" />
+          ダブルス登録
+        </Link>
+        <span className="px-5 py-2 bg-gray-800 rounded-full text-sm font-medium text-gray-500 cursor-not-allowed opacity-50">
+          👥 チーム試合（準備中）
+        </span>
+      </section>
 
       {/* 統計 */}
       <section className="grid grid-cols-3 gap-4 px-4 mb-10 max-w-xl mx-auto">
@@ -105,19 +110,6 @@ export default async function HomePage() {
             <span className="text-xs text-gray-500 mt-1">{stat.label}</span>
           </div>
         ))}
-      </section>
-
-      {/* アクションボタン */}
-      <section className="flex flex-wrap justify-center gap-3 px-4 mb-14">
-        <Link href="/register" className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-full text-sm font-medium transition">
-          👥 メンバー登録
-        </Link>
-        <Link href="/matches/register/singles" className="px-5 py-2 bg-purple-600 hover:bg-purple-700 rounded-full text-sm font-medium transition">
-          🏒 個人試合を登録
-        </Link>
-        <Link href="/matches/register/teams" className="px-5 py-2 bg-orange-500 hover:bg-orange-600 rounded-full text-sm font-medium transition">
-          👥 チーム試合を登録
-        </Link>
       </section>
 
       {/* トッププレーヤー */}

@@ -3,7 +3,6 @@ import Link from 'next/link'
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
-
   const [
     { count: playerCount },
     { count: matchCount },
@@ -15,13 +14,13 @@ export default async function AdminDashboard() {
   ])
 
   const menuItems = [
-    { href: '/admin/players', label: '👤 メンバー管理', sub: 'メンバーの追加・編集・脱退処理' },
-    { href: '/admin/matches', label: '🏒 試合管理', sub: '試合の編集・削除' },
-    { href: '/admin/matches/register', label: '➕ 試合登録', sub: '個人戦・チーム戦の結果登録' },
-    { href: '/admin/matches/register/doubles', label: '🎾 ダブルス登録', sub: 'ダブルス試合の結果登録' },
-    { href: '/admin/tournaments', label: '🏆 大会管理', sub: '大会の作成・予選・本戦管理' },
-    { href: '/admin/notices', label: '📢 お知らせ管理', sub: 'お知らせの作成・編集' },
-    { href: '/admin/ranking-config', label: '⚙️ ランキング設定', sub: 'ランキング計算パラメータ設定' },
+    { href: '/admin/players', label: '👤 メンバー管理', sub: 'メンバーの追加・編集・脱退処理', icon: null },
+    { href: '/admin/matches', label: '試合管理', sub: '試合の編集・削除', icon: null, emoji: '📋' },
+    { href: '/admin/matches/register', label: 'シングルス登録', sub: '個人戦の結果登録', icon: '/shuffleboard-puck-blue.png' },
+    { href: '/admin/matches/register/doubles', label: 'ダブルス登録', sub: 'ダブルス試合の結果登録', icon: '/shuffleboard-puck-red.png' },
+    { href: '/admin/tournaments', label: '🏆 大会管理', sub: '大会の作成・予選・本戦管理', icon: null },
+    { href: '/admin/notices', label: '📢 お知らせ管理', sub: 'お知らせの作成・編集', icon: null },
+    { href: '/admin/ranking-config', label: '⚙️ ランキング設定', sub: 'ランキング計算パラメータ設定', icon: null },
   ]
 
   return (
@@ -50,8 +49,13 @@ export default async function AdminDashboard() {
             href={item.href}
             className="p-5 bg-purple-900/20 border border-purple-800/30 rounded-2xl hover:bg-purple-900/40 transition"
           >
-            <p className="font-semibold text-white">{item.label}</p>
-            <p className="text-sm text-gray-400 mt-1">{item.sub}</p>
+            <div className="flex items-center gap-2 mb-1">
+              {item.icon && (
+                <img src={item.icon} className="w-5 h-5 object-contain" />
+              )}
+              <p className="font-semibold text-white">{item.label}</p>
+            </div>
+            <p className="text-sm text-gray-400">{item.sub}</p>
           </Link>
         ))}
       </div>
