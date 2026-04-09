@@ -10,7 +10,6 @@ export default async function MatchesPage() {
     getRecentTeamsMatches(30),
   ])
 
-  // 大会予選試合を取得
   const { data: qualifyingMatches } = await supabase
     .from('tournament_qualifying_matches')
     .select('*, block:tournament_blocks(block_name, tournament:tournaments(id, name)), player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url)')
@@ -18,7 +17,6 @@ export default async function MatchesPage() {
     .order('played_at', { ascending: false })
     .limit(30)
 
-  // 大会本戦試合を取得
   const { data: finalsMatches } = await supabase
     .from('tournament_finals_matches')
     .select('*, tournament:tournaments(id, name), player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), tournament_finals_sets(*)')
@@ -119,7 +117,9 @@ export default async function MatchesPage() {
       mode: m.mode,
       sets: m.tournament_finals_sets?.sort((a: any, b: any) => a.set_number - b.set_number),
     })),
-  ].sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
+  ]
+    .filter(match => match.player1Name !== 'DEFAULT' && match.player2Name !== 'DEFAULT')
+    .sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
 
   const isUpset = (match: MatchItem) => {
     if (!match.winnerId) return false
@@ -160,7 +160,6 @@ export default async function MatchesPage() {
 
               return (
                 <div key={`${match.type}-${match.id}`} className={`p-4 border rounded-2xl ${upset ? 'bg-yellow-900/20 border-yellow-600/40' : 'bg-purple-900/20 border-purple-800/30'}`}>
-                  {/* ヘッダー */}
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     <p className="text-xs text-gray-400">{dateStr}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${color}`}>{label}</span>
@@ -179,9 +178,7 @@ export default async function MatchesPage() {
                     )}
                   </div>
 
-                  {/* 対戦 */}
                   <div className="flex items-center gap-4">
-                    {/* Player1 */}
                     <Link href={`/players/${match.player1Id}`} className="flex-1 flex flex-col items-center gap-2">
                       <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${
                         upset && isP1Winner
@@ -205,7 +202,6 @@ export default async function MatchesPage() {
                       )}
                     </Link>
 
-                    {/* スコア */}
                     <div className="text-center flex-shrink-0 space-y-1">
                       <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-sm font-bold mx-auto">VS</div>
                       {match.type === 'finals' && match.sets && match.sets.length > 0 ? (
@@ -221,7 +217,6 @@ export default async function MatchesPage() {
                       )}
                     </div>
 
-                    {/* Player2 */}
                     <Link href={`/players/${match.player2Id}`} className="flex-1 flex flex-col items-center gap-2">
                       <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${
                         upset && !isP1Winner && match.winnerId
