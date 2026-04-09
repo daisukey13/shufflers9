@@ -16,7 +16,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     : 0
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto">
+    <div className="space-y-8 max-w-3xl mx-auto px-4 py-8">
       <div className="flex items-center gap-6 p-6 bg-purple-900/20 border border-purple-800/30 rounded-2xl">
         <div className="w-20 h-20 rounded-full bg-gray-800 border-2 border-purple-500 overflow-hidden flex items-center justify-center flex-shrink-0">
           {player.avatar_url
@@ -25,7 +25,12 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           }
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">{player.name}</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold text-white">{player.name}</h1>
+            {player.address && (
+              <span className="text-sm text-gray-400">📍 {player.address}</span>
+            )}
+          </div>
           <div className="flex gap-6 mt-3">
             <div className="text-center">
               <p className="text-2xl font-bold text-purple-400">{player.rating}</p>

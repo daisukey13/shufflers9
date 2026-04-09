@@ -31,14 +31,12 @@ export default async function MyPage() {
     .select('*, team:teams(*)')
     .eq('player_id', player.id)
 
-  // 受付中・エントリー終了の大会を取得
   const { data: openTournaments } = await supabase
     .from('tournaments')
     .select('id, name, status')
     .in('status', ['open', 'entry_closed', 'qualifying', 'qualifying_done', 'finals'])
     .order('created_at', { ascending: false })
 
-  // 自分のエントリー状況を取得
   const { data: myEntries } = await supabase
     .from('tournament_entries')
     .select('tournament_id, status, cancel_requested')
@@ -92,7 +90,14 @@ export default async function MyPage() {
                   : <span className="text-2xl">👤</span>
                 }
               </div>
-              <h2 className="text-2xl font-bold text-white">{player.name}</h2>
+              <div>
+  <div className="flex items-center gap-2 flex-wrap">
+    <h2 className="text-2xl font-bold text-white">{player.name}</h2>
+    {player.address && (
+      <span className="text-sm text-gray-400">📍 {player.address}</span>
+    )}
+  </div>
+</div>
             </div>
           </div>
 

@@ -8,7 +8,6 @@ export default async function PlayersPage() {
     getPlayerRankings(),
   ])
 
-  // ランキング順位マップを作成
   const rankMap = new Map(rankings.map((p, i) => [p.id, i + 1]))
 
   return (
@@ -46,9 +45,16 @@ export default async function PlayersPage() {
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white truncate">{player.name}</p>
-                    <p className="text-xs text-gray-400">HC {player.hc ?? 36} · {player.wins}勝 {player.losses}敗 · {winRate}%</p>
-                  </div>
+  <div className="flex items-center gap-2 flex-wrap">
+    <p className="font-medium text-white truncate">{player.name}</p>
+    {player.address && (
+      <span className="text-xs text-gray-500">📍 {player.address}</span>
+    )}
+  </div>
+  <p className="text-xs text-gray-400">
+    HC {player.hc ?? 36} · {player.wins}勝 {player.losses}敗 · {winRate}%
+  </p>
+</div>
                   <span className="font-bold text-purple-400 flex-shrink-0">{player.rating} pt</span>
                 </Link>
               )
