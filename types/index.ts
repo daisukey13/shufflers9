@@ -19,3 +19,21 @@ export type Player = {
   tournament_qualifications: number
   created_at: string
 }
+export type Team = {
+  id: string
+  name: string
+  avatar_url: string | null
+  rating: number
+  wins: number
+  losses: number
+  is_active: boolean
+  created_at: string
+}
+
+export type TeamMember = {
+  id: string
+  team_id: string
+  player_id: string
+  joined_at: string
+  player?: Player
+}
