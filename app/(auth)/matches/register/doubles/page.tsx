@@ -167,7 +167,7 @@ export default function AdminRegisterDoublesPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-lg">
+    <div className="space-y-6 max-w-lg mx-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">🎾 ダブルス試合登録</h1>
         <Link href="/admin/matches" className="text-sm text-gray-400 hover:text-white transition">
