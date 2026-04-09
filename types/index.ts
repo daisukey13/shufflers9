@@ -18,6 +18,9 @@ export type Player = {
   tournament_runner_ups: number
   tournament_qualifications: number
   created_at: string
+  doubles_rating: number
+doubles_wins: number
+doubles_losses: number
 }
 
 export type Team = {
@@ -101,4 +104,24 @@ export type Notice = {
   published_at: string | null
   created_by: string | null
   created_at: string
+}
+export type DoublesMatch = {
+  id: string
+  pair1_player1_id: string
+  pair1_player2_id: string
+  pair2_player1_id: string
+  pair2_player2_id: string
+  score1: number | null
+  score2: number | null
+  winner_pair: number | null
+  rating_change1: number
+  rating_change2: number
+  mode: string
+  registered_by: string | null
+  played_at: string
+  created_at: string
+  pair1_player1?: Player
+  pair1_player2?: Player
+  pair2_player1?: Player
+  pair2_player2?: Player
 }

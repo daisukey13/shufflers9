@@ -318,7 +318,7 @@ export default async function MyPage() {
           </div>
         )}
 
-        {/* クイックアクション */}
+       {/* クイックアクション */}
 <div className="grid grid-cols-2 gap-4">
   <Link
     href="/matches/register/singles"
@@ -327,10 +327,13 @@ export default async function MyPage() {
     <span className="text-3xl">🏒</span>
     <span className="text-sm font-medium text-purple-300">個人戦を登録</span>
   </Link>
-  <div className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-gray-800/30 rounded-2xl opacity-40 cursor-not-allowed">
-    <span className="text-3xl grayscale">👥</span>
-    <span className="text-sm font-medium text-gray-600">チーム戦（準備中）</span>
-  </div>
+  <Link
+    href="/matches/register/doubles"
+    className="flex flex-col items-center gap-2 p-5 bg-[#1a0f35] border border-purple-800/30 rounded-2xl hover:bg-purple-900/30 transition"
+  >
+    <span className="text-3xl">🎾</span>
+    <span className="text-sm font-medium text-green-300">ダブルスを登録</span>
+  </Link>
 </div>
 
         {/* 直近の試合 */}
