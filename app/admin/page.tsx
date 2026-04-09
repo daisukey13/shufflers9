@@ -18,6 +18,7 @@ export default async function AdminDashboard() {
     { href: '/admin/players', label: '👤 メンバー管理', sub: 'メンバーの追加・編集・脱退処理' },
     { href: '/admin/matches', label: '🏒 試合管理', sub: '試合の編集・削除' },
     { href: '/admin/matches/register', label: '➕ 試合登録', sub: '個人戦・チーム戦の結果登録' },
+    { href: '/admin/matches/register/doubles', label: '🎾 ダブルス登録', sub: 'ダブルス試合の結果登録' },
     { href: '/admin/tournaments', label: '🏆 大会管理', sub: '大会の作成・予選・本戦管理' },
     { href: '/admin/notices', label: '📢 お知らせ管理', sub: 'お知らせの作成・編集' },
     { href: '/admin/ranking-config', label: '⚙️ ランキング設定', sub: 'ランキング計算パラメータ設定' },
