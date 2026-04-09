@@ -14,7 +14,13 @@ export default function Header() {
   return (
     <header className="bg-[#12082a]/90 border-b border-purple-900/40 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-white font-bold text-lg tracking-wider">🏒</Link>
+        <Link href="/" className="flex items-center">
+          <img
+            src="/shuffleboard-puck-blue.png"
+            alt="ホーム"
+            className="w-10 h-10 object-contain hover:opacity-80 transition"
+          />
+        </Link>
         <nav className="flex gap-4 sm:gap-6">
           {navItems.map(item => (
             <Link

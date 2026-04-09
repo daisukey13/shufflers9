@@ -31,22 +31,29 @@ export default async function HomePage() {
     <div className="min-h-screen bg-transparent text-white">
 
       {/* ヒーロー */}
-      <section className="relative text-center py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#3b0764_0%,_transparent_70%)] pointer-events-none" />
-        <div className="relative flex justify-center mb-6">
-          <img
-            src="/logo-toyoura-shufflers.png"
-            alt="Toyoura Shufflers Club"
-            className="w-full max-w-2xl h-auto object-contain"
-          />
-        </div>
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <div className="h-px w-12 bg-orange-400/50" />
-          <div className="w-2 h-2 rounded-full bg-orange-400" />
-          <div className="h-px w-12 bg-orange-400/50" />
-        </div>
-        <p className="relative text-gray-400 text-sm">みんなで楽しくテーブルシャッフルボード！</p>
-      </section>
+<section className="relative text-center py-20 px-4 overflow-hidden">
+  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#3b0764_0%,_transparent_70%)] pointer-events-none" />
+  <div className="relative flex justify-center mb-4">
+    <img
+      src="/shuffleboard-puck-blue.png"
+      alt="Shuffleboard Puck"
+      className="w-24 h-24 object-contain opacity-90"
+    />
+  </div>
+  <div className="relative flex justify-center mb-6">
+    <img
+      src="/logo-toyoura-shufflers.png"
+      alt="Toyoura Shufflers Club"
+      className="w-full max-w-2xl h-auto object-contain"
+    />
+  </div>
+  <div className="flex items-center justify-center gap-2 mb-4">
+    <div className="h-px w-12 bg-orange-400/50" />
+    <div className="w-2 h-2 rounded-full bg-orange-400" />
+    <div className="h-px w-12 bg-orange-400/50" />
+  </div>
+  <p className="relative text-gray-400 text-sm">みんなで楽しくテーブルシャッフルボード！</p>
+</section>
 
       {/* クイックリンク */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-purple-900/20 border-y border-purple-800/30 mb-10">
