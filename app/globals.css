@@ -18,3 +18,15 @@ body {
 .avatar-glow {
   animation: glow-gold 1.5s ease-in-out infinite;
 }
+@keyframes glow-win {
+  0%, 100% {
+    box-shadow: 0 0 6px 2px #a855f7, 0 0 14px 4px #7c3aed;
+  }
+  50% {
+    box-shadow: 0 0 10px 3px #c084fc, 0 0 22px 6px #a855f7;
+  }
+}
+
+.avatar-glow-win {
+  animation: glow-win 2s ease-in-out infinite;
+}

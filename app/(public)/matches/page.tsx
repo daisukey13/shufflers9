@@ -26,7 +26,6 @@ export default async function MatchesPage() {
     .order('played_at', { ascending: false })
     .limit(30)
 
-  // 全試合を日時降順でまとめる
   type MatchItem = {
     id: string
     played_at: string
@@ -45,6 +44,10 @@ export default async function MatchesPage() {
     score2: number | null
     mode?: string
     sets?: { set_number: number; score1: number; score2: number }[]
+    player1_hc?: number | null
+    player2_hc?: number | null
+    player1_rank?: number | null
+    player2_rank?: number | null
   }
 
   const allMatches: MatchItem[] = [
@@ -61,6 +64,10 @@ export default async function MatchesPage() {
       player2Avatar: m.player2?.avatar_url ?? null,
       score1: m.score1,
       score2: m.score2,
+      player1_hc: m.player1_hc,
+      player2_hc: m.player2_hc,
+      player1_rank: m.player1_rank,
+      player2_rank: m.player2_rank,
     })),
     ...teams.map(m => ({
       id: m.id,
@@ -114,9 +121,9 @@ export default async function MatchesPage() {
     })),
   ].sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
 
-  const isUpset = (match: any) => {
-    if (!match.winner_id) return false
-    const isP1Winner = match.winner_id === match.player1_id
+  const isUpset = (match: MatchItem) => {
+    if (!match.winnerId) return false
+    const isP1Winner = match.winnerId === match.player1Id
     const winnerRank = isP1Winner ? match.player1_rank : match.player2_rank
     const loserRank = isP1Winner ? match.player2_rank : match.player1_rank
     const winnerHc = isP1Winner ? match.player1_hc : match.player2_hc
@@ -145,11 +152,11 @@ export default async function MatchesPage() {
         ) : (
           <div className="space-y-4">
             {allMatches.map(match => {
-              const upset = match.type === 'singles' ? isUpset(singles.find(m => m.id === match.id)) : false
+              const upset = isUpset(match)
+              const isP1Winner = match.winnerId === match.player1Id
               const date = new Date(match.played_at)
               const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
               const { label, color } = typeLabel(match.type, match.blockName)
-              const isP1Winner = match.winnerId === match.player1Id
 
               return (
                 <div key={`${match.type}-${match.id}`} className={`p-4 border rounded-2xl ${upset ? 'bg-yellow-900/20 border-yellow-600/40' : 'bg-purple-900/20 border-purple-800/30'}`}>
@@ -176,7 +183,13 @@ export default async function MatchesPage() {
                   <div className="flex items-center gap-4">
                     {/* Player1 */}
                     <Link href={`/players/${match.player1Id}`} className="flex-1 flex flex-col items-center gap-2">
-                      <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${upset && isP1Winner ? 'border-yellow-400 avatar-glow' : 'border-purple-700/50'}`}>
+                      <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${
+                        upset && isP1Winner
+                          ? 'border-yellow-400 avatar-glow'
+                          : isP1Winner && match.winnerId
+                            ? 'border-purple-400 avatar-glow-win'
+                            : 'border-purple-700/50'
+                      }`}>
                         {match.player1Avatar
                           ? <img src={match.player1Avatar} className="w-full h-full object-cover" />
                           : <span className="text-3xl flex items-center justify-center h-full">👤</span>
@@ -210,7 +223,13 @@ export default async function MatchesPage() {
 
                     {/* Player2 */}
                     <Link href={`/players/${match.player2Id}`} className="flex-1 flex flex-col items-center gap-2">
-                      <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${upset && !isP1Winner && match.winnerId ? 'border-yellow-400 avatar-glow' : 'border-purple-700/50'}`}>
+                      <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${
+                        upset && !isP1Winner && match.winnerId
+                          ? 'border-yellow-400 avatar-glow'
+                          : !isP1Winner && match.winnerId
+                            ? 'border-purple-400 avatar-glow-win'
+                            : 'border-purple-700/50'
+                      }`}>
                         {match.player2Avatar
                           ? <img src={match.player2Avatar} className="w-full h-full object-cover" />
                           : <span className="text-3xl flex items-center justify-center h-full">👤</span>
