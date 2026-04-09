@@ -1,48 +1,19 @@
-'use client'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import HeaderClient from './HeaderClient'
 
-const navItems = [
-  { href: '/rankings', label: 'ランキング' },
-  { href: '/players', label: 'メンバー' },
-  { href: '/matches', label: '試合結果' },
-  { href: '/tournaments', label: '大会' },
-]
+export default async function Header() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-export default function Header() {
-  const pathname = usePathname()
-  return (
-    <header className="bg-[#12082a]/90 border-b border-purple-900/40 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="flex items-center">
-          <img
-            src="/shuffleboard-puck-blue.png"
-            alt="ホーム"
-            className="w-10 h-10 object-contain hover:opacity-80 transition"
-          />
-        </Link>
-        <nav className="flex gap-4 sm:gap-6">
-          {navItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`text-sm transition ${
-                pathname.startsWith(item.href)
-                  ? 'text-purple-400 font-semibold'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <Link
-          href="/mypage"
-          className="w-9 h-9 rounded-full border-2 border-purple-600 flex items-center justify-center text-purple-400 hover:text-white hover:border-purple-400 transition"
-        >
-          👤
-        </Link>
-      </div>
-    </header>
-  )
+  let avatarUrl: string | null = null
+  if (user) {
+    const { data: player } = await supabase
+      .from('players')
+      .select('avatar_url')
+      .eq('user_id', user.id)
+      .single()
+    avatarUrl = player?.avatar_url ?? null
+  }
+
+  return <HeaderClient isLoggedIn={!!user} avatarUrl={avatarUrl} />
 }

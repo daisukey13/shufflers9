@@ -96,15 +96,23 @@ export default async function MyPage() {
       <div className="max-w-2xl mx-auto space-y-6">
 
         {/* ヘッダー */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-300">マイページ</h1>
-          <div className="flex gap-3">
-            <Link href="/mypage/edit" className="text-sm text-purple-400 hover:text-purple-300 transition">
-              ✏️ 編集
-            </Link>
-            <LogoutButton />
-          </div>
-        </div>
+<div className="flex items-center justify-between">
+  <h1 className="text-xl font-bold text-gray-300">マイページ</h1>
+  <div className="flex gap-3">
+    {player.is_admin && (
+      <Link
+        href="/admin"
+        className="text-sm text-yellow-400 hover:text-yellow-300 transition"
+      >
+        ⚙️ 管理画面
+      </Link>
+    )}
+    <Link href="/mypage/edit" className="text-sm text-purple-400 hover:text-purple-300 transition">
+      ✏️ 編集
+    </Link>
+    <LogoutButton />
+  </div>
+</div>
 
         {/* プロフィールカード */}
         <div className="bg-[#1a0f35] border border-purple-800/30 rounded-2xl p-6 space-y-5">
