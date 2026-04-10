@@ -495,9 +495,10 @@ export default function QualifyingClient({
                               className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                             >
                               <option value="">選択</option>
-                              {block.tournament_block_players.map(bp => (
-                                <option key={bp.player_id} value={bp.player_id}>{bp.player.name}</option>
-                              ))}
+{block.tournament_block_players.map(bp => (
+  <option key={bp.player_id} value={bp.player_id}>{bp.player.name}</option>
+))}
+<option value={defaultPlayerId}>DEFAULT（不戦勝）</option>
                             </select>
                           </div>
                           <div>
@@ -510,11 +511,14 @@ export default function QualifyingClient({
                               className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                             >
                               <option value="">選択</option>
-                              {block.tournament_block_players
-                                .filter(bp => bp.player_id !== matchPlayer1)
-                                .map(bp => (
-                                  <option key={bp.player_id} value={bp.player_id}>{bp.player.name}</option>
-                                ))}
+{block.tournament_block_players
+  .filter(bp => bp.player_id !== matchPlayer1)
+  .map(bp => (
+    <option key={bp.player_id} value={bp.player_id}>{bp.player.name}</option>
+  ))}
+{matchPlayer1 !== defaultPlayerId && (
+  <option value={defaultPlayerId}>DEFAULT（不戦勝）</option>
+)}
                             </select>
                           </div>
                         </div>

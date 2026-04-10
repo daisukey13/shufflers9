@@ -206,7 +206,10 @@ export default function FinalsClient({
     router.refresh()
   }
 
-  const allPlayers = qualifiers.map(q => q.winner?.player).filter(Boolean) as Player[]
+  const allPlayers = [
+  ...qualifiers.map(q => q.winner?.player).filter(Boolean) as Player[],
+  { id: '00000000-0000-0000-0000-000000000000', name: 'DEFAULT（不戦勝）', avatar_url: null },
+]
   const roundsInFinals = Array.from(new Set(finalsMatches.map(m => m.round))).sort()
 
   const champion = isFinalsLocked
