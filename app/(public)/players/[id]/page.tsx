@@ -29,7 +29,6 @@ export default async function PlayerPage({
 
   if (!player) notFound()
 
-  // 大会戦績を取得
   const { data: finalsParticipation } = await supabase
     .from('tournament_finals_matches')
     .select('*, tournament:tournaments(id, name, status)')
@@ -65,11 +64,26 @@ export default async function PlayerPage({
   const doublesWinRate = (player.doubles_wins ?? 0) + (player.doubles_losses ?? 0) > 0
     ? Math.round(((player.doubles_wins ?? 0) / ((player.doubles_wins ?? 0) + (player.doubles_losses ?? 0))) * 100) : 0
 
-  // ページャー
   const totalSinglesPages = Math.ceil(matches.length / PER_PAGE)
   const totalDoublesPages = Math.ceil(doublesMatches.length / PER_PAGE)
   const pagedMatches = matches.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE)
   const pagedDoubles = doublesMatches.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE)
+
+  // パートナーとの通算成績を事前計算
+  const partnerStatsMap = new Map<string, { wins: number; losses: number }>()
+  doublesMatches.forEach((m: any) => {
+    const isPair1 = m.pair1_player1_id === player.id || m.pair1_player2_id === player.id
+    const partner = isPair1
+      ? (m.pair1_player1_id === player.id ? m.pair1_player2 : m.pair1_player1)
+      : (m.pair2_player1_id === player.id ? m.pair2_player2 : m.pair2_player1)
+    if (!partner?.id) return
+    const isWin = (isPair1 && m.winner_pair === 1) || (!isPair1 && m.winner_pair === 2)
+    const prev = partnerStatsMap.get(partner.id) ?? { wins: 0, losses: 0 }
+    partnerStatsMap.set(partner.id, {
+      wins: prev.wins + (isWin ? 1 : 0),
+      losses: prev.losses + (isWin ? 0 : 1),
+    })
+  })
 
   return (
     <div className="space-y-8 max-w-3xl mx-auto px-4 py-8">
@@ -288,6 +302,8 @@ export default async function PlayerPage({
                   const opp1 = isPair1 ? match.pair2_player1 : match.pair1_player1
                   const opp2 = isPair1 ? match.pair2_player2 : match.pair1_player2
                   const ratingChange = isPair1 ? match.rating_change1 : match.rating_change2
+                  const partnerId = partner?.id
+                  const partnerStats = partnerId ? partnerStatsMap.get(partnerId) : null
 
                   return (
                     <div key={match.id} className={`flex items-center gap-4 p-4 rounded-xl border-l-4 ${isWin ? 'border-green-500 bg-green-900/10' : 'border-red-500 bg-red-900/10'}`}>
@@ -298,8 +314,17 @@ export default async function PlayerPage({
                         <p className="text-sm text-white">
                           vs {opp1?.name ?? '不明'} / {opp2?.name ?? '不明'}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          パートナー: {partner?.name ?? '不明'}
+                        <p className="text-xs mt-0.5">
+                          <span className="text-yellow-400 font-semibold">
+                            🤝 {partner?.name ?? '不明'}
+                          </span>
+                          {partnerStats && (
+                            <span className="ml-1.5">
+                              <span className="text-green-400">{partnerStats.wins}勝</span>
+                              <span className="text-gray-500"> / </span>
+                              <span className="text-red-400">{partnerStats.losses}敗</span>
+                            </span>
+                          )}
                         </p>
                         <p className="text-xs text-gray-400">
                           {new Date(match.played_at).toLocaleDateString('ja-JP')}

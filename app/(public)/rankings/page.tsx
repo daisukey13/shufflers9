@@ -58,7 +58,9 @@ export default async function RankingsPage({
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-yellow-100 text-xl truncate">{player.name}</p>
-            <p className="text-sm text-gray-400 mt-0.5">HC {player.hc ?? 36}</p>
+            <p className="text-sm text-gray-400 mt-0.5">
+              HC {player.hc ?? 36}{player.address ? ` · 📍 ${player.address}` : ''}
+            </p>
             <div className="flex gap-3 mt-2">
               <span className="text-sm text-green-300">{ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins}勝</span>
               <span className="text-sm text-red-300">{ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses}敗</span>
@@ -96,7 +98,9 @@ export default async function RankingsPage({
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-white truncate text-base">{player.name}</p>
-            <p className="text-xs text-gray-400">HC {player.hc ?? 36} · {ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins}勝 {ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses}敗 · {wr}%</p>
+            <p className="text-xs text-gray-400">
+              HC {player.hc ?? 36}{player.address ? ` · 📍 ${player.address}` : ''} · {ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins}勝 {ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses}敗 · {wr}%
+            </p>
           </div>
           <span className="font-bold text-purple-400 flex-shrink-0 text-lg">
             {ratingKey === 'doubles_rating' ? player.doubles_rating : player.rating} pt
@@ -129,7 +133,6 @@ export default async function RankingsPage({
             }`}
           >
             ダブルスポイント
-          
           </Link>
         </div>
 
