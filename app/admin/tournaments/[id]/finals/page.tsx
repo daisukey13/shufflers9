@@ -14,7 +14,6 @@ export default async function FinalsPage({ params }: { params: Promise<{ id: str
 
   if (!tournament) notFound()
 
-  // 予選各ブロックの1位を取得
   const { data: blocks } = await supabase
     .from('tournament_blocks')
     .select('*, tournament_block_players(*, player:players(id, name, avatar_url, hc, rating))')
@@ -32,6 +31,13 @@ export default async function FinalsPage({ params }: { params: Promise<{ id: str
     .eq('tournament_id', id)
     .order('round')
     .order('match_number')
+
+  // DEFAULTプレーヤーを取得
+  const { data: defaultPlayer } = await supabase
+    .from('players')
+    .select('id, name, avatar_url')
+    .eq('user_id', '00000000-0000-0000-0000-000000000000')
+    .single()
 
   // 予選通過者（各ブロック1位）を計算
   const qualifiers = (blocks ?? []).map(block => {
@@ -63,6 +69,7 @@ export default async function FinalsPage({ params }: { params: Promise<{ id: str
       tournament={tournament}
       qualifiers={qualifiers}
       finalsMatches={finalsMatches ?? []}
+      defaultPlayerId={defaultPlayer?.id ?? ''}
     />
   )
 }

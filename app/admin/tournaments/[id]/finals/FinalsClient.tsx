@@ -25,10 +25,12 @@ export default function FinalsClient({
   tournament,
   qualifiers,
   finalsMatches,
+  defaultPlayerId,
 }: {
   tournament: Tournament
   qualifiers: Qualifier[]
   finalsMatches: FinalsMatch[]
+  defaultPlayerId: string
 }) {
   const [showMatchForm, setShowMatchForm] = useState(false)
   const [round, setRound] = useState(1)
@@ -208,7 +210,7 @@ export default function FinalsClient({
 
   const allPlayers = [
   ...qualifiers.map(q => q.winner?.player).filter(Boolean) as Player[],
-  { id: '00000000-0000-0000-0000-000000000000', name: 'DEFAULT（不戦勝）', avatar_url: null },
+  ...(defaultPlayerId ? [{ id: defaultPlayerId, name: 'DEFAULT（不戦勝）', avatar_url: null }] : []),
 ]
   const roundsInFinals = Array.from(new Set(finalsMatches.map(m => m.round))).sort()
 
