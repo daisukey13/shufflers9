@@ -7,6 +7,10 @@ const geist = Geist({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Toyoura Shufflers Club',
   description: 'テーブルシャッフルボード クラブランキング',
+  icons: {
+    icon: '/shuffleboard-puck-blue.png',
+    apple: '/shuffleboard-puck-blue.png',
+  },
 }
 
 export default function RootLayout({

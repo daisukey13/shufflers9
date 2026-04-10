@@ -1,30 +1,31 @@
 'use client'
-
 import { useState } from 'react'
 
 type Avatar = { id: string; url: string }
-
 type Props = {
   avatars: Avatar[]
   selected: string
   onSelect: (url: string) => void
+  size?: 'sm' | 'md'
 }
 
-export default function AvatarPicker({ avatars, selected, onSelect }: Props) {
+export default function AvatarPicker({ avatars, selected, onSelect, size = 'md' }: Props) {
   const [page, setPage] = useState(0)
-  const perPage = 20
+  const perPage = 30
   const totalPages = Math.ceil(avatars.length / perPage)
   const visible = avatars.slice(page * perPage, (page + 1) * perPage)
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-5 gap-2">
+    <div className="space-y-2">
+      <div className={size === 'sm' ? 'grid grid-cols-10 gap-1' : 'grid grid-cols-5 gap-2'}>
         {visible.map(avatar => (
           <button
             key={avatar.id}
             type="button"
             onClick={() => onSelect(avatar.url)}
-            className={`rounded-full overflow-hidden border-2 transition aspect-square ${
+            className={`rounded-full overflow-hidden border-2 transition flex-shrink-0 ${
+              size === 'sm' ? 'w-9 h-9' : 'aspect-square'
+            } ${
               selected === avatar.url
                 ? 'border-purple-400 scale-110'
                 : 'border-transparent hover:border-purple-600'
