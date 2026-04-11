@@ -35,7 +35,6 @@ export default async function TournamentDetailPage({ params }: { params: Promise
     .order('round')
     .order('match_number')
 
-  // ランキング順位を取得
   const { data: rankingPlayers } = await supabase
     .from('players')
     .select('id')
@@ -45,6 +44,38 @@ export default async function TournamentDetailPage({ params }: { params: Promise
 
   const rankings = (rankingPlayers ?? []).map((p, i) => ({ id: p.id, rank: i + 1 }))
 
+  // ログイン状態とエントリー状況を取得
+  const { data: { user } } = await supabase.auth.getUser()
+  let currentPlayer = null
+  let myEntry = null
+
+  if (user) {
+    const { data: player } = await supabase
+      .from('players')
+      .select('id, name, is_admin')
+      .eq('user_id', user.id)
+      .single()
+
+    if (player && !player.is_admin) {
+      currentPlayer = player
+      const { data: entry } = await supabase
+        .from('tournament_entries')
+        .select('*')
+        .eq('tournament_id', id)
+        .eq('player_id', player.id)
+        .single()
+      myEntry = entry
+    }
+  }
+
+  // エントリー済みプレーヤー一覧
+  const { data: entries } = await supabase
+    .from('tournament_entries')
+    .select('*, player:players(id, name, avatar_url)')
+    .eq('tournament_id', id)
+    .neq('status', 'cancelled')
+    .order('created_at')
+
   return (
     <TournamentDetailClient
       tournament={tournament}
@@ -52,6 +83,10 @@ export default async function TournamentDetailPage({ params }: { params: Promise
       qualifyingMatches={qualifyingMatches ?? []}
       finalsMatches={finalsMatches ?? []}
       rankings={rankings}
+      isLoggedIn={!!user}
+      currentPlayer={currentPlayer}
+      myEntry={myEntry}
+      entries={entries ?? []}
     />
   )
 }
