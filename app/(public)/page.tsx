@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { getPlayerRankings } from '@/lib/queries/rankings'
-import { getRecentSinglesMatches } from '@/lib/queries/matches'
+import { getRecentAllMatches } from '@/lib/queries/matches'
 
 export default async function HomePage() {
   const [players, recentMatches] = await Promise.all([
     getPlayerRankings(),
-    getRecentSinglesMatches(3),
+    getRecentSinglesMatches(5),
   ])
   const top5 = players.slice(0, 5)
   const avgRating = players.length > 0
@@ -204,57 +204,61 @@ export default async function HomePage() {
         )}
       </section>
 
-      {/* 最近の試合 */}
-      <section className="px-4 mb-14 max-w-3xl mx-auto">
-        <h2 className="text-xl font-bold mb-6">🔄 最近の試合</h2>
-        {recentMatches.length === 0 ? (
-          <p className="text-gray-500 text-sm text-center">試合がありません</p>
-        ) : (
-          <div className="space-y-3">
-            {recentMatches.map(match => {
-              const winnerId = match.winner_id
-              const date = new Date(match.played_at)
-              const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
-              return (
-                <div key={match.id} className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-2xl">
-                  <p className="text-xs text-gray-400 mb-3">{dateStr}</p>
-                  <div className="flex items-center gap-3">
-                    <Link href={`/players/${match.player1_id}`} className="flex-1 flex items-center gap-2 justify-end">
-                      <span className={`font-semibold text-sm truncate ${winnerId === match.player1_id ? 'text-white' : 'text-gray-400'}`}>
-                        {match.player1?.name ?? '不明'}
-                      </span>
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
-                        {match.player1?.avatar_url
-                          ? <img src={match.player1.avatar_url} className="w-full h-full object-cover" />
-                          : <span className="text-3xl flex items-center justify-center h-full">👤</span>
-                        }
-                      </div>
-                    </Link>
-                    <div className="text-center flex-shrink-0">
-                      <div className="w-9 h-9 rounded-full bg-red-600 flex items-center justify-center text-xs font-bold mb-1 mx-auto">VS</div>
-                      <p className="text-base font-bold text-white">{match.score1} - {match.score2}</p>
-                    </div>
-                    <Link href={`/players/${match.player2_id}`} className="flex-1 flex items-center gap-2">
-                      <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
-                        {match.player2?.avatar_url
-                          ? <img src={match.player2.avatar_url} className="w-full h-full object-cover" />
-                          : <span className="text-3xl flex items-center justify-center h-full">👤</span>
-                        }
-                      </div>
-                      <span className={`font-semibold text-sm truncate ${winnerId === match.player2_id ? 'text-white' : 'text-gray-400'}`}>
-                        {match.player2?.name ?? '不明'}
-                      </span>
-                    </Link>
-                  </div>
+     {/* 最近の試合 */}
+<section className="px-4 mb-14 max-w-3xl mx-auto">
+  <h2 className="text-xl font-bold mb-6">🔄 最近の試合</h2>
+  {recentMatches.length === 0 ? (
+    <p className="text-gray-500 text-sm text-center">試合がありません</p>
+  ) : (
+    <div className="space-y-3">
+      {recentMatches.map(match => {
+        const winnerId = match.winner_id
+        const date = new Date(match.played_at)
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+        return (
+          <div key={match.id} className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-gray-400">{dateStr}</p>
+              {match.label && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-700/50 text-purple-300">
+                  {match.label}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Link href={`/players/${match.player1?.id}`} className="flex-1 flex items-center gap-2 justify-end">
+                <span className={`font-semibold text-sm truncate ${winnerId === match.player1?.id ? 'text-white' : 'text-gray-400'}`}>
+                  {match.player1?.name ?? '不明'}
+                </span>
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
+                  {match.player1?.avatar_url
+                    ? <img src={match.player1.avatar_url} className="w-full h-full object-cover" />
+                    : <span className="text-3xl flex items-center justify-center h-full">👤</span>
+                  }
                 </div>
-              )
-            })}
+              </Link>
+              <div className="text-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-red-600 flex items-center justify-center text-xs font-bold mb-1 mx-auto">VS</div>
+                <p className="text-base font-bold text-white">{match.score1} - {match.score2}</p>
+              </div>
+              <Link href={`/players/${match.player2?.id}`} className="flex-1 flex items-center gap-2">
+                <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
+                  {match.player2?.avatar_url
+                    ? <img src={match.player2.avatar_url} className="w-full h-full object-cover" />
+                    : <span className="text-3xl flex items-center justify-center h-full">👤</span>
+                  }
+                </div>
+                <span className={`font-semibold text-sm truncate ${winnerId === match.player2?.id ? 'text-white' : 'text-gray-400'}`}>
+                  {match.player2?.name ?? '不明'}
+                </span>
+              </Link>
+            </div>
           </div>
-        )}
-        <Link href="/matches" className="block text-center text-purple-400 hover:text-purple-300 mt-5 text-sm">
-          すべての試合を見る →
-        </Link>
-      </section>
+        )
+      })}
+    </div>
+  )}
+</section>
     </div>
   )
 }

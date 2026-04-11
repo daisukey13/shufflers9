@@ -112,17 +112,28 @@ const handleAutoGenerate = async () => {
 const handleEditMatch = async () => {
   if (!editMatch) return
   setEditLoading(true)
+
   const s1 = parseInt(editScore1)
   const s2 = parseInt(editScore2)
+
   if (isNaN(s1) || isNaN(s2)) {
     setEditLoading(false)
     return
   }
+
   const winnerId = s1 > s2 ? editMatch.player1_id : s2 > s1 ? editMatch.player2_id : null
+
   await supabase
     .from('tournament_qualifying_matches')
-    .update({ score1: s1, score2: s2, winner_id: winnerId })
+    .update({
+      player1_id: editMatch.player1_id,
+      player2_id: editMatch.player2_id,
+      score1: s1,
+      score2: s2,
+      winner_id: winnerId,
+    })
     .eq('id', editMatch.id)
+
   setEditMatch(null)
   setEditLoading(false)
   router.refresh()
@@ -680,43 +691,72 @@ const handleEditMatch = async () => {
             )
           })}
         </div>
-      )}
-   </div>
+    )}
+      {editMatch && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-[#1e0f3a] border border-purple-800/50 rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="text-lg font-bold">試合を編集</h2>
+            
+            {/* プレーヤー1 */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">プレーヤー1</label>
+              <select
+                value={editMatch.player1_id}
+                onChange={e => setEditMatch({ ...editMatch, player1_id: e.target.value, player1: players.find(p => p.id === e.target.value) ?? editMatch.player1 })}
+                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                {enteredPlayers.map(p => (
+  <option key={p.id} value={p.id}>{p.name}</option>
+))}
+              </select>
+            </div>
 
-    {editMatch && (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
-        <div className="bg-[#1e0f3a] border border-purple-800/50 rounded-2xl p-6 w-full max-w-sm space-y-4">
-          <h2 className="text-lg font-bold">スコアを編集</h2>
-          <p className="text-sm text-gray-400">{editMatch.player1.name} vs {editMatch.player2.name}</p>
-          <div className="flex gap-4 items-center">
-            <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">{editMatch.player1.name}</label>
-              <input type="number" min="0" max="15" value={editScore1}
-                onChange={e => setEditScore1(e.target.value)}
-                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
+            {/* スコア */}
+            <div className="flex gap-4 items-center">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-400 mb-1">スコア1</label>
+                <input type="number" min="0" max="15" value={editScore1}
+                  onChange={e => setEditScore1(e.target.value)}
+                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <span className="text-gray-400 mt-4">-</span>
+              <div className="flex-1">
+                <label className="block text-xs text-gray-400 mb-1">スコア2</label>
+                <input type="number" min="0" max="15" value={editScore2}
+                  onChange={e => setEditScore2(e.target.value)}
+                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
             </div>
-            <span className="text-gray-400 mt-4">-</span>
-            <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">{editMatch.player2.name}</label>
-              <input type="number" min="0" max="15" value={editScore2}
-                onChange={e => setEditScore2(e.target.value)}
+
+            {/* プレーヤー2 */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">プレーヤー2</label>
+              <select
+                value={editMatch.player2_id}
+                onChange={e => setEditMatch({ ...editMatch, player2_id: e.target.value, player2: players.find(p => p.id === e.target.value) ?? editMatch.player2 })}
                 className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
+              >
+                {enteredPlayers.map(p => (
+  <option key={p.id} value={p.id}>{p.name}</option>
+))}
+              </select>
             </div>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={handleEditMatch} disabled={editLoading}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition">
-              {editLoading ? '保存中...' : '保存'}
-            </button>
-            <button onClick={() => setEditMatch(null)}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition">
-              キャンセル
-            </button>
+
+<div className="flex gap-3">
+              <button onClick={handleEditMatch} disabled={editLoading}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition">
+                {editLoading ? '保存中...' : '保存'}
+              </button>
+              <button onClick={() => setEditMatch(null)}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition">
+                キャンセル
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
+    </div>
   )
 }

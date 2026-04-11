@@ -49,3 +49,68 @@ export async function getPlayerDoublesMatches(playerId: string) {
   if (error) throw error
   return data ?? []
 }
+export async function getRecentAllMatches(limit = 5) {
+  const supabase = await createClient()
+
+  // シングルス試合
+  const { data: singles } = await supabase
+    .from('singles_matches')
+    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url)')
+    .order('played_at', { ascending: false })
+    .limit(limit)
+
+  // 予選試合
+  const { data: qualifying } = await supabase
+    .from('tournament_qualifying_matches')
+    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), block:tournament_blocks(tournament_id, block_name, tournament:tournaments(name))')
+    .eq('mode', 'normal')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  // 本戦試合
+  const { data: finals } = await supabase
+    .from('tournament_finals_matches')
+    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), tournament:tournaments(name)')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  // 統合して日付順にソート
+  const all = [
+    ...(singles ?? []).map((m: any) => ({
+      id: m.id,
+      type: 'singles' as const,
+      player1: m.player1,
+      player2: m.player2,
+      score1: m.score1,
+      score2: m.score2,
+      winner_id: m.winner_id,
+      played_at: m.played_at,
+      label: null,
+    })),
+    ...(qualifying ?? []).map((m: any) => ({
+      id: m.id,
+      type: 'qualifying' as const,
+      player1: m.player1,
+      player2: m.player2,
+      score1: m.score1,
+      score2: m.score2,
+      winner_id: m.winner_id,
+      played_at: m.created_at,
+      label: m.block?.tournament?.name ? `${m.block.tournament.name} 予選` : '予選',
+    })),
+    ...(finals ?? []).map((m: any) => ({
+      id: m.id,
+      type: 'finals' as const,
+      player1: m.player1,
+      player2: m.player2,
+      score1: m.tournament_finals_sets?.[0]?.score1 ?? null,
+      score2: m.tournament_finals_sets?.[0]?.score2 ?? null,
+      winner_id: m.winner_id,
+      played_at: m.created_at,
+      label: m.tournament?.name ? `${m.tournament.name} 本戦` : '本戦',
+    })),
+  ].sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
+   .slice(0, limit)
+
+  return all
+}
