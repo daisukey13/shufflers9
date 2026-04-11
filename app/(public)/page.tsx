@@ -1,12 +1,16 @@
 import Link from 'next/link'
 import { getPlayerRankings } from '@/lib/queries/rankings'
 import { getRecentAllMatches } from '@/lib/queries/matches'
+import { getRecentNotices } from '@/lib/queries/notices'
+import { getRecentTournamentWinners } from '@/lib/queries/tournaments'
 
 export default async function HomePage() {
-  const [players, recentMatches] = await Promise.all([
-    getPlayerRankings(),
-    getRecentAllMatches(5),
-  ])
+  const [players, recentMatches, notices, tournamentWinners] = await Promise.all([
+  getPlayerRankings(),
+  getRecentAllMatches(5),
+  getRecentNotices(5),
+  getRecentTournamentWinners(5),
+])
   const top5 = players.slice(0, 5)
   const avgRating = players.length > 0
     ? Math.round(players.reduce((a, p) => a + p.rating, 0) / players.length)
@@ -111,7 +115,36 @@ export default async function HomePage() {
           </div>
         ))}
       </section>
-
+{/* お知らせ */}
+{notices.length > 0 && (
+  <section className="px-4 mb-10 max-w-3xl mx-auto">
+    <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-yellow-100">
+      📢 お知らせ
+    </h2>
+    <div className="space-y-2">
+      {notices.map(notice => {
+        const publishedAt = new Date(notice.published_at)
+        const isNew = (Date.now() - publishedAt.getTime()) < 7 * 24 * 60 * 60 * 1000
+        const dateStr = `${publishedAt.getFullYear()}/${publishedAt.getMonth() + 1}/${publishedAt.getDate()}`
+        return (
+          <Link
+            key={notice.id}
+            href={`/notices/${notice.id}`}
+            className="flex items-center gap-3 p-4 bg-purple-900/20 border border-purple-800/30 rounded-2xl hover:bg-purple-900/40 transition"
+          >
+            {isNew && (
+              <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-red-500 text-white">
+                NEW
+              </span>
+            )}
+            <span className="flex-1 text-sm text-gray-100 truncate">{notice.title}</span>
+            <span className="flex-shrink-0 text-xs text-gray-500">{dateStr}</span>
+          </Link>
+        )
+      })}
+    </div>
+  </section>
+)}
       {/* トッププレーヤー */}
       <section className="px-4 mb-14 max-w-6xl mx-auto">
         <h2 className="text-xl font-bold mb-8 flex items-center gap-2 text-yellow-100">
@@ -203,7 +236,30 @@ export default async function HomePage() {
           </>
         )}
       </section>
-
+{/* 大会優勝者 */}
+{tournamentWinners.length > 0 && (
+  <section className="px-4 mb-10 max-w-3xl mx-auto">
+    <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-yellow-100">
+      🥇 大会優勝者
+    </h2>
+    <div className="flex gap-4 overflow-x-auto pb-2">
+      {tournamentWinners.map(tw => (
+        <div key={tw.tournamentId} className="flex flex-col items-center gap-2 min-w-[90px]">
+          <Link href={`/players/${tw.winner.id}`} className="flex flex-col items-center gap-2">
+            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 shadow shadow-yellow-400/30">
+              {tw.winner.avatar_url
+                ? <img src={tw.winner.avatar_url} className="w-full h-full object-cover" />
+                : <span className="text-2xl flex items-center justify-center h-full bg-gray-800">👤</span>
+              }
+            </div>
+            <span className="text-xs font-semibold text-yellow-100 text-center leading-tight">{tw.winner.name}</span>
+          </Link>
+          <span className="text-xs text-gray-500 text-center leading-tight">{tw.tournamentName}</span>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
      {/* 最近の試合 */}
 <section className="px-4 mb-14 max-w-3xl mx-auto">
   <h2 className="text-xl font-bold mb-6">🔄 最近の試合</h2>
