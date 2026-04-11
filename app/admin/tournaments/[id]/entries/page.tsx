@@ -18,7 +18,7 @@ export default async function EntriesAdminPage({ params }: { params: Promise<{ i
 
   const { data: entries } = await supabase
     .from('tournament_entries')
-    .select('*, player:players(id, name, avatar_url, hc, rating)')
+    .select('*, player:players!tournament_entries_player_id_fkey(id, name, avatar_url, hc, rating)')
     .eq('tournament_id', id)
     .order('created_at')
 
