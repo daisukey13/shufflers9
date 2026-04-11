@@ -13,11 +13,12 @@ export default async function EntryPage({ params }: { params: Promise<{ id: stri
 
   const { data: player } = await supabase
     .from('players')
-    .select('id, name, hc, rating')
+    .select('id, name, hc, rating, is_admin')
     .eq('user_id', user.id)
     .single()
 
   if (!player) redirect('/login')
+  if (player.is_admin) redirect(`/tournaments/${id}`)
 
   const { data: tournament } = await supabase
     .from('tournaments')

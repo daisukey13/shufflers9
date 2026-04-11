@@ -124,10 +124,24 @@ export default function EntryClient({
           </div>
         )}
 
+        {/* エントリー完了メッセージ */}
+        {success && !existingEntry && (
+          <div className="p-4 bg-blue-900/20 border border-blue-700/30 rounded-xl space-y-2">
+            <p className="text-green-400 text-sm font-semibold">✅ エントリーが完了しました！</p>
+            <p className="text-blue-300 text-sm">
+              📢 予選の組み合わせは、サイトの
+              <Link href="/notices" className="text-purple-400 hover:text-purple-300 underline mx-1">
+                お知らせ欄
+              </Link>
+              およびLINE公式アカウントでお知らせします。
+            </p>
+          </div>
+        )}
+
         {error && (
           <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
         )}
-        {success && (
+        {success && existingEntry && (
           <p className="text-sm text-green-400 bg-green-900/20 px-3 py-2 rounded-lg">✅ 完了しました！</p>
         )}
 
