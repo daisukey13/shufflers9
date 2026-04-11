@@ -245,7 +245,7 @@ export default async function HomePage() {
     <div className="flex gap-4 overflow-x-auto pb-2">
       {tournamentWinners.map(tw => (
         <div key={tw.tournamentId} className="flex flex-col items-center gap-2 min-w-[90px]">
-          <Link href={`/players/${tw.winner.id}`} className="flex flex-col items-center gap-2">
+          <Link href={`/tournaments/${tw.tournamentId}`} className="flex flex-col items-center gap-2">
             <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 shadow shadow-yellow-400/30">
               {tw.winner.avatar_url
                 ? <img src={tw.winner.avatar_url} className="w-full h-full object-cover" />
