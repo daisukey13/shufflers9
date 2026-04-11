@@ -28,6 +28,7 @@ export default function QualifyingClient({
 
   tournament: Tournament
   players: Player[]
+  enteredPlayers: Player[] 
   defaultPlayerId: string
   blocks: Block[]
   matches: Match[]
