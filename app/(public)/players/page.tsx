@@ -28,12 +28,12 @@ export default async function PlayersPage({
     addressCount.set(addr, (addressCount.get(addr) ?? 0) + 1)
   })
 
-  // ADDRESS_OPTIONSの順序を維持しつつ、多い順にソート
+  // ADDRESS_OPTIONSの順序を維持してソート
   const sortedCategories = [
-    ...ADDRESS_OPTIONS.filter(a => addressCount.has(a))
-      .sort((a, b) => (addressCount.get(b) ?? 0) - (addressCount.get(a) ?? 0)),
-    ...(addressCount.has('その他') ? ['その他'] : []),
-  ]
+  ...ADDRESS_OPTIONS.filter(a => addressCount.has(a)),
+  ...(addressCount.has('その他') ? ['その他'] : []),
+]
+
 
   // カテゴリー順に並び替えたプレーヤーリスト
   const sortedPlayers = [

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import AvatarPicker from '@/components/ui/AvatarPicker'
@@ -23,11 +23,88 @@ export default function MyPageEditClient({
   const [phone, setPhone] = useState(player.phone ?? '')
   const [address, setAddress] = useState(player.address ?? '')
   const [avatarUrl, setAvatarUrl] = useState(player.avatar_url ?? '')
+  const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  // 画像をリサイズしてアップロード
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    setError(null)
+
+    try {
+      // canvasでリサイズ（200x200px）
+      const resized = await resizeImage(file, 200, 200)
+
+      const fileName = `${player.id}_${Date.now()}.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(`uploads/${fileName}`, resized, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        })
+
+      if (uploadError) {
+        setError('アップロードに失敗しました: ' + uploadError.message)
+        setUploading(false)
+        return
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(`uploads/${fileName}`)
+
+      setAvatarUrl(publicUrl)
+    } catch (err) {
+      setError('画像の処理に失敗しました')
+    }
+
+    setUploading(false)
+  }
+
+  // 画像リサイズ関数
+  const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round(height * maxWidth / width)
+            width = maxWidth
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round(width * maxHeight / height)
+            height = maxHeight
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, width, height)
+        URL.revokeObjectURL(url)
+        canvas.toBlob(blob => {
+          if (blob) resolve(blob)
+          else reject(new Error('変換失敗'))
+        }, 'image/jpeg', 0.8)
+      }
+      img.onerror = reject
+      img.src = url
+    })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -81,15 +158,40 @@ export default function MyPageEditClient({
           {/* アバター */}
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-300">アバター</label>
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-3">
               <div className="w-24 h-24 rounded-full border-2 border-purple-500 overflow-hidden bg-gray-800 flex items-center justify-center">
                 {avatarUrl
                   ? <img src={avatarUrl} className="w-full h-full object-cover" />
                   : <span className="text-4xl">👤</span>
                 }
               </div>
+
+              {/* 画像アップロードボタン */}
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="px-4 py-1.5 bg-blue-700/50 hover:bg-blue-600/50 rounded-lg text-xs text-blue-300 transition disabled:opacity-50"
+                >
+                  {uploading ? 'アップロード中...' : '📷 写真をアップロード'}
+                </button>
+                <p className="text-xs text-gray-500">JPG/PNG・自動で200×200pxにリサイズ</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </div>
             </div>
-            <AvatarPicker avatars={avatars} selected={avatarUrl} onSelect={setAvatarUrl} />
+
+            {/* プリセットアバター */}
+            <div>
+              <p className="text-xs text-gray-400 mb-2">またはプリセットから選択：</p>
+              <AvatarPicker avatars={avatars} selected={avatarUrl} onSelect={setAvatarUrl} />
+            </div>
           </div>
 
           {/* 表示名 */}
@@ -166,7 +268,7 @@ export default function MyPageEditClient({
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || uploading}
             className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
           >
             {loading ? '保存中...' : '保存する'}
