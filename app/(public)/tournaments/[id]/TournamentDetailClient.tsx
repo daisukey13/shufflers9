@@ -21,6 +21,7 @@ type FinalsMatch = {
   tournament_finals_sets: FinalsSet[]
 }
 type Tournament = { id: string; name: string; status: string; format: string; description: string | null }
+type Entry = { id: string; status: string; cancel_requested: boolean; preferred_dates: string | null; player: Player }
 
 export default function TournamentDetailClient({
   tournament,
@@ -28,12 +29,20 @@ export default function TournamentDetailClient({
   qualifyingMatches,
   finalsMatches,
   rankings,
+  isLoggedIn,
+  currentPlayer,
+  myEntry,
+  entries,
 }: {
   tournament: Tournament
   blocks: Block[]
   qualifyingMatches: QualifyingMatch[]
   finalsMatches: FinalsMatch[]
   rankings: { id: string; rank: number }[]
+  isLoggedIn: boolean
+  currentPlayer: { id: string; name: string; is_admin: boolean } | null
+  myEntry: Entry | null
+  entries: Entry[]
 }) {
   const [tab, setTab] = useState<'qualifying' | 'finals'>('qualifying')
   const [popupPlayer, setPopupPlayer] = useState<Player & { hc?: number; rating?: number } | null>(null)
@@ -122,6 +131,85 @@ export default function TournamentDetailClient({
             {STATUS_LABELS[tournament.status] ?? tournament.status}
           </span>
         </div>
+
+
+        {/* エントリーセクション */}
+        {(tournament.status === 'open' || tournament.status === 'entry_closed') && (
+          <div className="bg-purple-900/20 border border-purple-800/30 rounded-2xl p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-gray-300">📋 エントリー</h2>
+
+            {/* 自分のエントリー状況 */}
+            {isLoggedIn && currentPlayer && (
+              <div>
+                {myEntry ? (
+                  <div className={`p-3 rounded-xl border text-sm ${
+                    myEntry.cancel_requested ? 'bg-red-900/20 border-red-700/30 text-red-400' :
+                    'bg-green-900/20 border-green-700/30 text-green-400'
+                  }`}>
+                    {myEntry.cancel_requested ? '⚠️ キャンセル申請中' : '✅ エントリー済み'}
+                  </div>
+                ) : tournament.status === 'open' ? (
+                  <Link
+                    href={`/tournaments/${tournament.id}/entry`}
+                    className="block w-full text-center py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition"
+                  >
+                    エントリーする
+                  </Link>
+                ) : (
+                  <p className="text-sm text-yellow-400">エントリー受付は終了しました</p>
+                )}
+              </div>
+            )}
+
+            {/* 未ログイン時 */}
+            {!isLoggedIn && (
+              <div className="p-3 bg-blue-900/20 border border-blue-700/30 rounded-xl space-y-2">
+                <p className="text-sm text-blue-300">エントリーするにはログインが必要です</p>
+                <div className="flex gap-2">
+                  <Link
+                    href="/login"
+                    className="flex-1 text-center py-1.5 bg-purple-600 hover:bg-purple-700 rounded-lg text-xs font-medium transition"
+                  >
+                    ログイン
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="flex-1 text-center py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium text-gray-300 transition"
+                  >
+                    新規登録
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* エントリー済みプレーヤー一覧 */}
+            {entries.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-400 mb-2">エントリー済み {entries.filter(e => !e.cancel_requested).length}名</p>
+                <div className="space-y-1">
+                  {entries.filter(e => !e.cancel_requested).map(entry => (
+                    <Link
+                      key={entry.id}
+                      href={`/players/${entry.player.id}`}
+                      className="flex items-center gap-3 p-2 bg-black/20 rounded-lg hover:bg-purple-900/30 transition"
+                    >
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
+                        {entry.player.avatar_url
+                          ? <img src={entry.player.avatar_url} className="w-full h-full object-cover" />
+                          : <span className="text-sm flex items-center justify-center h-full">👤</span>
+                        }
+                      </div>
+                      <span className="text-sm text-white">{entry.player.name}</span>
+                      {entry.preferred_dates && (
+                        <span className="text-xs text-gray-500 truncate">{entry.preferred_dates}</span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 優勝者（終了後のみ表示） */}
 {champion && (
