@@ -78,7 +78,7 @@ export default function EntriesAdminClient({
   const cancelledEntries = entries.filter(e => e.status === 'cancelled')
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div className="space-y-8 max-w-2xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">📋 エントリー管理</h1>
@@ -127,25 +127,44 @@ export default function EntriesAdminClient({
           {activeEntries.length === 0 ? (
             <p className="text-gray-400 text-sm">エントリーがありません</p>
           ) : (
-            activeEntries.map(entry => (
+            activeEntries.map((entry, index) => (
               <div key={entry.id} className={`flex items-center gap-3 p-3 border rounded-xl ${entry.cancel_requested ? 'border-red-700/50 bg-red-900/10' : 'border-purple-800/30 bg-purple-900/20'}`}>
+                {/* 順番 */}
+                <span className="text-xs text-gray-500 flex-shrink-0 w-5 text-center">{index + 1}</span>
+
+                {/* アバター */}
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
                   {entry.player.avatar_url
                     ? <img src={entry.player.avatar_url} className="w-full h-full object-cover" />
                     : <span className="text-xl flex items-center justify-center h-full">👤</span>
                   }
                 </div>
+
+                {/* 情報 */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white">{entry.player.name}</p>
-                  <p className="text-xs text-gray-400">HC {entry.player.hc} · RP {entry.player.rating}</p>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/players/${entry.player_id}`}
+                      target="_blank"
+                      className="font-medium text-white hover:text-purple-400 transition"
+                    >
+                      {entry.player.name}
+                    </Link>
+                    <span className="text-xs text-gray-500">HC {entry.player.hc} · RP {entry.player.rating}</span>
+                  </div>
                   {entry.preferred_dates && (
-                    <p className="text-xs text-blue-400 mt-0.5">希望日程: {entry.preferred_dates}</p>
+                    <p className="text-xs text-blue-400 mt-0.5">💬 {entry.preferred_dates}</p>
                   )}
                   {entry.cancel_requested && (
                     <p className="text-xs text-red-400 mt-0.5">⚠️ キャンセル申請中</p>
                   )}
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {new Date(entry.created_at).toLocaleDateString('ja-JP')}
+                  </p>
                 </div>
-                <div className="flex gap-2">
+
+                {/* ボタン */}
+                <div className="flex gap-2 flex-shrink-0">
                   {entry.cancel_requested && (
                     <button
                       onClick={() => handleCancelApprove(entry.id)}
@@ -181,7 +200,13 @@ export default function EntriesAdminClient({
                   }
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-gray-400">{entry.player.name}</p>
+                  <Link
+                    href={`/players/${entry.player_id}`}
+                    target="_blank"
+                    className="font-medium text-gray-400 hover:text-gray-300 transition"
+                  >
+                    {entry.player.name}
+                  </Link>
                   <p className="text-xs text-gray-500">キャンセル済み</p>
                 </div>
               </div>
