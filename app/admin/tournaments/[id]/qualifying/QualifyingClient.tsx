@@ -343,7 +343,27 @@ const handleAutoGenerate = async () => {
           </Link>
         </div>
       </div>
-
+{/* ランダムブロック自動生成 */}
+      {!isQualifyingLocked && blocks.length === 0 && enteredPlayers.length > 0 && (
+        <div className="p-4 bg-blue-900/20 border border-blue-700/30 rounded-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-blue-300">🎲 ランダムブロック自動生成</p>
+              <p className="text-xs text-gray-400 mt-0.5">エントリー済み{enteredPlayers.length}名をランダムに3人ずつブロック分けします</p>
+            </div>
+            <button
+              onClick={handleAutoGenerate}
+              disabled={autoLoading}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-sm font-medium transition"
+            >
+              {autoLoading ? '生成中...' : '自動生成'}
+            </button>
+          </div>
+          {autoError && (
+            <p className="text-sm text-red-400">{autoError}</p>
+          )}
+        </div>
+      )}
       {/* ブロック追加（ロック中は非表示） */}
       {!isQualifyingLocked && (
         <div>
