@@ -21,6 +21,14 @@ type FinalsMatch = {
 }
 type Tournament = { id: string; name: string; status: string }
 
+const NEXT_STATUS: Record<string, { status: string; label: string; color: string }> = {
+  open: { status: 'entry_closed', label: 'エントリー締切', color: 'bg-yellow-600 hover:bg-yellow-700' },
+  entry_closed: { status: 'qualifying', label: '予選開始', color: 'bg-blue-600 hover:bg-blue-700' },
+  qualifying: { status: 'qualifying_done', label: '予選完了', color: 'bg-purple-600 hover:bg-purple-700' },
+  qualifying_done: { status: 'finals', label: '本戦開始', color: 'bg-orange-600 hover:bg-orange-700' },
+  finals: { status: 'finished', label: '大会終了', color: 'bg-red-600 hover:bg-red-700' },
+}
+
 export default function FinalsClient({
   tournament,
   qualifiers,
@@ -44,6 +52,7 @@ export default function FinalsClient({
   ])
   const [mode, setMode] = useState<'normal' | 'walkover' | 'forfeit'>('normal')
   const [loading, setLoading] = useState(false)
+  const [statusLoading, setStatusLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
@@ -73,6 +82,19 @@ export default function FinalsClient({
     return null
   }
 
+  const handleStatusChange = async () => {
+    const next = NEXT_STATUS[tournament.status]
+    if (!next) return
+    if (!confirm(`ステータスを「${next.label}」に変更しますか？`)) return
+    setStatusLoading(true)
+    await supabase.from('tournaments').update({ status: next.status }).eq('id', tournament.id)
+    if (next.status === 'finished') {
+      await supabase.rpc('update_tournament_stats', { p_tournament_id: tournament.id })
+    }
+    setStatusLoading(false)
+    router.refresh()
+  }
+
   const handleRegisterMatch = async () => {
     setLoading(true)
     setError(null)
@@ -83,7 +105,15 @@ export default function FinalsClient({
       return
     }
 
-    const winnerId = mode === 'walkover' ? player1Id : calcWinner(sets)
+    // DEFAULTが相手の場合は自動で非DEFAULT側を勝者に
+    const winnerId = mode === 'walkover'
+      ? player1Id
+      : player2Id === defaultPlayerId
+        ? player1Id
+        : player1Id === defaultPlayerId
+          ? player2Id
+          : calcWinner(sets)
+
     const matchNumber = finalsMatches.filter(m => m.round === round).length + 1
 
     const { data: match, error: matchErr } = await supabase
@@ -123,8 +153,9 @@ export default function FinalsClient({
       await supabase.from('tournament_finals_sets').insert(setsToInsert)
     }
 
-    // 通常試合のみRP・HC反映
-    if (mode === 'normal' && winnerId && setsToInsert.length > 0) {
+    // 通常試合のみRP・HC反映（DEFAULTは除く）
+    const isDefaultMatch = player1Id === defaultPlayerId || player2Id === defaultPlayerId
+    if (mode === 'normal' && winnerId && setsToInsert.length > 0 && !isDefaultMatch) {
       const totalScore1 = setsToInsert.reduce((sum, s) => sum + s.score1, 0)
       const totalScore2 = setsToInsert.reduce((sum, s) => sum + s.score2, 0)
 
@@ -178,7 +209,6 @@ export default function FinalsClient({
             total_matches: (p2.total_matches ?? 0) + 1,
           }).eq('id', player2Id)
 
-          // HC更新
           const { data: hc1 } = await supabase.rpc('calc_hc', {
             p_wins: p1wins ? p1.wins + 1 : p1.wins,
             p_losses: !p1wins ? p1.losses + 1 : p1.losses,
@@ -209,9 +239,9 @@ export default function FinalsClient({
   }
 
   const allPlayers = [
-  ...qualifiers.map(q => q.winner?.player).filter(Boolean) as Player[],
-  ...(defaultPlayerId ? [{ id: defaultPlayerId, name: 'DEFAULT（不戦勝）', avatar_url: null }] : []),
-]
+    ...qualifiers.map(q => q.winner?.player).filter(Boolean) as Player[],
+    ...(defaultPlayerId ? [{ id: defaultPlayerId, name: 'DEFAULT（不戦勝）', avatar_url: null }] : []),
+  ]
   const roundsInFinals = Array.from(new Set(finalsMatches.map(m => m.round))).sort()
 
   const champion = isFinalsLocked
@@ -227,9 +257,20 @@ export default function FinalsClient({
           <h1 className="text-2xl font-bold">🏆 {tournament.name}</h1>
           <p className="text-sm text-gray-400 mt-1">本戦管理</p>
         </div>
-        <Link href={`/admin/tournaments/${tournament.id}/qualifying`} className="text-sm text-gray-400 hover:text-white transition">
-          ← 予選管理
-        </Link>
+        <div className="flex items-center gap-3">
+          {NEXT_STATUS[tournament.status] && (
+            <button
+              onClick={handleStatusChange}
+              disabled={statusLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition disabled:opacity-50 ${NEXT_STATUS[tournament.status].color}`}
+            >
+              {statusLoading ? '処理中...' : `${NEXT_STATUS[tournament.status].label} →`}
+            </button>
+          )}
+          <Link href={`/admin/tournaments/${tournament.id}/qualifying`} className="text-sm text-gray-400 hover:text-white transition">
+            ← 予選管理
+          </Link>
+        </div>
       </div>
 
       {isFinalsLocked && (
@@ -403,14 +444,14 @@ export default function FinalsClient({
                   className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                 >
                   <option value="">なし</option>
-                  {[player1Id, player2Id].filter(Boolean).map(pid => {
+                  {[player1Id, player2Id].filter(Boolean).filter(pid => pid !== defaultPlayerId).map(pid => {
                     const p = allPlayers.find(p => p.id === pid)
                     return p ? <option key={p.id} value={p.id}>{p.name}</option> : null
                   })}
                 </select>
               </div>
 
-              {mode !== 'walkover' && (
+              {mode !== 'walkover' && player1Id !== defaultPlayerId && player2Id !== defaultPlayerId && (
                 <div className="space-y-2">
                   <label className="block text-xs text-gray-400">セットスコア（15点先取）</label>
                   {sets.map((s, i) => (
@@ -443,6 +484,14 @@ export default function FinalsClient({
                       />
                     </div>
                   ))}
+                </div>
+              )}
+
+              {(player1Id === defaultPlayerId || player2Id === defaultPlayerId) && (
+                <div className="p-3 bg-orange-900/20 border border-orange-700/30 rounded-lg">
+                  <p className="text-xs text-orange-400">
+                    ⚠️ DEFAULTとの対戦は自動的に不戦勝として処理されます
+                  </p>
                 </div>
               )}
 

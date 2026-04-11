@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
@@ -7,6 +9,30 @@ export default async function TournamentsPage() {
     .from('tournaments')
     .select('*')
     .order('created_at', { ascending: false })
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'open': return '受付中'
+      case 'entry_closed': return 'エントリー終了'
+      case 'qualifying': return '予選中'
+      case 'qualifying_done': return '予選完了'
+      case 'finals': return '本戦中'
+      case 'finished': return '終了'
+      default: return status
+    }
+  }
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case 'open': return 'bg-green-900/50 text-green-400'
+      case 'entry_closed': return 'bg-yellow-900/50 text-yellow-400'
+      case 'qualifying': return 'bg-blue-900/50 text-blue-400'
+      case 'qualifying_done': return 'bg-purple-900/50 text-purple-400'
+      case 'finals': return 'bg-red-900/50 text-red-400'
+      case 'finished': return 'bg-gray-700 text-gray-400'
+      default: return 'bg-gray-700 text-gray-400'
+    }
+  }
 
   return (
     <div className="min-h-screen bg-transparent text-white px-4 py-8">
@@ -29,15 +55,8 @@ export default async function TournamentsPage() {
                     {t.format === 'doubles' ? 'ダブルス' : '個人戦'}
                   </p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
-                  t.status === 'finished' ? 'bg-gray-700 text-gray-400' :
-                  t.status === 'finals' ? 'bg-red-900/50 text-red-400' :
-                  t.status === 'qualifying' ? 'bg-blue-900/50 text-blue-400' :
-                  'bg-green-900/50 text-green-400'
-                }`}>
-                  {t.status === 'open' ? '受付中' :
-                   t.status === 'qualifying' ? '予選中' :
-                   t.status === 'finals' ? '本戦中' : '終了'}
+                <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${statusColor(t.status)}`}>
+                  {statusLabel(t.status)}
                 </span>
               </Link>
             ))}
