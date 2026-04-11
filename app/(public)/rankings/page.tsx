@@ -37,12 +37,18 @@ export default async function RankingsPage({
       const borderColor = rank === 1 ? 'border-yellow-400' : rank === 2 ? 'border-gray-400' : 'border-orange-500'
       const badgeColor = rank === 1 ? 'bg-yellow-400 text-black' : rank === 2 ? 'bg-gray-400 text-black' : 'bg-orange-500 text-white'
       const bgColor = rank === 1 ? 'bg-gradient-to-r from-yellow-900/40 to-yellow-700/20' : rank === 2 ? 'bg-gradient-to-r from-gray-800/60 to-gray-700/20' : 'bg-gradient-to-r from-orange-900/40 to-orange-700/20'
+      const glowStyle = rank === 1
+        ? { boxShadow: '0 0 20px 4px rgba(250,204,21,0.3), 0 0 60px 8px rgba(250,204,21,0.1)' }
+        : rank === 2
+          ? { boxShadow: '0 0 20px 4px rgba(209,213,219,0.2), 0 0 60px 8px rgba(209,213,219,0.1)' }
+          : { boxShadow: '0 0 20px 4px rgba(249,115,22,0.2), 0 0 60px 8px rgba(249,115,22,0.1)' }
 
       return (
         <Link
           key={player.id}
           href={`/players/${player.id}`}
-          className={`relative flex items-center gap-4 p-5 border-2 ${borderColor} ${bgColor} rounded-2xl shadow-lg hover:scale-[1.01] transition-transform`}
+          style={glowStyle}
+          className={`relative flex items-center gap-4 p-5 border-2 ${borderColor} ${bgColor} rounded-2xl hover:scale-[1.01] transition-transform`}
         >
           {rank === 1 && (
             <div className="absolute top-2 right-3 text-xs text-yellow-400 font-bold">👑 CHAMPION</div>
