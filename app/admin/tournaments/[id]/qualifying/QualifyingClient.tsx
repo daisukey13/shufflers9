@@ -20,10 +20,12 @@ type Tournament = { id: string; name: string; status: string; format: string }
 export default function QualifyingClient({
   tournament,
   players,
+  enteredPlayers,
   defaultPlayerId,
   blocks,
   matches,
 }: {
+
   tournament: Tournament
   players: Player[]
   defaultPlayerId: string
@@ -43,6 +45,62 @@ export default function QualifyingClient({
   const [matchMode, setMatchMode] = useState<'normal' | 'walkover' | 'forfeit'>('normal')
   const [matchLoading, setMatchLoading] = useState(false)
   const [matchError, setMatchError] = useState<string | null>(null)
+
+  const [autoLoading, setAutoLoading] = useState(false)
+const [autoError, setAutoError] = useState<string | null>(null)
+
+// ランダムブロック自動生成
+const handleAutoGenerate = async () => {
+  if (enteredPlayers.length === 0) {
+    setAutoError('エントリー済みのプレーヤーがいません')
+    return
+  }
+  if (!confirm(`${enteredPlayers.length}名をランダムにブロック分けします。よろしいですか？`)) return
+
+  setAutoLoading(true)
+  setAutoError(null)
+
+  // シャッフル
+  const shuffled = [...enteredPlayers].sort(() => Math.random() - 0.5)
+
+  // 3人ずつブロックに分ける
+  const blockGroups: Player[][] = []
+  for (let i = 0; i < shuffled.length; i += 3) {
+    blockGroups.push(shuffled.slice(i, i + 3))
+  }
+
+  const blockNames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const startIndex = blocks.length
+
+  for (let i = 0; i < blockGroups.length; i++) {
+    const group = blockGroups[i]
+    const blockName = blockNames[startIndex + i]
+
+    const { data: block, error: blockErr } = await supabase
+      .from('tournament_blocks')
+      .insert({ tournament_id: tournament.id, block_name: blockName })
+      .select()
+      .single()
+
+    if (blockErr || !block) continue
+
+    const blockPlayers = [...group]
+    while (blockPlayers.length < 3) {
+      blockPlayers.push({ id: defaultPlayerId } as Player)
+    }
+
+    await supabase.from('tournament_block_players').insert(
+      blockPlayers.map(p => ({
+        block_id: block.id,
+        player_id: p.id,
+        is_default: p.id === defaultPlayerId,
+      }))
+    )
+  }
+
+  setAutoLoading(false)
+  router.refresh()
+}
 
   const router = useRouter()
   const supabase = createClient()

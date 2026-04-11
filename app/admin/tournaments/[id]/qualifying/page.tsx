@@ -27,6 +27,16 @@ export default async function QualifyingPage({ params }: { params: Promise<{ id:
     .eq('user_id', '00000000-0000-0000-0000-000000000000')
     .single()
 
+  // エントリー済みプレーヤーを取得
+  const { data: entries } = await supabase
+    .from('tournament_entries')
+    .select('player_id, player:players!tournament_entries_player_id_fkey(id, name, avatar_url, hc, rating)')
+    .eq('tournament_id', id)
+    .eq('status', 'entered')
+    .eq('cancel_requested', false)
+
+  const enteredPlayers = (entries ?? []).map((e: any) => e.player).filter(Boolean)
+
   const { data: blocks } = await supabase
     .from('tournament_blocks')
     .select('*, tournament_block_players(*, player:players(id, name, avatar_url, hc, rating))')
@@ -43,6 +53,7 @@ export default async function QualifyingPage({ params }: { params: Promise<{ id:
     <QualifyingClient
       tournament={tournament}
       players={players ?? []}
+      enteredPlayers={enteredPlayers}
       defaultPlayerId={defaultPlayer?.id ?? ''}
       blocks={blocks ?? []}
       matches={matches ?? []}
