@@ -41,31 +41,43 @@ const NEXT_STATUS: Record<string, { status: string; label: string; color: string
 
 export default function TournamentsAdminClient({ tournaments }: { tournaments: Tournament[] }) {
   const [loading, setLoading] = useState<string | null>(null)
+  const [localTournaments, setLocalTournaments] = useState(tournaments)
   const router = useRouter()
   const supabase = createClient()
 
   const handleStatusChange = async (tournament: Tournament) => {
-  const next = NEXT_STATUS[tournament.status]
-  if (!next) return
-  if (!confirm(`「${tournament.name}」を「${next.label}」しますか？`)) return
+    const next = NEXT_STATUS[tournament.status]
+    if (!next) return
+    if (!confirm(`「${tournament.name}」を「${next.label}」しますか？`)) return
 
-  setLoading(tournament.id)
+    setLoading(tournament.id)
 
-  await supabase
-    .from('tournaments')
-    .update({ status: next.status })
-    .eq('id', tournament.id)
+    const { error } = await supabase
+      .from('tournaments')
+      .update({ status: next.status })
+      .eq('id', tournament.id)
 
-  // 大会終了時に戦績を自動集計
-  if (next.status === 'finished') {
-    await supabase.rpc('update_tournament_stats', {
-      p_tournament_id: tournament.id,
-    })
+    if (error) {
+      alert('更新に失敗しました: ' + error.message)
+      setLoading(null)
+      return
+    }
+
+    // 大会終了時に戦績を自動集計
+    if (next.status === 'finished') {
+      await supabase.rpc('update_tournament_stats', {
+        p_tournament_id: tournament.id,
+      })
+    }
+
+    // ローカル状態も更新
+    setLocalTournaments(prev =>
+      prev.map(t => t.id === tournament.id ? { ...t, status: next.status } : t)
+    )
+
+    setLoading(null)
+    router.refresh()
   }
-
-  setLoading(null)
-  router.refresh()
-}
 
   return (
     <div className="space-y-6">
@@ -80,10 +92,10 @@ export default function TournamentsAdminClient({ tournaments }: { tournaments: T
       </div>
 
       <div className="space-y-3">
-        {tournaments.length === 0 ? (
+        {localTournaments.length === 0 ? (
           <p className="text-gray-400 text-sm">大会がありません</p>
         ) : (
-          tournaments.map(t => (
+          localTournaments.map(t => (
             <div key={t.id} className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl space-y-3">
               <div className="flex items-center gap-4">
                 <div className="flex-1 min-w-0">
