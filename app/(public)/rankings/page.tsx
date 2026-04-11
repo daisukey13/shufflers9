@@ -1,3 +1,5 @@
+import TournamentBadges from '@/components/ui/TournamentBadges'
+
 import { getPlayerRankings } from '@/lib/queries/rankings'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
@@ -63,10 +65,16 @@ export default async function RankingsPage({
             }
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-yellow-100 text-xl truncate">{player.name}</p>
-            <p className="text-sm text-gray-400 mt-0.5">
-              HC {player.hc ?? 36}{player.address ? ` · 📍 ${player.address}` : ''}
-            </p>
+           <p className="font-bold text-yellow-100 text-xl truncate">{player.name}</p>
+<p className="text-sm text-gray-400 mt-0.5">
+  HC {player.hc ?? 36}{player.address ? ` · 📍 ${player.address}` : ''}
+</p>
+<TournamentBadges
+  wins={player.tournament_wins ?? 0}
+  runnerUps={player.tournament_runner_ups ?? 0}
+  qualifications={player.tournament_qualifications ?? 0}
+  size="sm"
+/>
             <div className="flex gap-3 mt-2">
               <span className="text-sm text-green-300">{ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins}勝</span>
               <span className="text-sm text-red-300">{ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses}敗</span>
@@ -104,9 +112,15 @@ export default async function RankingsPage({
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-white truncate text-base">{player.name}</p>
-            <p className="text-xs text-gray-400">
-              HC {player.hc ?? 36}{player.address ? ` · 📍 ${player.address}` : ''} · {ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins}勝 {ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses}敗 · {wr}%
-            </p>
+<TournamentBadges
+  wins={player.tournament_wins ?? 0}
+  runnerUps={player.tournament_runner_ups ?? 0}
+  qualifications={player.tournament_qualifications ?? 0}
+  size="sm"
+/>
+<p className="text-xs text-gray-400">
+  HC {player.hc ?? 36}...
+</p>
           </div>
           <span className="font-bold text-purple-400 flex-shrink-0 text-lg">
             {ratingKey === 'doubles_rating' ? player.doubles_rating : player.rating} pt

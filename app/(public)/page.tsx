@@ -5,7 +5,7 @@ import { getRecentAllMatches } from '@/lib/queries/matches'
 export default async function HomePage() {
   const [players, recentMatches] = await Promise.all([
     getPlayerRankings(),
-    getRecentSinglesMatches(5),
+    getRecentAllMatches(5),
   ])
   const top5 = players.slice(0, 5)
   const avgRating = players.length > 0
