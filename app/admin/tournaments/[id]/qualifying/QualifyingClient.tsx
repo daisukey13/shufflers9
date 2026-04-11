@@ -105,7 +105,26 @@ const handleAutoGenerate = async () => {
     )
   }
 
-  setAutoLoading(false)
+ setAutoLoading(false)
+  router.refresh()
+}
+
+const handleEditMatch = async () => {
+  if (!editMatch) return
+  setEditLoading(true)
+  const s1 = parseInt(editScore1)
+  const s2 = parseInt(editScore2)
+  if (isNaN(s1) || isNaN(s2)) {
+    setEditLoading(false)
+    return
+  }
+  const winnerId = s1 > s2 ? editMatch.player1_id : s2 > s1 ? editMatch.player2_id : null
+  await supabase
+    .from('tournament_qualifying_matches')
+    .update({ score1: s1, score2: s2, winner_id: winnerId })
+    .eq('id', editMatch.id)
+  setEditMatch(null)
+  setEditLoading(false)
   router.refresh()
 }
 
@@ -504,25 +523,35 @@ const handleAutoGenerate = async () => {
                   </div>
                 </div>
 
-                {/* 試合結果一覧 */}
-                {blockMatches.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-300 mb-2">試合結果</h3>
-                    <div className="space-y-1">
-                      {blockMatches.map(m => (
-                        <div key={m.id} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg text-sm">
-                          <span className={m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player1.name}</span>
-                          <span className="text-white font-bold">{m.mode === 'walkover' ? 'W/O' : `${m.score1} - ${m.score2}`}</span>
-                          <span className={m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player2.name}</span>
-                          {m.mode !== 'normal' && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-400">
-                              {m.mode === 'walkover' ? '不戦勝' : '途中棄権'}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+               {/* 試合結果一覧 */}
+{blockMatches.length > 0 && (
+  <div>
+    <h3 className="text-sm font-semibold text-gray-300 mb-2">試合結果</h3>
+    <div className="space-y-1">
+      {blockMatches.map(m => (
+        <div key={m.id} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg text-sm">
+          <span className={m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player1.name}</span>
+          <span className="text-white font-bold">{m.mode === 'walkover' ? 'W/O' : `${m.score1} - ${m.score2}`}</span>
+          <span className={m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player2.name}</span>
+          {m.mode !== 'normal' && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-400">
+              {m.mode === 'walkover' ? '不戦勝' : '途中棄権'}
+            </span>
+          )}
+          <button
+            onClick={() => {
+              setEditMatch(m)
+              setEditScore1(m.score1?.toString() ?? '')
+              setEditScore2(m.score2?.toString() ?? '')
+            }}
+            className="ml-auto text-xs px-2 py-0.5 bg-purple-700/50 hover:bg-purple-600/50 rounded text-purple-300 transition"
+          >
+            編集
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
                 )}
 
                 {/* 試合登録（ロック中は非表示） */}
@@ -652,6 +681,42 @@ const handleAutoGenerate = async () => {
           })}
         </div>
       )}
-    </div>
+   </div>
+
+    {editMatch && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+        <div className="bg-[#1e0f3a] border border-purple-800/50 rounded-2xl p-6 w-full max-w-sm space-y-4">
+          <h2 className="text-lg font-bold">スコアを編集</h2>
+          <p className="text-sm text-gray-400">{editMatch.player1.name} vs {editMatch.player2.name}</p>
+          <div className="flex gap-4 items-center">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-400 mb-1">{editMatch.player1.name}</label>
+              <input type="number" min="0" max="15" value={editScore1}
+                onChange={e => setEditScore1(e.target.value)}
+                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <span className="text-gray-400 mt-4">-</span>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-400 mb-1">{editMatch.player2.name}</label>
+              <input type="number" min="0" max="15" value={editScore2}
+                onChange={e => setEditScore2(e.target.value)}
+                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={handleEditMatch} disabled={editLoading}
+              className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition">
+              {editLoading ? '保存中...' : '保存'}
+            </button>
+            <button onClick={() => setEditMatch(null)}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition">
+              キャンセル
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   )
 }
