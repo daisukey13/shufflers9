@@ -468,9 +468,9 @@ const handleAutoGenerate = async () => {
                         {standings.map((s, idx) => (
                           <tr key={s.player.id} className={`border-b border-purple-800/20 ${idx === 0 ? 'text-yellow-100' : 'text-white'}`}>
                             <td className="py-2 pr-4">
-                              <span className={`font-bold ${idx === 0 ? 'text-yellow-400' : 'text-gray-400'}`}>
-                                {idx + 1}{idx === 0 && ' 👑'}
-                              </span>
+                              <span className="font-bold text-gray-400">
+  {isQualifyingLocked ? idx + 1 : '－'}
+</span>
                             </td>
                             <td className="py-2 pr-4">
                               <div className="flex items-center gap-2">
