@@ -50,6 +50,12 @@ export default function QualifyingClient({
   const [autoLoading, setAutoLoading] = useState(false)
 const [autoError, setAutoError] = useState<string | null>(null)
 
+const [editMatch, setEditMatch] = useState<Match | null>(null)
+const [editScore1, setEditScore1] = useState('')
+const [editScore2, setEditScore2] = useState('')
+const [editLoading, setEditLoading] = useState(false)
+
+
 // ランダムブロック自動生成
 const handleAutoGenerate = async () => {
   if (enteredPlayers.length === 0) {
