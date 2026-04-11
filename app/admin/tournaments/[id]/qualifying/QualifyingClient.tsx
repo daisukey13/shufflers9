@@ -7,15 +7,25 @@ import Link from 'next/link'
 
 type Player = { id: string; name: string; avatar_url: string | null; hc: number; rating: number }
 type BlockPlayer = { id: string; block_id: string; player_id: string; is_default: boolean; player: Player }
-type Block = { id: string; tournament_id: string; block_name: string; tournament_block_players: BlockPlayer[] }
+type Block = { id: string; tournament_id: string; block_name: string; match_time_1: string | null; match_time_2: string | null; match_time_3: string | null; tournament_block_players: BlockPlayer[] }
 type Match = {
   id: string; block_id: string; player1_id: string; player2_id: string
   score1: number | null; score2: number | null; winner_id: string | null
-  mode: string; affects_ranking: boolean
+  mode: string; affects_ranking: boolean; scheduled_time: string | null
   player1: { id: string; name: string; avatar_url: string | null }
   player2: { id: string; name: string; avatar_url: string | null }
 }
 type Tournament = { id: string; name: string; status: string; format: string }
+
+const timeOptions = (() => {
+  const options: string[] = []
+  for (let h = 8; h <= 20; h++) {
+    for (let m = 0; m < 60; m += 5) {
+      options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+    }
+  }
+  return options
+})()
 
 export default function QualifyingClient({
   tournament,
@@ -25,10 +35,9 @@ export default function QualifyingClient({
   blocks,
   matches,
 }: {
-
   tournament: Tournament
   players: Player[]
-  enteredPlayers: Player[] 
+  enteredPlayers: Player[]
   defaultPlayerId: string
   blocks: Block[]
   matches: Match[]
@@ -48,103 +57,178 @@ export default function QualifyingClient({
   const [matchError, setMatchError] = useState<string | null>(null)
 
   const [autoLoading, setAutoLoading] = useState(false)
-const [autoError, setAutoError] = useState<string | null>(null)
+  const [autoError, setAutoError] = useState<string | null>(null)
 
-const [editMatch, setEditMatch] = useState<Match | null>(null)
-const [editScore1, setEditScore1] = useState('')
-const [editScore2, setEditScore2] = useState('')
-const [editLoading, setEditLoading] = useState(false)
+  const [editMatch, setEditMatch] = useState<Match | null>(null)
+  const [editScore1, setEditScore1] = useState('')
+  const [editScore2, setEditScore2] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
 
+  const [matchTimes, setMatchTimes] = useState<Record<string, string[]>>(() =>
+    Object.fromEntries(blocks.map(b => [b.id, [b.match_time_1 ?? '', b.match_time_2 ?? '', b.match_time_3 ?? '']]))
+  )
 
-// ランダムブロック自動生成
-const handleAutoGenerate = async () => {
-  if (enteredPlayers.length === 0) {
-    setAutoError('エントリー済みのプレーヤーがいません')
-    return
-  }
-  if (!confirm(`${enteredPlayers.length}名をランダムにブロック分けします。よろしいですか？`)) return
-
-  setAutoLoading(true)
-  setAutoError(null)
-
-  // シャッフル
-  const shuffled = [...enteredPlayers].sort(() => Math.random() - 0.5)
-
-  // 3人ずつブロックに分ける
-  const blockGroups: Player[][] = []
-  for (let i = 0; i < shuffled.length; i += 3) {
-    blockGroups.push(shuffled.slice(i, i + 3))
-  }
-
-  const blockNames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  const startIndex = blocks.length
-
-  for (let i = 0; i < blockGroups.length; i++) {
-    const group = blockGroups[i]
-    const blockName = blockNames[startIndex + i]
-
-    const { data: block, error: blockErr } = await supabase
-      .from('tournament_blocks')
-      .insert({ tournament_id: tournament.id, block_name: blockName })
-      .select()
-      .single()
-
-    if (blockErr || !block) continue
-
-    const blockPlayers = [...group]
-    while (blockPlayers.length < 3) {
-      blockPlayers.push({ id: defaultPlayerId } as Player)
-    }
-
-    await supabase.from('tournament_block_players').insert(
-      blockPlayers.map(p => ({
-        block_id: block.id,
-        player_id: p.id,
-        is_default: p.id === defaultPlayerId,
-      }))
-    )
-  }
-
- setAutoLoading(false)
-  router.refresh()
-}
-
-const handleEditMatch = async () => {
-  if (!editMatch) return
-  setEditLoading(true)
-
-  const s1 = parseInt(editScore1)
-  const s2 = parseInt(editScore2)
-
-  if (isNaN(s1) || isNaN(s2)) {
-    setEditLoading(false)
-    return
-  }
-
-  const winnerId = s1 > s2 ? editMatch.player1_id : s2 > s1 ? editMatch.player2_id : null
-
-  await supabase
-    .from('tournament_qualifying_matches')
-    .update({
-      player1_id: editMatch.player1_id,
-      player2_id: editMatch.player2_id,
-      score1: s1,
-      score2: s2,
-      winner_id: winnerId,
-    })
-    .eq('id', editMatch.id)
-
-  setEditMatch(null)
-  setEditLoading(false)
-  router.refresh()
-}
+  const [statusLoading, setStatusLoading] = useState(false)
+  const [autoMatchLoading, setAutoMatchLoading] = useState<string | null>(null)
 
   const router = useRouter()
   const supabase = createClient()
 
   const blockNames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-
   const isQualifyingLocked = ['qualifying_done', 'finals', 'finished'].includes(tournament.status)
+
+  const getBlockTimes = (blockId: string) =>
+    matchTimes[blockId] ?? ['', '', '']
+
+  const setBlockTime = async (blockId: string, index: number, value: string) => {
+    const current = getBlockTimes(blockId)
+    const updated = [...current]
+    updated[index] = value
+    setMatchTimes(prev => ({ ...prev, [blockId]: updated }))
+
+    const colName = `match_time_${index + 1}`
+    await supabase
+      .from('tournament_blocks')
+      .update({ [colName]: value || null })
+      .eq('id', blockId)
+  }
+
+  // 予選完了
+  const handleCompleteQualifying = async () => {
+    if (!confirm('予選を完了し、本戦管理へ進みますか？')) return
+    setStatusLoading(true)
+    await supabase
+      .from('tournaments')
+      .update({ status: 'qualifying_done' })
+      .eq('id', tournament.id)
+    setStatusLoading(false)
+    router.push(`/admin/tournaments/${tournament.id}/finals`)
+  }
+
+  // ブロック試合自動作成
+  const handleAutoCreateMatches = async (block: Block) => {
+    if (!confirm(`ブロック${block.block_name}の試合を自動作成しますか？`)) return
+    setAutoMatchLoading(block.id)
+
+    const bp = block.tournament_block_players
+    if (bp.length < 2) {
+      setAutoMatchLoading(null)
+      return
+    }
+
+    // 3試合の組み合わせ
+    const pairs: [BlockPlayer, BlockPlayer][] = [
+      [bp[0], bp[1]],
+      [bp[1], bp[2]],
+      [bp[0], bp[2]],
+    ]
+
+    const times = getBlockTimes(block.id)
+
+    for (let i = 0; i < pairs.length; i++) {
+      const [p1, p2] = pairs[i]
+      const hasDefault = p1.is_default || p2.is_default
+
+      // 登録済みはスキップ
+      const alreadyExists = matches.some(m =>
+        m.block_id === block.id &&
+        ((m.player1_id === p1.player_id && m.player2_id === p2.player_id) ||
+         (m.player1_id === p2.player_id && m.player2_id === p1.player_id))
+      )
+      if (alreadyExists) continue
+
+      // DEFAULTが絡む試合は時間未設定
+      const scheduledTime = hasDefault ? null : (times[i] || null)
+
+      await supabase.from('tournament_qualifying_matches').insert({
+        block_id: block.id,
+        player1_id: p1.player_id,
+        player2_id: p2.player_id,
+        score1: null,
+        score2: null,
+        winner_id: null,
+        mode: 'normal',
+        affects_ranking: true,
+        scheduled_time: scheduledTime,
+      })
+    }
+
+    setAutoMatchLoading(null)
+    router.refresh()
+  }
+
+  // ランダムブロック自動生成
+  const handleAutoGenerate = async () => {
+    if (enteredPlayers.length === 0) {
+      setAutoError('エントリー済みのプレーヤーがいません')
+      return
+    }
+    if (!confirm(`${enteredPlayers.length}名をランダムにブロック分けします。よろしいですか？`)) return
+
+    setAutoLoading(true)
+    setAutoError(null)
+
+    const shuffled = [...enteredPlayers].sort(() => Math.random() - 0.5)
+    const blockGroups: Player[][] = []
+    for (let i = 0; i < shuffled.length; i += 3) {
+      blockGroups.push(shuffled.slice(i, i + 3))
+    }
+
+    const startIndex = blocks.length
+
+    for (let i = 0; i < blockGroups.length; i++) {
+      const group = blockGroups[i]
+      const blockName = blockNames[startIndex + i]
+
+      const { data: block, error: blockErr } = await supabase
+        .from('tournament_blocks')
+        .insert({ tournament_id: tournament.id, block_name: blockName })
+        .select()
+        .single()
+
+      if (blockErr || !block) continue
+
+      const blockPlayers = [...group]
+      while (blockPlayers.length < 3) {
+        blockPlayers.push({ id: defaultPlayerId } as Player)
+      }
+
+      await supabase.from('tournament_block_players').insert(
+        blockPlayers.map(p => ({
+          block_id: block.id,
+          player_id: p.id,
+          is_default: p.id === defaultPlayerId,
+        }))
+      )
+    }
+
+    setAutoLoading(false)
+    router.refresh()
+  }
+
+  const handleEditMatch = async () => {
+    if (!editMatch) return
+    setEditLoading(true)
+
+    const s1 = parseInt(editScore1)
+    const s2 = parseInt(editScore2)
+
+    if (isNaN(s1) || isNaN(s2)) {
+      setEditLoading(false)
+      return
+    }
+
+    const winnerId = s1 > s2 ? editMatch.player1_id : s2 > s1 ? editMatch.player2_id : null
+
+    await supabase
+      .from('tournament_qualifying_matches')
+      .update({ score1: s1, score2: s2, winner_id: winnerId })
+      .eq('id', editMatch.id)
+
+    setEditMatch(null)
+    setEditLoading(false)
+    router.refresh()
+  }
 
   // ブロック作成
   const handleCreateBlock = async () => {
@@ -200,7 +284,7 @@ const handleEditMatch = async () => {
     router.refresh()
   }
 
-  // 試合登録（RP・HC反映含む）
+  // 試合登録
   const handleRegisterMatch = async (blockId: string) => {
     setMatchLoading(true)
     setMatchError(null)
@@ -249,7 +333,6 @@ const handleEditMatch = async () => {
       return
     }
 
-    // 通常試合のみRP・HC反映
     if (isNormal && winnerId && finalScore1 !== null && finalScore2 !== null) {
       const { data: p1 } = await supabase
         .from('players')
@@ -300,7 +383,6 @@ const handleEditMatch = async () => {
             total_matches: (p2.total_matches ?? 0) + 1,
           }).eq('id', matchPlayer2)
 
-          // HC更新
           const { data: hc1 } = await supabase.rpc('calc_hc', {
             p_wins: finalScore1 > finalScore2 ? p1.wins + 1 : p1.wins,
             p_losses: finalScore1 < finalScore2 ? p1.losses + 1 : p1.losses,
@@ -330,9 +412,8 @@ const handleEditMatch = async () => {
     router.refresh()
   }
 
-  // ブロックの順位計算
   const calcBlockStandings = (block: Block, blockMatches: Match[]) => {
-    const standings = block.tournament_block_players.map(bp => {
+    return block.tournament_block_players.map(bp => {
       const wins = blockMatches.filter(m => m.winner_id === bp.player_id).length
       const losses = blockMatches.filter(m =>
         (m.player1_id === bp.player_id || m.player2_id === bp.player_id) && m.winner_id && m.winner_id !== bp.player_id
@@ -354,7 +435,6 @@ const handleEditMatch = async () => {
         diff: scoreFor - scoreAgainst,
       }
     }).sort((a, b) => b.wins - a.wins || b.diff - a.diff)
-    return standings
   }
 
   const getRegisteredPairs = (blockMatches: Match[]) =>
@@ -362,14 +442,22 @@ const handleEditMatch = async () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      {/* ヘッダー */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold">🏆 {tournament.name}</h1>
           <p className="text-sm text-gray-400 mt-1">予選管理</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Link href="/admin/tournaments" className="text-sm text-gray-400 hover:text-white transition">
             ← 大会一覧
+          </Link>
+          <Link
+            href={`/tournaments/${tournament.id}`}
+            target="_blank"
+            className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-medium transition"
+          >
+            公開ページ →
           </Link>
           <Link
             href={`/admin/tournaments/${tournament.id}/finals`}
@@ -379,7 +467,25 @@ const handleEditMatch = async () => {
           </Link>
         </div>
       </div>
-{/* ランダムブロック自動生成 */}
+
+      {/* 予選完了ボタン */}
+      {!isQualifyingLocked && blocks.length > 0 && (
+        <div className="p-4 bg-green-900/20 border border-green-700/40 rounded-2xl flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-green-300">予選完了・本戦へ進む</p>
+            <p className="text-xs text-gray-400 mt-0.5">予選を締め切り、本戦管理ページへ移動します</p>
+          </div>
+          <button
+            onClick={handleCompleteQualifying}
+            disabled={statusLoading}
+            className="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg text-sm font-bold transition whitespace-nowrap"
+          >
+            {statusLoading ? '処理中...' : '予選完了 → 本戦へ'}
+          </button>
+        </div>
+      )}
+
+      {/* ランダムブロック自動生成 */}
       {!isQualifyingLocked && blocks.length === 0 && enteredPlayers.length > 0 && (
         <div className="p-4 bg-blue-900/20 border border-blue-700/30 rounded-xl space-y-3">
           <div className="flex items-center justify-between">
@@ -395,12 +501,11 @@ const handleEditMatch = async () => {
               {autoLoading ? '生成中...' : '自動生成'}
             </button>
           </div>
-          {autoError && (
-            <p className="text-sm text-red-400">{autoError}</p>
-          )}
+          {autoError && <p className="text-sm text-red-400">{autoError}</p>}
         </div>
       )}
-      {/* ブロック追加（ロック中は非表示） */}
+
+      {/* ブロック追加 */}
       {!isQualifyingLocked && (
         <div>
           <button
@@ -467,6 +572,7 @@ const handleEditMatch = async () => {
             const standings = calcBlockStandings(block, blockMatches)
             const registeredPairs = getRegisteredPairs(blockMatches)
             const blockPlayerIds = block.tournament_block_players.map(bp => bp.player_id)
+            const times = getBlockTimes(block.id)
 
             const pendingPairs: [string, string][] = []
             for (let i = 0; i < blockPlayerIds.length; i++) {
@@ -478,6 +584,8 @@ const handleEditMatch = async () => {
                 }
               }
             }
+
+            const allMatchesCreated = blockMatches.length >= 3
 
             return (
               <div key={block.id} className="bg-purple-900/20 border border-purple-800/30 rounded-2xl p-5 space-y-5">
@@ -505,8 +613,8 @@ const handleEditMatch = async () => {
                           <tr key={s.player.id} className={`border-b border-purple-800/20 ${idx === 0 ? 'text-yellow-100' : 'text-white'}`}>
                             <td className="py-2 pr-4">
                               <span className="font-bold text-gray-400">
-  {isQualifyingLocked ? idx + 1 : '－'}
-</span>
+                                {isQualifyingLocked ? idx + 1 : '－'}
+                              </span>
                             </td>
                             <td className="py-2 pr-4">
                               <div className="flex items-center gap-2">
@@ -534,43 +642,94 @@ const handleEditMatch = async () => {
                   </div>
                 </div>
 
-               {/* 試合結果一覧 */}
-{blockMatches.length > 0 && (
-  <div>
-    <h3 className="text-sm font-semibold text-gray-300 mb-2">試合結果</h3>
-    <div className="space-y-1">
-      {blockMatches.map(m => (
-        <div key={m.id} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg text-sm">
-          <span className={m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player1.name}</span>
-          <span className="text-white font-bold">{m.mode === 'walkover' ? 'W/O' : `${m.score1} - ${m.score2}`}</span>
-          <span className={m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player2.name}</span>
-          {m.mode !== 'normal' && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-400">
-              {m.mode === 'walkover' ? '不戦勝' : '途中棄権'}
-            </span>
-          )}
-          <button
-            onClick={() => {
-              setEditMatch(m)
-              setEditScore1(m.score1?.toString() ?? '')
-              setEditScore2(m.score2?.toString() ?? '')
-            }}
-            className="ml-auto text-xs px-2 py-0.5 bg-purple-700/50 hover:bg-purple-600/50 rounded text-purple-300 transition"
-          >
-            編集
-          </button>
-        </div>
-      ))}
-    </div>
-  </div>
+                {/* 試合開始予定時間 */}
+                <div className="p-4 bg-black/20 rounded-xl space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-300">⏰ 試合開始予定時間</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[0, 1, 2].map(i => (
+                      <div key={i}>
+                        <label className="block text-xs text-gray-400 mb-1">第{i + 1}試合</label>
+                        <select
+                          value={times[i] ?? ''}
+                          onChange={e => setBlockTime(block.id, i, e.target.value)}
+                          className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        >
+                          <option value="">未設定</option>
+                          {timeOptions.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  {times.some(t => t) && (
+                    <p className="text-xs text-purple-300">
+                      {times.map((t, i) => t ? `第${i + 1}試合 ${t}` : null).filter(Boolean).join('　')}
+                    </p>
+                  )}
+                </div>
+
+                {/* 試合自動作成ボタン */}
+                {!isQualifyingLocked && (
+                  <div className="flex items-center justify-between gap-4 p-3 bg-blue-900/20 border border-blue-700/30 rounded-xl">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-300">🎲 試合を自動作成</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        第1試合〜第3試合を自動生成（登録済みはスキップ）
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleAutoCreateMatches(block)}
+                      disabled={autoMatchLoading === block.id || allMatchesCreated}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-sm font-medium transition whitespace-nowrap"
+                    >
+                      {autoMatchLoading === block.id ? '作成中...' : allMatchesCreated ? '作成済み' : '自動作成'}
+                    </button>
+                  </div>
                 )}
 
-                {/* 試合登録（ロック中は非表示） */}
+                {/* 試合結果一覧 */}
+                {blockMatches.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-300 mb-2">試合結果</h3>
+                    <div className="space-y-1">
+                      {blockMatches.map((m, idx) => (
+                        <div key={m.id} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg text-sm">
+                          <span className="text-xs text-gray-500 flex-shrink-0 w-12">
+                            {m.scheduled_time ? `⏰ ${m.scheduled_time}` : `第${idx + 1}試合`}
+                          </span>
+                          <span className={m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player1.name}</span>
+                          <span className="text-white font-bold flex-shrink-0">
+                            {m.winner_id ? (m.mode === 'walkover' ? 'W/O' : `${m.score1} - ${m.score2}`) : '未登録'}
+                          </span>
+                          <span className={m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player2.name}</span>
+                          {m.mode !== 'normal' && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-400">
+                              {m.mode === 'walkover' ? '不戦勝' : '途中棄権'}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setEditMatch(m)
+                              setEditScore1(m.score1?.toString() ?? '')
+                              setEditScore2(m.score2?.toString() ?? '')
+                            }}
+                            className="ml-auto text-xs px-2 py-0.5 bg-purple-700/50 hover:bg-purple-600/50 rounded text-purple-300 transition"
+                          >
+                            {m.winner_id ? '編集' : 'スコア入力'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 手動試合登録 */}
                 {!isQualifyingLocked && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-semibold text-gray-300">
-                        試合登録 {pendingPairs.length > 0 && <span className="text-gray-500">（残り{pendingPairs.length}試合）</span>}
+                        手動試合登録 {pendingPairs.length > 0 && <span className="text-gray-500">（残り{pendingPairs.length}試合）</span>}
                       </h3>
                       <button
                         onClick={() => {
@@ -586,15 +745,13 @@ const handleEditMatch = async () => {
                         }}
                         className="text-xs px-3 py-1 bg-purple-700/50 hover:bg-purple-600/50 rounded-lg text-purple-300 transition"
                       >
-                        {showMatchForm === block.id ? 'キャンセル' : '+ 試合登録'}
+                        {showMatchForm === block.id ? 'キャンセル' : '+ 手動登録'}
                       </button>
                     </div>
 
                     {showMatchForm === block.id && (
                       <div className="p-4 bg-black/20 rounded-xl space-y-3">
-                        {matchError && (
-                          <p className="text-sm text-red-400">{matchError}</p>
-                        )}
+                        {matchError && <p className="text-sm text-red-400">{matchError}</p>}
 
                         <div className="flex gap-2 bg-black/20 rounded-lg p-1">
                           {(['normal', 'walkover', 'forfeit'] as const).map(mode => (
@@ -620,10 +777,10 @@ const handleEditMatch = async () => {
                               className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                             >
                               <option value="">選択</option>
-{block.tournament_block_players.map(bp => (
-  <option key={bp.player_id} value={bp.player_id}>{bp.player.name}</option>
-))}
-<option value={defaultPlayerId}>DEFAULT（不戦勝）</option>
+                              {block.tournament_block_players.map(bp => (
+                                <option key={bp.player_id} value={bp.player_id}>{bp.player.name}</option>
+                              ))}
+                              <option value={defaultPlayerId}>DEFAULT（不戦勝）</option>
                             </select>
                           </div>
                           <div>
@@ -636,14 +793,14 @@ const handleEditMatch = async () => {
                               className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                             >
                               <option value="">選択</option>
-{block.tournament_block_players
-  .filter(bp => bp.player_id !== matchPlayer1)
-  .map(bp => (
-    <option key={bp.player_id} value={bp.player_id}>{bp.player.name}</option>
-  ))}
-{matchPlayer1 !== defaultPlayerId && (
-  <option value={defaultPlayerId}>DEFAULT（不戦勝）</option>
-)}
+                              {block.tournament_block_players
+                                .filter(bp => bp.player_id !== matchPlayer1)
+                                .map(bp => (
+                                  <option key={bp.player_id} value={bp.player_id}>{bp.player.name}</option>
+                                ))}
+                              {matchPlayer1 !== defaultPlayerId && (
+                                <option value={defaultPlayerId}>DEFAULT（不戦勝）</option>
+                              )}
                             </select>
                           </div>
                         </div>
@@ -653,10 +810,7 @@ const handleEditMatch = async () => {
                             <div className="flex-1">
                               <label className="block text-xs text-gray-400 mb-1">スコア1</label>
                               <input
-                                type="number"
-                                min="0"
-                                max="15"
-                                value={score1}
+                                type="number" min="0" max="15" value={score1}
                                 onChange={e => setScore1(e.target.value)}
                                 className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                               />
@@ -665,10 +819,7 @@ const handleEditMatch = async () => {
                             <div className="flex-1">
                               <label className="block text-xs text-gray-400 mb-1">スコア2</label>
                               <input
-                                type="number"
-                                min="0"
-                                max="15"
-                                value={score2}
+                                type="number" min="0" max="15" value={score2}
                                 onChange={e => setScore2(e.target.value)}
                                 className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                               />
@@ -691,27 +842,21 @@ const handleEditMatch = async () => {
             )
           })}
         </div>
-    )}
+      )}
+
+      {/* 試合編集モーダル */}
       {editMatch && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
           <div className="bg-[#1e0f3a] border border-purple-800/50 rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <h2 className="text-lg font-bold">試合を編集</h2>
-            
-            {/* プレーヤー1 */}
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">プレーヤー1</label>
-              <select
-                value={editMatch.player1_id}
-                onChange={e => setEditMatch({ ...editMatch, player1_id: e.target.value, player1: players.find(p => p.id === e.target.value) ?? editMatch.player1 })}
-                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {enteredPlayers.map(p => (
-  <option key={p.id} value={p.id}>{p.name}</option>
-))}
-              </select>
+            <h2 className="text-lg font-bold">
+              {editMatch.winner_id ? '試合を編集' : 'スコアを入力'}
+            </h2>
+            <div className="flex items-center justify-between text-sm text-gray-300">
+              <span className="font-medium">{editMatch.player1.name}</span>
+              <span className="text-gray-500">vs</span>
+              <span className="font-medium">{editMatch.player2.name}</span>
             </div>
 
-            {/* スコア */}
             <div className="flex gap-4 items-center">
               <div className="flex-1">
                 <label className="block text-xs text-gray-400 mb-1">スコア1</label>
@@ -730,21 +875,7 @@ const handleEditMatch = async () => {
               </div>
             </div>
 
-            {/* プレーヤー2 */}
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">プレーヤー2</label>
-              <select
-                value={editMatch.player2_id}
-                onChange={e => setEditMatch({ ...editMatch, player2_id: e.target.value, player2: players.find(p => p.id === e.target.value) ?? editMatch.player2 })}
-                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {enteredPlayers.map(p => (
-  <option key={p.id} value={p.id}>{p.name}</option>
-))}
-              </select>
-            </div>
-
-<div className="flex gap-3">
+            <div className="flex gap-3">
               <button onClick={handleEditMatch} disabled={editLoading}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition">
                 {editLoading ? '保存中...' : '保存'}
