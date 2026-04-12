@@ -38,5 +38,5 @@ export async function getRecentTournamentWinners(limit = 5) {
     })
   )
 
-  return results.filter(Boolean)
+ return results.filter((r): r is NonNullable<typeof r> => r !== null)
 }
