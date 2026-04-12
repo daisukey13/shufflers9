@@ -54,7 +54,7 @@ export default function HeaderClient({
           ) : isLoggedIn ? (
             <span className="text-lg">👤</span>
           ) : (
-            <span className="text-sm text-purple-400">ログイン</span>
+            <img src="/default-avatar.png" className="w-full h-full object-cover opacity-50" />
           )}
         </Link>
       </div>
