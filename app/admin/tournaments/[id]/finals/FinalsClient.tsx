@@ -92,15 +92,7 @@ export default function FinalsClient({
     return null
   }
 
-  const handleStatusChange = async () => {
-    const next = NEXT_STATUS[tournament.status]
-    if (!next) return
-    if (!confirm(`ステータスを「${next.label}」に変更しますか？`)) return
-    setStatusLoading(true)
-    await supabase.from('tournaments').update({ status: next.status }).eq('id', tournament.id)
-    if (next.status === 'finished') {
-      await supabase.rpc('update_tournament_stats', { p_tournament_id: tournament.id })
-    }
+  
     setStatusLoading(false)
     router.refresh()
   }
