@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Player } from '@/types'
 
-export default function AdminRegisterDoublesPage() {
+export default function RegisterDoublesPage() {
   const [players, setPlayers] = useState<Player[]>([])
-  const [pair1p1, setPair1p1] = useState('')
+  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
   const [pair1p2, setPair1p2] = useState('')
   const [pair2p1, setPair2p1] = useState('')
   const [pair2p2, setPair2p2] = useState('')
@@ -22,6 +22,16 @@ export default function AdminRegisterDoublesPage() {
 
   useEffect(() => {
     const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: me } = await supabase
+        .from('players')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+      if (me) setCurrentPlayer(me)
+
       const { data } = await supabase
         .from('players')
         .select('*')
@@ -33,10 +43,10 @@ export default function AdminRegisterDoublesPage() {
     load()
   }, [])
 
-  const selectedIds = [pair1p1, pair1p2, pair2p1, pair2p2].filter(Boolean)
+  const pair1p1 = currentPlayer?.id ?? ''
 
   const available = (exclude: string[]) =>
-    players.filter(p => !exclude.includes(p.id))
+    players.filter(p => !exclude.includes(p.id) && p.id !== pair1p1)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,7 +71,6 @@ export default function AdminRegisterDoublesPage() {
     setError(null)
 
     try {
-      // 4人のdoubles_rating取得
       const { data: p1 } = await supabase.from('players').select('doubles_rating, doubles_wins, doubles_losses, total_matches, wins, losses, total_score').eq('id', pair1p1).single()
       const { data: p2 } = await supabase.from('players').select('doubles_rating, doubles_wins, doubles_losses, total_matches, wins, losses, total_score').eq('id', pair1p2).single()
       const { data: p3 } = await supabase.from('players').select('doubles_rating, doubles_wins, doubles_losses, total_matches, wins, losses, total_score').eq('id', pair2p1).single()
@@ -73,7 +82,6 @@ export default function AdminRegisterDoublesPage() {
         return
       }
 
-      // ペア平均RPでElo計算
       const pair1AvgRating = Math.round(((p1.doubles_rating ?? 1000) + (p2.doubles_rating ?? 1000)) / 2)
       const pair2AvgRating = Math.round(((p3.doubles_rating ?? 1000) + (p4.doubles_rating ?? 1000)) / 2)
 
@@ -95,7 +103,6 @@ export default function AdminRegisterDoublesPage() {
       const eloResult = elo[0]
       const winnerPair = s1 > s2 ? 1 : 2
 
-      // 試合登録
       const { error: matchError } = await supabase.from('doubles_matches').insert({
         pair1_player1_id: pair1p1,
         pair1_player2_id: pair1p2,
@@ -115,7 +122,6 @@ export default function AdminRegisterDoublesPage() {
         return
       }
 
-      // ペア1のRP・勝敗・total_matches更新
       for (const [pid, pl] of [[pair1p1, p1], [pair1p2, p2]] as [string, typeof p1][]) {
         if (!pl) continue
         await supabase.from('players').update({
@@ -126,7 +132,6 @@ export default function AdminRegisterDoublesPage() {
         }).eq('id', pid)
       }
 
-      // ペア2のRP・勝敗・total_matches更新
       for (const [pid, pl] of [[pair2p1, p3], [pair2p2, p4]] as [string, typeof p3][]) {
         if (!pl) continue
         await supabase.from('players').update({
@@ -137,17 +142,15 @@ export default function AdminRegisterDoublesPage() {
         }).eq('id', pid)
       }
 
-      // HC更新（試合数のみ加味・4人分）
       for (const [pid, pl] of [
         [pair1p1, p1], [pair1p2, p2], [pair2p1, p3], [pair2p2, p4]
       ] as [string, typeof p1][]) {
         if (!pl) continue
-        const newTotalMatches = (pl.total_matches ?? 0) + 1
         const { data: hcResult } = await supabase.rpc('calc_hc', {
           p_wins: pl.wins ?? 0,
           p_losses: pl.losses ?? 0,
           p_total_score: pl.total_score ?? 0,
-          p_total_matches: newTotalMatches,
+          p_total_matches: (pl.total_matches ?? 0) + 1,
         })
         if (hcResult !== null) {
           await supabase.from('players').update({ hc: hcResult }).eq('id', pid)
@@ -156,9 +159,9 @@ export default function AdminRegisterDoublesPage() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push('/admin/matches')
+        router.push('/')
         router.refresh()
-      }, 1000)
+      }, 1500)
 
     } catch (err) {
       setError('予期しないエラーが発生しました')
@@ -166,12 +169,16 @@ export default function AdminRegisterDoublesPage() {
     }
   }
 
+  if (!currentPlayer) {
+    return <div className="text-center text-gray-400 py-10">読み込み中...</div>
+  }
+
   return (
-    <div className="space-y-6 max-w-lg mx-auto">
+    <div className="space-y-6 max-w-lg mx-auto px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">🎾 ダブルス試合登録</h1>
-        <Link href="/admin/matches" className="text-sm text-gray-400 hover:text-white transition">
-          ← 試合管理
+        <Link href="/" className="text-sm text-gray-400 hover:text-white transition">
+          ← トップへ
         </Link>
       </div>
 
@@ -186,24 +193,16 @@ export default function AdminRegisterDoublesPage() {
         {/* ペア1 */}
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-purple-300 border-b border-purple-800/30 pb-1">
-            ペア1
+            ペア1（あなたのチーム）
           </h2>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">プレーヤー1</label>
-            <select
-              value={pair1p1}
-              onChange={e => setPair1p1(e.target.value)}
-              required
-              className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="">選択してください</option>
-              {available([pair1p2, pair2p1, pair2p2]).map(p => (
-                <option key={p.id} value={p.id}>{p.name} (D-RP:{p.doubles_rating ?? 1000})</option>
-              ))}
-            </select>
+            <label className="block text-xs text-gray-400 mb-1">プレーヤー1（自分）</label>
+            <div className="w-full bg-purple-900/10 border border-purple-700/30 rounded-lg px-3 py-2 text-sm text-gray-300">
+              {currentPlayer.name}（自動設定）
+            </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">プレーヤー2</label>
+            <label className="block text-xs text-gray-400 mb-1">プレーヤー2（パートナー）</label>
             <select
               value={pair1p2}
               onChange={e => setPair1p2(e.target.value)}
@@ -211,7 +210,7 @@ export default function AdminRegisterDoublesPage() {
               className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="">選択してください</option>
-              {available([pair1p1, pair2p1, pair2p2]).map(p => (
+              {available([pair2p1, pair2p2]).map(p => (
                 <option key={p.id} value={p.id}>{p.name} (D-RP:{p.doubles_rating ?? 1000})</option>
               ))}
             </select>
@@ -221,7 +220,7 @@ export default function AdminRegisterDoublesPage() {
         {/* ペア2 */}
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-orange-300 border-b border-purple-800/30 pb-1">
-            ペア2
+            ペア2（対戦相手）
           </h2>
           <div>
             <label className="block text-xs text-gray-400 mb-1">プレーヤー1</label>
@@ -232,7 +231,7 @@ export default function AdminRegisterDoublesPage() {
               className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="">選択してください</option>
-              {available([pair1p1, pair1p2, pair2p2]).map(p => (
+              {available([pair1p2, pair2p2]).map(p => (
                 <option key={p.id} value={p.id}>{p.name} (D-RP:{p.doubles_rating ?? 1000})</option>
               ))}
             </select>
@@ -246,7 +245,7 @@ export default function AdminRegisterDoublesPage() {
               className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="">選択してください</option>
-              {available([pair1p1, pair1p2, pair2p1]).map(p => (
+              {available([pair1p2, pair2p1]).map(p => (
                 <option key={p.id} value={p.id}>{p.name} (D-RP:{p.doubles_rating ?? 1000})</option>
               ))}
             </select>
@@ -262,10 +261,7 @@ export default function AdminRegisterDoublesPage() {
             <div className="flex-1">
               <label className="block text-xs text-gray-400 mb-1">ペア1のスコア</label>
               <input
-                type="number"
-                min="0"
-                max="15"
-                value={score1}
+                type="number" min="0" max="15" value={score1}
                 onChange={e => setScore1(e.target.value)}
                 required
                 className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -275,10 +271,7 @@ export default function AdminRegisterDoublesPage() {
             <div className="flex-1">
               <label className="block text-xs text-gray-400 mb-1">ペア2のスコア</label>
               <input
-                type="number"
-                min="0"
-                max="15"
-                value={score2}
+                type="number" min="0" max="15" value={score2}
                 onChange={e => setScore2(e.target.value)}
                 required
                 className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
