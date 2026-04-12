@@ -10,11 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout main
         uses: actions/checkout@v4.2.2
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4.3.0
@@ -109,12 +110,13 @@ jobs:
 
           TODAY=$(date +'%Y-%m-%d')
 
-          # backupフォルダの内容を一時保存
+          # backupフォルダを一時保存
           cp -r backup/ /tmp/backup_temp/
 
-          # backupsブランチに切り替え
-          git fetch origin backups || true
-          git checkout backups || git checkout --orphan backups
+          # backupsブランチをリモートから直接取得してリセット
+          git fetch origin backups
+          git checkout backups
+          git reset --hard origin/backups
 
           # backupフォルダを復元
           mkdir -p backup
