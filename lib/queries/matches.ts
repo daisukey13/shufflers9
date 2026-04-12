@@ -117,3 +117,17 @@ export async function getRecentAllMatches(limit = 5) {
 
   return all
 }
+export async function getRecentDoublesMatches(limit = 5) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('doubles_matches')
+    .select(`*,
+      pair1_player1:players!pair1_player1_id(id, name, avatar_url),
+      pair1_player2:players!pair1_player2_id(id, name, avatar_url),
+      pair2_player1:players!pair2_player1_id(id, name, avatar_url),
+      pair2_player2:players!pair2_player2_id(id, name, avatar_url)
+    `)
+    .order('played_at', { ascending: false })
+    .limit(limit)
+  return data ?? []
+}
