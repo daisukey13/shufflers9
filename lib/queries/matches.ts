@@ -59,18 +59,21 @@ export async function getRecentAllMatches(limit = 5) {
     .order('played_at', { ascending: false })
     .limit(limit)
 
-  // 予選試合
+ // 予選試合（スコア確定済みのみ）
   const { data: qualifying } = await supabase
     .from('tournament_qualifying_matches')
     .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), block:tournament_blocks(tournament_id, block_name, tournament:tournaments(name))')
     .eq('mode', 'normal')
+    .not('winner_id', 'is', null)
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  // 本戦試合
+
+    // 本戦試合（スコア確定済みのみ）
   const { data: finals } = await supabase
     .from('tournament_finals_matches')
     .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), tournament:tournaments(name)')
+    .not('winner_id', 'is', null)
     .order('created_at', { ascending: false })
     .limit(limit)
 
