@@ -309,22 +309,13 @@ const timeOptions = (() => {
         .single()
 
       if (p1 && p2) {
-        const { count: matchesP1 } = await supabase
-          .from('singles_matches')
-          .select('*', { count: 'exact', head: true })
-          .or(`player1_id.eq.${player1Id},player2_id.eq.${player1Id}`)
-        const { count: matchesP2 } = await supabase
-          .from('singles_matches')
-          .select('*', { count: 'exact', head: true })
-          .or(`player1_id.eq.${player2Id},player2_id.eq.${player2Id}`)
-
         const { data: elo } = await supabase.rpc('calc_elo', {
           rating_a: p1.rating,
           rating_b: p2.rating,
           score_a: totalScore1,
           score_b: totalScore2,
-          matches_a: matchesP1 ?? 0,
-          matches_b: matchesP2 ?? 0,
+          matches_a: p1.total_matches ?? 0,
+          matches_b: p2.total_matches ?? 0,
         })
 
         if (elo?.[0]) {
