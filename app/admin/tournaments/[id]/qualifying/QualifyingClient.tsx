@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 type Player = { id: string; name: string; avatar_url: string | null; hc: number; rating: number }
 type BlockPlayer = { id: string; block_id: string; player_id: string; is_default: boolean; player: Player }
-type Block = { id: string; tournament_id: string; block_name: string; match_time_1: string | null; match_time_2: string | null; match_time_3: string | null; tournament_block_players: BlockPlayer[] }
+type Block = { id: string; tournament_id: string; block_name: string; match_time_1: string | null; match_time_2: string | null; match_time_3: string | null; scores_finalized: boolean; tournament_block_players: BlockPlayer[] }
 type Match = {
   id: string; block_id: string; player1_id: string; player2_id: string
   score1: number | null; score2: number | null; winner_id: string | null
@@ -85,7 +85,6 @@ export default function QualifyingClient({
     const updated = [...current]
     updated[index] = value
     setMatchTimes(prev => ({ ...prev, [blockId]: updated }))
-
     const colName = `match_time_${index + 1}`
     await supabase
       .from('tournament_blocks')
@@ -116,7 +115,6 @@ export default function QualifyingClient({
       return
     }
 
-    // 3試合の組み合わせ
     const pairs: [BlockPlayer, BlockPlayer][] = [
       [bp[0], bp[1]],
       [bp[1], bp[2]],
@@ -129,7 +127,6 @@ export default function QualifyingClient({
       const [p1, p2] = pairs[i]
       const hasDefault = p1.is_default || p2.is_default
 
-      // 登録済みはスキップ
       const alreadyExists = matches.some(m =>
         m.block_id === block.id &&
         ((m.player1_id === p1.player_id && m.player2_id === p2.player_id) ||
@@ -137,7 +134,6 @@ export default function QualifyingClient({
       )
       if (alreadyExists) continue
 
-      // DEFAULTが絡む試合は時間未設定
       const scheduledTime = hasDefault ? null : (times[i] || null)
 
       await supabase.from('tournament_qualifying_matches').insert({
@@ -154,6 +150,16 @@ export default function QualifyingClient({
     }
 
     setAutoMatchLoading(null)
+    router.refresh()
+  }
+
+  // スコア登録完了
+  const handleFinalizeScores = async (block: Block) => {
+    if (!confirm(`ブロック${block.block_name}のスコア登録を完了し、順位を公開しますか？`)) return
+    await supabase
+      .from('tournament_blocks')
+      .update({ scores_finalized: true })
+      .eq('id', block.id)
     router.refresh()
   }
 
@@ -612,9 +618,13 @@ export default function QualifyingClient({
                         {standings.map((s, idx) => (
                           <tr key={s.player.id} className={`border-b border-purple-800/20 ${idx === 0 ? 'text-yellow-100' : 'text-white'}`}>
                             <td className="py-2 pr-4">
-                              <span className="font-bold text-gray-400">
-                                {isQualifyingLocked ? idx + 1 : '－'}
-                              </span>
+                              {block.scores_finalized ? (
+                                <span className={`font-bold ${idx === 0 && isQualifyingLocked ? 'text-yellow-400' : 'text-gray-400'}`}>
+                                  {idx + 1}{idx === 0 && !s.is_default && isQualifyingLocked ? ' 👑' : ''}
+                                </span>
+                              ) : (
+                                <span className="text-gray-600 font-bold">－</span>
+                              )}
                             </td>
                             <td className="py-2 pr-4">
                               <div className="flex items-center gap-2">
@@ -688,6 +698,27 @@ export default function QualifyingClient({
                   </div>
                 )}
 
+                {/* スコア登録完了ボタン */}
+                {!isQualifyingLocked && !block.scores_finalized && (
+                  <div className="flex items-center justify-between gap-4 p-3 bg-green-900/20 border border-green-700/30 rounded-xl">
+                    <div>
+                      <p className="text-sm font-semibold text-green-300">✅ スコア登録完了</p>
+                      <p className="text-xs text-gray-400 mt-0.5">押すと公開ページに順位が表示されます</p>
+                    </div>
+                    <button
+                      onClick={() => handleFinalizeScores(block)}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition whitespace-nowrap"
+                    >
+                      順位を公開
+                    </button>
+                  </div>
+                )}
+                {block.scores_finalized && (
+                  <div className="p-3 bg-green-900/10 border border-green-700/20 rounded-xl">
+                    <p className="text-xs text-green-400">✅ スコア登録完了・順位公開中</p>
+                  </div>
+                )}
+
                 {/* 試合結果一覧 */}
                 {blockMatches.length > 0 && (
                   <div>
@@ -700,7 +731,7 @@ export default function QualifyingClient({
                           </span>
                           <span className={m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player1.name}</span>
                           <span className="text-white font-bold flex-shrink-0">
-                            {m.winner_id ? (m.mode === 'walkover' ? 'W/O' : `${m.score1} - ${m.score2}`) : '未登録'}
+                            {m.winner_id ? (m.mode === 'walkover' ? 'W/O' : `${m.score1} - ${m.score2}`) : '－'}
                           </span>
                           <span className={m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player2.name}</span>
                           {m.mode !== 'normal' && (
