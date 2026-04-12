@@ -1,0 +1,121 @@
+name: Daily Database Backup
+
+on:
+  schedule:
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node -e "
+          const https = require('https');
+          const fs = require('fs');
+          const path = require('path');
+
+          const SUPABASE_URL = process.env.SUPABASE_URL;
+          const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+          const tables = [
+            'players',
+            'singles_matches',
+            'doubles_matches',
+            'teams',
+            'team_members',
+            'teams_matches',
+            'notices',
+            'ranking_config',
+            'tournaments',
+            'tournament_entries',
+            'tournament_blocks',
+            'tournament_block_players',
+            'tournament_qualifying_matches',
+            'tournament_finals_matches',
+            'tournament_finals_sets',
+          ];
+
+          const today = new Date().toISOString().slice(0, 10);
+          const backupDir = \`backup/\${today}\`;
+          fs.mkdirSync(backupDir, { recursive: true });
+
+          async function fetchTable(table) {
+            return new Promise((resolve, reject) => {
+              const url = new URL(\`\${SUPABASE_URL}/rest/v1/\${table}?select=*\`);
+              const options = {
+                hostname: url.hostname,
+                path: url.pathname + url.search,
+                headers: {
+                  'apikey': SERVICE_ROLE_KEY,
+                  'Authorization': \`Bearer \${SERVICE_ROLE_KEY}\`,
+                  'Content-Type': 'application/json',
+                },
+              };
+              https.get(options, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => resolve(JSON.parse(data)));
+              }).on('error', reject);
+            });
+          }
+
+          async function main() {
+            const summary = { date: today, tables: {} };
+            for (const table of tables) {
+              try {
+                const data = await fetchTable(table);
+                fs.writeFileSync(
+                  path.join(backupDir, \`\${table}.json\`),
+                  JSON.stringify(data, null, 2)
+                );
+                summary.tables[table] = Array.isArray(data) ? data.length : 0;
+                console.log(\`✅ \${table}: \${summary.tables[table]}件\`);
+              } catch (e) {
+                console.error(\`❌ \${table}: \${e.message}\`);
+                summary.tables[table] = 'error';
+              }
+            }
+            fs.writeFileSync(
+              path.join(backupDir, '_summary.json'),
+              JSON.stringify(summary, null, 2)
+            );
+            console.log('バックアップ完了:', today);
+          }
+
+          main();
+          "
+
+      - name: Commit and push backup
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          TODAY=$(date +'%Y-%m-%d')
+
+          # backupsブランチに切り替え
+          git fetch origin backups || true
+          git checkout backups || git checkout --orphan backups
+
+          # backupフォルダだけmainからコピー
+          git checkout main -- backup/
+
+          git add backup/
+          git diff --cached --quiet || git commit -m "backup: ${TODAY} 自動バックアップ"
+          git push origin backups
