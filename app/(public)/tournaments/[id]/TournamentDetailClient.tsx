@@ -5,11 +5,11 @@ import Link from 'next/link'
 
 type Player = { id: string; name: string; avatar_url: string | null; hc?: number; rating?: number }
 type BlockPlayer = { id: string; block_id: string; player_id: string; is_default: boolean; player: Player }
-type Block = { id: string; block_name: string; tournament_block_players: BlockPlayer[] }
+type Block = { id: string; block_name: string; match_time_1: string | null; match_time_2: string | null; match_time_3: string | null; tournament_block_players: BlockPlayer[] }
 type QualifyingMatch = {
   id: string; block_id: string; player1_id: string; player2_id: string
   score1: number | null; score2: number | null; winner_id: string | null
-  mode: string; affects_ranking: boolean
+  mode: string; affects_ranking: boolean; scheduled_time: string | null
   player1: Player; player2: Player
 }
 type FinalsSet = { id: string; match_id: string; set_number: number; score1: number; score2: number }
@@ -271,7 +271,15 @@ export default function TournamentDetailClient({
                 return (
                   <div key={block.id} className="bg-purple-900/20 border border-purple-800/30 rounded-2xl p-5 space-y-5">
                     <h2 className="text-lg font-bold text-yellow-100">ブロック {block.block_name}</h2>
-
+{(block.match_time_1 || block.match_time_2 || block.match_time_3) && (
+  <div className="flex flex-wrap gap-2">
+    {[block.match_time_1, block.match_time_2, block.match_time_3].map((t, i) => t ? (
+      <span key={i} className="text-xs px-2 py-1 rounded-full bg-blue-900/40 border border-blue-700/30 text-blue-300">
+        ⏰ 第{i + 1}試合 {t}
+      </span>
+    ) : null)}
+  </div>
+)}
                     {/* 順位表 */}
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -291,10 +299,22 @@ export default function TournamentDetailClient({
                           {standings.map((s, idx) => (
                             <tr key={s.player.id} className={`border-b border-purple-800/20 ${idx === 0 && !s.is_default && isQualifyingDone ? 'bg-yellow-900/10' : ''}`}>
                               <td className="py-2 pr-3">
-                                <span className={`font-bold ${idx === 0 && isQualifyingDone ? 'text-yellow-400' : 'text-gray-400'}`}>
-                                  {idx + 1}{idx === 0 && !s.is_default && isQualifyingDone ? ' 👑' : ''}
-                                </span>
-                              </td>
+  {(() => {
+    const blockMatchesForBlock = qualifyingMatches.filter(m => m.block_id === block.id)
+    const nonDefaultMatches = blockMatchesForBlock.filter(m =>
+      !block.tournament_block_players.some(
+        bp => bp.is_default && (bp.player_id === m.player1_id || bp.player_id === m.player2_id)
+      )
+    )
+    const allScored = nonDefaultMatches.length >= 3 && nonDefaultMatches.every(m => m.winner_id !== null)
+    if (!allScored) return <span className="text-gray-600 font-bold">－</span>
+    return (
+      <span className={`font-bold ${idx === 0 && isQualifyingDone ? 'text-yellow-400' : 'text-gray-400'}`}>
+        {idx + 1}{idx === 0 && !s.is_default && isQualifyingDone ? ' 👑' : ''}
+      </span>
+    )
+  })()}
+</td>
                               <td className="py-2 pr-3">
                                 <button
                                   onClick={() => setPopupPlayer(s.player)}
@@ -329,30 +349,51 @@ export default function TournamentDetailClient({
                       <div>
                         <h3 className="text-sm font-semibold text-gray-400 mb-2">試合結果</h3>
                         <div className="space-y-1">
-                          {blockMatches.map(m => (
-                            <div key={m.id} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg text-sm">
-                              <button
-                                onClick={() => setPopupPlayer(m.player1)}
-                                className={`flex-1 text-right hover:opacity-80 ${m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}`}
-                              >
-                                {m.player1.name}
-                              </button>
-                              <span className="text-white font-bold flex-shrink-0">
-                                {m.mode === 'walkover' ? 'W/O' : `${m.score1} - ${m.score2}`}
-                              </span>
-                              <button
-                                onClick={() => setPopupPlayer(m.player2)}
-                                className={`flex-1 hover:opacity-80 ${m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}`}
-                              >
-                                {m.player2.name}
-                              </button>
-                              {m.mode !== 'normal' && (
-                                <span className="text-xs text-yellow-400 flex-shrink-0">
-                                  {m.mode === 'walkover' ? '不戦勝' : '棄権'}
-                                </span>
-                              )}
-                            </div>
-                          ))}
+                          {blockMatches.map((m, idx) => {
+  const isDefault = block.tournament_block_players.some(
+    bp => bp.is_default && (bp.player_id === m.player1_id || bp.player_id === m.player2_id)
+  )
+  const realMatchNumber = blockMatches
+    .slice(0, idx)
+    .filter(bm => !block.tournament_block_players.some(
+      bp => bp.is_default && (bp.player_id === bm.player1_id || bp.player_id === bm.player2_id)
+    )).length + 1
+
+  const times = [block.match_time_1, block.match_time_2, block.match_time_3]
+  const matchTime = !isDefault ? times[realMatchNumber - 1] : null
+
+  return (
+    <div key={m.id} className="flex flex-col gap-1 p-2 bg-black/20 rounded-lg text-sm">
+      {!isDefault && (
+        <span className="text-xs text-blue-300">
+          第{realMatchNumber}試合{matchTime ? `　${matchTime}開始` : ''}
+        </span>
+      )}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setPopupPlayer(m.player1)}
+          className={`flex-1 text-right hover:opacity-80 ${m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}`}
+        >
+          {m.player1.name}
+        </button>
+        <span className="text-white font-bold flex-shrink-0">
+          {m.mode === 'walkover' ? 'W/O' : m.winner_id ? `${m.score1} - ${m.score2}` : '-'}
+        </span>
+        <button
+          onClick={() => setPopupPlayer(m.player2)}
+          className={`flex-1 hover:opacity-80 ${m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}`}
+        >
+          {m.player2.name}
+        </button>
+        {m.mode !== 'normal' && (
+          <span className="text-xs text-yellow-400 flex-shrink-0">
+            {m.mode === 'walkover' ? '不戦勝' : '棄権'}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+})}
                         </div>
                       </div>
                     )}
