@@ -88,10 +88,18 @@ export default function TournamentDetailClient({
   const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
   const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
-  const champion = isFinished
+const champion = isFinished
     ? finalsMatches
         .filter(m => m.round === maxRound && m.winner)
         .sort((a, b) => b.match_number - a.match_number)[0]?.winner
+    : null
+
+  const finalMatch = finalsMatches
+    .filter(m => m.round === maxRound)
+    .sort((a, b) => b.match_number - a.match_number)[0]
+
+  const runnerUp = isFinished && finalMatch
+    ? (finalMatch.winner_id === finalMatch.player1_id ? finalMatch.player2 : finalMatch.player1)
     : null
 
   const roundsInFinals = Array.from(new Set(finalsMatches.map(m => m.round))).sort()
@@ -241,7 +249,18 @@ export default function TournamentDetailClient({
     </div>
   </div>
 )}
-
+{/* 準優勝者 */}
+{runnerUp && (
+  <div className="p-4 bg-gray-900/40 border border-gray-600/40 rounded-2xl text-center">
+    <p className="text-gray-400 text-sm font-bold mb-2">🥈 準優勝</p>
+    <div className="flex items-center justify-center gap-3">
+      {runnerUp.avatar_url && (
+        <img src={runnerUp.avatar_url} className="w-12 h-12 rounded-full border-2 border-gray-400 object-cover" />
+      )}
+      <p className="text-xl font-bold text-gray-200">{runnerUp.name}</p>
+    </div>
+  </div>
+)}
         {/* タブ */}
         <div className="flex gap-2 bg-black/20 rounded-lg p-1">
           <button

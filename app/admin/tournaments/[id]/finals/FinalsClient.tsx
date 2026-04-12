@@ -368,6 +368,14 @@ export default function FinalsClient({
         .sort((a, b) => b.match_number - a.match_number)[0]?.winner
     : null
 
+  const finalMatch = finalsMatches
+    .filter(m => m.round === maxRound)
+    .sort((a, b) => b.match_number - a.match_number)[0]
+
+  const runnerUp = isFinalsLocked && finalMatch
+    ? (finalMatch.winner_id === finalMatch.player1_id ? finalMatch.player2 : finalMatch.player1)
+    : null
+
   return (
     <div className="space-y-8">
       {/* ヘッダー */}
@@ -397,7 +405,18 @@ export default function FinalsClient({
           <p className="text-yellow-400 text-sm">✅ 大会終了済み。試合の編集のみ可能です。</p>
         </div>
       )}
-
+{/* 準優勝者 */}
+{runnerUp && (
+  <div className="p-4 bg-gray-900/40 border border-gray-600/40 rounded-2xl text-center">
+    <p className="text-gray-400 text-sm font-bold mb-2">🥈 準優勝</p>
+    <div className="flex items-center justify-center gap-3">
+      {runnerUp.avatar_url && (
+        <img src={runnerUp.avatar_url} className="w-12 h-12 rounded-full border-2 border-gray-400 object-cover" />
+      )}
+      <p className="text-xl font-bold text-gray-200">{runnerUp.name}</p>
+    </div>
+  </div>
+)}
       {/* 優勝者（終了後のみ） */}
       {champion && (
         <div className="p-6 bg-gradient-to-r from-yellow-900/40 to-yellow-700/20 border-2 border-yellow-400 rounded-2xl text-center">
