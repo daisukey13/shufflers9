@@ -10,19 +10,20 @@ export default async function MatchesPage() {
     getRecentTeamsMatches(30),
   ])
 
-  // 大会予選試合
+ // 大会予選試合（スコア確定済みのみ）
   const { data: qualifyingMatches } = await supabase
     .from('tournament_qualifying_matches')
     .select('*, block:tournament_blocks(block_name, tournament:tournaments(id, name)), player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url)')
     .eq('mode', 'normal')
+    .not('winner_id', 'is', null)
     .order('played_at', { ascending: false })
     .limit(30)
 
-  // 大会本戦試合
+  // 大会本戦試合（スコア確定済みのみ）
   const { data: finalsMatches } = await supabase
     .from('tournament_finals_matches')
     .select('*, tournament:tournaments(id, name), player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), tournament_finals_sets(*)')
-    .eq('mode', 'normal')
+    .not('winner_id', 'is', null)
     .order('played_at', { ascending: false })
     .limit(30)
 
