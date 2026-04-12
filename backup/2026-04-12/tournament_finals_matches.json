@@ -63,5 +63,44 @@
     "mode": "normal",
     "played_at": "2026-04-11T08:59:42.854155+00:00",
     "created_at": "2026-04-11T08:59:42.854155+00:00"
+  },
+  {
+    "id": "c6331032-a7b8-4b42-ada1-66af3a97cdf1",
+    "tournament_id": "2dd70811-0c43-486e-b21d-cc605b2609a9",
+    "round": 1,
+    "match_number": 1,
+    "player1_id": "a87c2e63-a0f1-424a-bd02-2508d1ca2b8a",
+    "player2_id": "241e5ec1-86ff-46c6-bcda-3fc41b92dd1d",
+    "winner_id": "241e5ec1-86ff-46c6-bcda-3fc41b92dd1d",
+    "disadvantage_player_id": null,
+    "mode": "normal",
+    "played_at": "2026-04-12T07:44:45.827327+00:00",
+    "created_at": "2026-04-12T07:44:45.827327+00:00"
+  },
+  {
+    "id": "949adc20-95dd-4a69-a412-7b47163fb9b1",
+    "tournament_id": "2dd70811-0c43-486e-b21d-cc605b2609a9",
+    "round": 1,
+    "match_number": 2,
+    "player1_id": "9bdb68a9-fc81-4e5a-bac7-3f15300f7dbf",
+    "player2_id": "223c354a-cdf6-4d4d-bb78-61d27ef069de",
+    "winner_id": "223c354a-cdf6-4d4d-bb78-61d27ef069de",
+    "disadvantage_player_id": null,
+    "mode": "normal",
+    "played_at": "2026-04-12T07:49:43.246718+00:00",
+    "created_at": "2026-04-12T07:49:43.246718+00:00"
+  },
+  {
+    "id": "b5dd3a93-846c-410d-a33e-3435749b1c32",
+    "tournament_id": "2dd70811-0c43-486e-b21d-cc605b2609a9",
+    "round": 5,
+    "match_number": 1,
+    "player1_id": "241e5ec1-86ff-46c6-bcda-3fc41b92dd1d",
+    "player2_id": "223c354a-cdf6-4d4d-bb78-61d27ef069de",
+    "winner_id": "241e5ec1-86ff-46c6-bcda-3fc41b92dd1d",
+    "disadvantage_player_id": null,
+    "mode": "normal",
+    "played_at": "2026-04-12T09:42:59.157598+00:00",
+    "created_at": "2026-04-12T09:42:59.157598+00:00"
   }
 ]

@@ -46,5 +46,21 @@
     "registered_by": null,
     "played_at": "2026-04-09T21:57:23.211906+00:00",
     "created_at": "2026-04-09T21:57:23.211906+00:00"
+  },
+  {
+    "id": "7514606c-6fb6-4ef3-bffb-1c6a569ade1c",
+    "pair1_player1_id": "6d255fa6-c7b7-413f-9c7a-9f3b7ef89a63",
+    "pair1_player2_id": "241e5ec1-86ff-46c6-bcda-3fc41b92dd1d",
+    "pair2_player1_id": "5a38093b-b5b7-4a23-905c-afd6e42b0649",
+    "pair2_player2_id": "a4af9bec-977c-4041-908a-7763501be813",
+    "score1": 5,
+    "score2": 15,
+    "winner_pair": 2,
+    "rating_change1": -21,
+    "rating_change2": 21,
+    "mode": "normal",
+    "registered_by": null,
+    "played_at": "2026-04-12T11:23:26.816282+00:00",
+    "created_at": "2026-04-12T11:23:26.816282+00:00"
   }
 ]

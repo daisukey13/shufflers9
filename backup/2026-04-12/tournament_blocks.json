@@ -6,7 +6,8 @@
     "created_at": "2026-04-08T12:18:18.716423+00:00",
     "match_time_1": null,
     "match_time_2": null,
-    "match_time_3": null
+    "match_time_3": null,
+    "scores_finalized": false
   },
   {
     "id": "213a6caa-3ef0-4425-a351-851b4891f5df",
@@ -15,7 +16,8 @@
     "created_at": "2026-04-08T12:18:42.328791+00:00",
     "match_time_1": null,
     "match_time_2": null,
-    "match_time_3": null
+    "match_time_3": null,
+    "scores_finalized": false
   },
   {
     "id": "f10ea32d-e8bc-4a3b-b736-6eebdb143d97",
@@ -24,7 +26,8 @@
     "created_at": "2026-04-10T04:51:05.579793+00:00",
     "match_time_1": null,
     "match_time_2": null,
-    "match_time_3": null
+    "match_time_3": null,
+    "scores_finalized": false
   },
   {
     "id": "ed56b67b-ea86-4d0c-a075-e56a2979b978",
@@ -33,7 +36,8 @@
     "created_at": "2026-04-10T04:51:38.133252+00:00",
     "match_time_1": null,
     "match_time_2": null,
-    "match_time_3": null
+    "match_time_3": null,
+    "scores_finalized": false
   },
   {
     "id": "254e48cb-43ed-4e47-975e-5fef26716cf4",
@@ -42,7 +46,8 @@
     "created_at": "2026-04-10T04:52:03.610422+00:00",
     "match_time_1": null,
     "match_time_2": null,
-    "match_time_3": null
+    "match_time_3": null,
+    "scores_finalized": false
   },
   {
     "id": "f6bbd092-c45d-424b-896e-f0dfd1c9b5e2",
@@ -51,7 +56,8 @@
     "created_at": "2026-04-11T07:47:24.310498+00:00",
     "match_time_1": null,
     "match_time_2": null,
-    "match_time_3": null
+    "match_time_3": null,
+    "scores_finalized": false
   },
   {
     "id": "b13f48d9-1041-4720-a30f-5894e320cc54",
@@ -60,7 +66,8 @@
     "created_at": "2026-04-11T07:47:24.864758+00:00",
     "match_time_1": null,
     "match_time_2": null,
-    "match_time_3": null
+    "match_time_3": null,
+    "scores_finalized": false
   },
   {
     "id": "1452b196-c69b-43ab-b58b-dbc41c8b4cc6",
@@ -69,7 +76,8 @@
     "created_at": "2026-04-11T12:00:04.060388+00:00",
     "match_time_1": "09:10",
     "match_time_2": "09:25",
-    "match_time_3": "09:40"
+    "match_time_3": "09:40",
+    "scores_finalized": true
   },
   {
     "id": "f59ddb8d-3919-49c3-b71f-2827d2318232",
@@ -78,16 +86,8 @@
     "created_at": "2026-04-11T12:00:04.630287+00:00",
     "match_time_1": "09:55",
     "match_time_2": "10:10",
-    "match_time_3": "10:25"
-  },
-  {
-    "id": "a5f16670-3760-48e3-a2cf-821d37faf2dd",
-    "tournament_id": "2dd70811-0c43-486e-b21d-cc605b2609a9",
-    "block_name": "C",
-    "created_at": "2026-04-11T12:00:05.097739+00:00",
-    "match_time_1": "10:40",
-    "match_time_2": "10:55",
-    "match_time_3": "11:10"
+    "match_time_3": "10:25",
+    "scores_finalized": true
   },
   {
     "id": "5e0139d4-b007-46df-814f-5d4f0eb08d53",
@@ -96,6 +96,17 @@
     "created_at": "2026-04-11T12:00:05.553071+00:00",
     "match_time_1": "11:25",
     "match_time_2": null,
-    "match_time_3": null
+    "match_time_3": null,
+    "scores_finalized": true
+  },
+  {
+    "id": "a5f16670-3760-48e3-a2cf-821d37faf2dd",
+    "tournament_id": "2dd70811-0c43-486e-b21d-cc605b2609a9",
+    "block_name": "C",
+    "created_at": "2026-04-11T12:00:05.097739+00:00",
+    "match_time_1": "10:40",
+    "match_time_2": "10:55",
+    "match_time_3": "11:10",
+    "scores_finalized": true
   }
 ]
