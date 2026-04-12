@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 type Player = { id: string; name: string; avatar_url: string | null; hc?: number; rating?: number }
 type BlockPlayer = { id: string; block_id: string; player_id: string; is_default: boolean; player: Player }
-type Block = { id: string; block_name: string; match_time_1: string | null; match_time_2: string | null; match_time_3: string | null; tournament_block_players: BlockPlayer[] }
+type Block = { id: string; tournament_id: string; block_name: string; match_time_1: string | null; match_time_2: string | null; match_time_3: string | null; scores_finalized: boolean; tournament_block_players: BlockPlayer[] }
 type QualifyingMatch = {
   id: string; block_id: string; player1_id: string; player2_id: string
   score1: number | null; score2: number | null; winner_id: string | null
@@ -296,24 +296,16 @@ export default function TournamentDetailClient({
                           </tr>
                         </thead>
                         <tbody>
-                          {standings.map((s, idx) => (
+                         {standings.filter(s => !s.is_default).map((s, idx) => (
                             <tr key={s.player.id} className={`border-b border-purple-800/20 ${idx === 0 && !s.is_default && isQualifyingDone ? 'bg-yellow-900/10' : ''}`}>
                               <td className="py-2 pr-3">
-  {(() => {
-    const blockMatchesForBlock = qualifyingMatches.filter(m => m.block_id === block.id)
-    const nonDefaultMatches = blockMatchesForBlock.filter(m =>
-      !block.tournament_block_players.some(
-        bp => bp.is_default && (bp.player_id === m.player1_id || bp.player_id === m.player2_id)
-      )
-    )
-    const allScored = nonDefaultMatches.length >= 3 && nonDefaultMatches.every(m => m.winner_id !== null)
-    if (!allScored) return <span className="text-gray-600 font-bold">－</span>
-    return (
-      <span className={`font-bold ${idx === 0 && isQualifyingDone ? 'text-yellow-400' : 'text-gray-400'}`}>
-        {idx + 1}{idx === 0 && !s.is_default && isQualifyingDone ? ' 👑' : ''}
-      </span>
-    )
-  })()}
+  {block.scores_finalized ? (
+    <span className={`font-bold ${idx === 0 && isQualifyingDone ? 'text-yellow-400' : 'text-gray-400'}`}>
+      {idx + 1}{idx === 0 && !s.is_default && isQualifyingDone ? ' 👑' : ''}
+    </span>
+  ) : (
+    <span className="text-gray-600 font-bold">－</span>
+  )}
 </td>
                               <td className="py-2 pr-3">
                                 <button
