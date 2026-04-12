@@ -25,7 +25,7 @@ const NEXT_STATUS: Record<string, { status: string; label: string; color: string
   open: { status: 'entry_closed', label: 'エントリー締切', color: 'bg-yellow-600 hover:bg-yellow-700' },
   entry_closed: { status: 'qualifying', label: '予選開始', color: 'bg-blue-600 hover:bg-blue-700' },
   qualifying: { status: 'qualifying_done', label: '予選完了', color: 'bg-purple-600 hover:bg-purple-700' },
-  qualifying_done: { status: 'finals', label: '本戦開始', color: 'bg-orange-600 hover:bg-orange-700' },
+  qualifying_done: { status: 'finals', label: '決勝トーナメント開始', color: 'bg-orange-600 hover:bg-orange-700' },
   finals: { status: 'finished', label: '大会終了', color: 'bg-red-600 hover:bg-red-700' },
 }
 
@@ -53,6 +53,16 @@ export default function FinalsClient({
   const [mode, setMode] = useState<'normal' | 'walkover' | 'forfeit'>('normal')
   const [loading, setLoading] = useState(false)
   const [statusLoading, setStatusLoading] = useState(false)
+  const [autoGenLoading, setAutoGenLoading] = useState(false)
+
+  const [editMatch, setEditMatch] = useState<FinalsMatch | null>(null)
+  const [editSets, setEditSets] = useState([
+    { score1: '', score2: '' },
+    { score1: '', score2: '' },
+    { score1: '', score2: '' },
+  ])
+  const [editLoading, setEditLoading] = useState(false)
+
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
@@ -94,6 +104,160 @@ export default function FinalsClient({
     setStatusLoading(false)
     router.refresh()
   }
+// 組み合わせ自動生成
+  const handleAutoGenerate = async () => {
+    const validQualifiers = qualifiers.filter(q => q.winner && !q.winner.is_default)
+    const count = validQualifiers.length
+
+    if (count < 2) {
+      alert('予選通過者が2名以上必要です')
+      return
+    }
+
+    if (finalsMatches.length > 0) {
+      if (!confirm('すでに試合が登録されています。追加で組み合わせを生成しますか？')) return
+    } else {
+      if (!confirm(`${count}名で決勝トーナメントの組み合わせを自動生成しますか？`)) return
+    }
+
+    setAutoGenLoading(true)
+
+    const sorted = [...validQualifiers].sort((a, b) =>
+      a.block.block_name.localeCompare(b.block.block_name)
+    )
+
+    const pairs: [Qualifier, Qualifier | null][] = []
+    for (let i = 0; i < sorted.length; i += 2) {
+      if (i + 1 < sorted.length) {
+        pairs.push([sorted[i], sorted[i + 1]])
+      } else {
+        pairs.push([sorted[i], null])
+      }
+    }
+
+    let matchNumber = finalsMatches.filter(m => m.round === 1).length + 1
+
+    for (const [q1, q2] of pairs) {
+      if (!q2) continue
+
+      const p1id = q1.winner.player_id
+      const p2id = q2.winner.player_id
+      const hasDefault = p1id === defaultPlayerId || p2id === defaultPlayerId
+      const winnerId = hasDefault
+        ? (p1id === defaultPlayerId ? p2id : p1id)
+        : null
+
+      await supabase.from('tournament_finals_matches').insert({
+        tournament_id: tournament.id,
+        round: 1,
+        match_number: matchNumber++,
+        player1_id: p1id,
+        player2_id: p2id,
+        winner_id: winnerId,
+        mode: hasDefault ? 'walkover' : 'normal',
+        disadvantage_player_id: null,
+      })
+    }
+
+    // 奇数の場合、最後の1人を2回戦にアドバンテージ付きで登録
+    if (sorted.length % 2 !== 0) {
+      const byePlayer = sorted[sorted.length - 1]
+      const round2MatchNumber = finalsMatches.filter(m => m.round === 2).length + 1
+      await supabase.from('tournament_finals_matches').insert({
+        tournament_id: tournament.id,
+        round: 2,
+        match_number: round2MatchNumber,
+        player1_id: byePlayer.winner.player_id,
+        player2_id: null,
+        winner_id: null,
+        mode: 'normal',
+        disadvantage_player_id: byePlayer.winner.player_id,
+      })
+    }
+
+    setAutoGenLoading(false)
+    router.refresh()
+  }
+  // 組み合わせ自動生成
+  const handleAutoGenerate = async () => {
+    const validQualifiers = qualifiers.filter(q => q.winner && !q.winner.is_default)
+    const count = validQualifiers.length
+
+    if (count < 2) {
+      alert('予選通過者が2名以上必要です')
+      return
+    }
+
+    if (finalsMatches.length > 0) {
+      if (!confirm('すでに試合が登録されています。追加で組み合わせを生成しますか？')) return
+    } else {
+      if (!confirm(`${count}名で決勝トーナメントの組み合わせを自動生成しますか？`)) return
+    }
+
+    setAutoGenLoading(true)
+
+    // ブロック順に並べる
+    const sorted = [...validQualifiers].sort((a, b) =>
+      a.block.block_name.localeCompare(b.block.block_name)
+    )
+
+    // 偶数：A vs B、C vs D...ペアで1回戦
+    // 奇数：最後の1人はBye（A vs B → 勝者 vs C）
+    const pairs: [Qualifier, Qualifier | null][] = []
+    for (let i = 0; i < sorted.length; i += 2) {
+      if (i + 1 < sorted.length) {
+        pairs.push([sorted[i], sorted[i + 1]])
+      } else {
+        pairs.push([sorted[i], null]) // Bye
+      }
+    }
+
+    let matchNumber = finalsMatches.filter(m => m.round === 1).length + 1
+
+    for (const [q1, q2] of pairs) {
+      if (!q2) {
+        // Byeの場合はスキップ（次のラウンドで処理）
+        continue
+      }
+
+      const p1id = q1.winner.player_id
+      const p2id = q2.winner.player_id
+      const hasDefault = p1id === defaultPlayerId || p2id === defaultPlayerId
+      const winnerId = hasDefault
+        ? (p1id === defaultPlayerId ? p2id : p1id)
+        : null
+
+      await supabase.from('tournament_finals_matches').insert({
+        tournament_id: tournament.id,
+        round: 1,
+        match_number: matchNumber++,
+        player1_id: p1id,
+        player2_id: p2id,
+        winner_id: winnerId,
+        mode: hasDefault ? 'walkover' : 'normal',
+        disadvantage_player_id: null,
+      })
+    }
+
+    // 奇数の場合、Byeの人を2回戦に自動登録（対戦相手は未定=null）
+    if (sorted.length % 2 !== 0) {
+      const byePlayer = sorted[sorted.length - 1]
+      const round2MatchNumber = finalsMatches.filter(m => m.round === 2).length + 1
+      await supabase.from('tournament_finals_matches').insert({
+        tournament_id: tournament.id,
+        round: 2,
+        match_number: round2MatchNumber,
+        player1_id: byePlayer.winner.player_id,
+        player2_id: null,
+        winner_id: null,
+        mode: 'normal',
+        disadvantage_player_id: byePlayer.winner.player_id,
+      })
+    }
+
+    setAutoGenLoading(false)
+    router.refresh()
+  }
 
   const handleRegisterMatch = async () => {
     setLoading(true)
@@ -105,7 +269,6 @@ export default function FinalsClient({
       return
     }
 
-    // DEFAULTが相手の場合は自動で非DEFAULT側を勝者に
     const winnerId = mode === 'walkover'
       ? player1Id
       : player2Id === defaultPlayerId
@@ -137,7 +300,6 @@ export default function FinalsClient({
       return
     }
 
-    // セット結果を登録
     const setsToInsert = mode !== 'walkover'
       ? sets
           .map((s, i) => ({
@@ -153,7 +315,6 @@ export default function FinalsClient({
       await supabase.from('tournament_finals_sets').insert(setsToInsert)
     }
 
-    // 通常試合のみRP・HC反映（DEFAULTは除く）
     const isDefaultMatch = player1Id === defaultPlayerId || player2Id === defaultPlayerId
     if (mode === 'normal' && winnerId && setsToInsert.length > 0 && !isDefaultMatch) {
       const totalScore1 = setsToInsert.reduce((sum, s) => sum + s.score1, 0)
@@ -252,10 +413,11 @@ export default function FinalsClient({
 
   return (
     <div className="space-y-8">
+      {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">🏆 {tournament.name}</h1>
-          <p className="text-sm text-gray-400 mt-1">本戦管理</p>
+          <p className="text-sm text-gray-400 mt-1">決勝トーナメント管理</p>
         </div>
         <div className="flex items-center gap-3">
           {NEXT_STATUS[tournament.status] && (
@@ -319,7 +481,30 @@ export default function FinalsClient({
         </div>
       </div>
 
-      {/* 本戦試合一覧 */}
+      {/* 組み合わせ自動生成ボタン */}
+      {!isFinalsLocked && (
+        <div className="p-4 bg-blue-900/20 border border-blue-700/30 rounded-xl flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-blue-300">🎲 組み合わせを自動生成</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              予選通過者をブロック順にペアリング（A vs B、C vs D...奇数の場合は最後の1人がアドバンテージ）
+            </p>
+          </div>
+          <button
+            onClick={handleAutoGenerate}
+            disabled={autoGenLoading}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-sm font-medium transition whitespace-nowrap"
+          >
+            {autoGenLoading ? '生成中...' : '自動生成'}
+          </button>
+        </div>
+      )}
+
+
+
+
+
+      {/* 決勝トーナメント試合一覧 */}
       {roundsInFinals.map(r => (
         <div key={r}>
           <h2 className="text-lg font-semibold text-gray-300 mb-3">{getRoundName(r)}</h2>
@@ -372,7 +557,7 @@ export default function FinalsClient({
             onClick={() => setShowMatchForm(!showMatchForm)}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition"
           >
-            {showMatchForm ? 'キャンセル' : '+ 本戦試合を登録'}
+            {showMatchForm ? 'キャンセル' : '+ 決勝トーナメント試合を登録'}
           </button>
 
           {showMatchForm && (
@@ -458,10 +643,7 @@ export default function FinalsClient({
                     <div key={i} className="flex items-center gap-2">
                       <span className="text-xs text-gray-500 w-16">第{i + 1}セット</span>
                       <input
-                        type="number"
-                        min="0"
-                        max="15"
-                        value={s.score1}
+                        type="number" min="0" max="15" value={s.score1}
                         onChange={e => {
                           const updated = [...sets]
                           updated[i] = { ...updated[i], score1: e.target.value }
@@ -471,10 +653,7 @@ export default function FinalsClient({
                       />
                       <span className="text-gray-400">-</span>
                       <input
-                        type="number"
-                        min="0"
-                        max="15"
-                        value={s.score2}
+                        type="number" min="0" max="15" value={s.score2}
                         onChange={e => {
                           const updated = [...sets]
                           updated[i] = { ...updated[i], score2: e.target.value }
