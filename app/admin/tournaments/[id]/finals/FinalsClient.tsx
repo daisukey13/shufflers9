@@ -180,6 +180,11 @@ export default function FinalsClient({
         ? (p1id === defaultPlayerId ? p2id : p1id)
         : null
 
+      // DEFAULTと対戦したプレーヤーにディスアドバンテージ（相手に1勝）
+      const disadvantagePlayerId = hasDefault
+        ? (p1id === defaultPlayerId ? p2id : p1id)
+        : null
+
       await supabase.from('tournament_finals_matches').insert({
         tournament_id: tournament.id,
         round: 1,
@@ -188,7 +193,7 @@ export default function FinalsClient({
         player2_id: p2id,
         winner_id: winnerId,
         mode: hasDefault ? 'walkover' : 'normal',
-        disadvantage_player_id: null,
+        disadvantage_player_id: disadvantagePlayerId,
       })
     }
 
