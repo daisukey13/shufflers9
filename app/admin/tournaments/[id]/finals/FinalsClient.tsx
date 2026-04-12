@@ -54,7 +54,6 @@ export default function FinalsClient({
   const [loading, setLoading] = useState(false)
   const [statusLoading, setStatusLoading] = useState(false)
   const [autoGenLoading, setAutoGenLoading] = useState(false)
-
   const [editMatch, setEditMatch] = useState<FinalsMatch | null>(null)
   const [editSets, setEditSets] = useState([
     { score1: '', score2: '' },
@@ -62,7 +61,6 @@ export default function FinalsClient({
     { score1: '', score2: '' },
   ])
   const [editLoading, setEditLoading] = useState(false)
-
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
@@ -92,11 +90,54 @@ export default function FinalsClient({
     return null
   }
 
-  
+  const handleStatusChange = async () => {
+    const next = NEXT_STATUS[tournament.status]
+    if (!next) return
+    if (!confirm(`ステータスを「${next.label}」に変更しますか？`)) return
+    setStatusLoading(true)
+    await supabase.from('tournaments').update({ status: next.status }).eq('id', tournament.id)
+    if (next.status === 'finished') {
+      await supabase.rpc('update_tournament_stats', { p_tournament_id: tournament.id })
+    }
     setStatusLoading(false)
     router.refresh()
   }
-// 組み合わせ自動生成
+
+  const handleEditMatchSave = async () => {
+    if (!editMatch) return
+    setEditLoading(true)
+
+    const setsToInsert = editSets
+      .map((s, i) => ({
+        match_id: editMatch.id,
+        set_number: i + 1,
+        score1: parseInt(s.score1),
+        score2: parseInt(s.score2),
+      }))
+      .filter(s => !isNaN(s.score1) && !isNaN(s.score2))
+
+    let p1wins = 0, p2wins = 0
+    setsToInsert.forEach(s => {
+      if (s.score1 > s.score2) p1wins++
+      else if (s.score2 > s.score1) p2wins++
+    })
+    const winnerId = p1wins > p2wins
+      ? editMatch.player1_id
+      : p2wins > p1wins
+        ? editMatch.player2_id
+        : null
+
+    await supabase.from('tournament_finals_sets').delete().eq('match_id', editMatch.id)
+    if (setsToInsert.length > 0) {
+      await supabase.from('tournament_finals_sets').insert(setsToInsert)
+    }
+    await supabase.from('tournament_finals_matches').update({ winner_id: winnerId }).eq('id', editMatch.id)
+
+    setEditMatch(null)
+    setEditLoading(false)
+    router.refresh()
+  }
+
   const handleAutoGenerate = async () => {
     const validQualifiers = qualifiers.filter(q => q.winner && !q.winner.is_default)
     const count = validQualifiers.length
@@ -151,87 +192,6 @@ export default function FinalsClient({
       })
     }
 
-    // 奇数の場合、最後の1人を2回戦にアドバンテージ付きで登録
-    if (sorted.length % 2 !== 0) {
-      const byePlayer = sorted[sorted.length - 1]
-      const round2MatchNumber = finalsMatches.filter(m => m.round === 2).length + 1
-      await supabase.from('tournament_finals_matches').insert({
-        tournament_id: tournament.id,
-        round: 2,
-        match_number: round2MatchNumber,
-        player1_id: byePlayer.winner.player_id,
-        player2_id: null,
-        winner_id: null,
-        mode: 'normal',
-        disadvantage_player_id: byePlayer.winner.player_id,
-      })
-    }
-
-    setAutoGenLoading(false)
-    router.refresh()
-  }
-  // 組み合わせ自動生成
-  const handleAutoGenerate = async () => {
-    const validQualifiers = qualifiers.filter(q => q.winner && !q.winner.is_default)
-    const count = validQualifiers.length
-
-    if (count < 2) {
-      alert('予選通過者が2名以上必要です')
-      return
-    }
-
-    if (finalsMatches.length > 0) {
-      if (!confirm('すでに試合が登録されています。追加で組み合わせを生成しますか？')) return
-    } else {
-      if (!confirm(`${count}名で決勝トーナメントの組み合わせを自動生成しますか？`)) return
-    }
-
-    setAutoGenLoading(true)
-
-    // ブロック順に並べる
-    const sorted = [...validQualifiers].sort((a, b) =>
-      a.block.block_name.localeCompare(b.block.block_name)
-    )
-
-    // 偶数：A vs B、C vs D...ペアで1回戦
-    // 奇数：最後の1人はBye（A vs B → 勝者 vs C）
-    const pairs: [Qualifier, Qualifier | null][] = []
-    for (let i = 0; i < sorted.length; i += 2) {
-      if (i + 1 < sorted.length) {
-        pairs.push([sorted[i], sorted[i + 1]])
-      } else {
-        pairs.push([sorted[i], null]) // Bye
-      }
-    }
-
-    let matchNumber = finalsMatches.filter(m => m.round === 1).length + 1
-
-    for (const [q1, q2] of pairs) {
-      if (!q2) {
-        // Byeの場合はスキップ（次のラウンドで処理）
-        continue
-      }
-
-      const p1id = q1.winner.player_id
-      const p2id = q2.winner.player_id
-      const hasDefault = p1id === defaultPlayerId || p2id === defaultPlayerId
-      const winnerId = hasDefault
-        ? (p1id === defaultPlayerId ? p2id : p1id)
-        : null
-
-      await supabase.from('tournament_finals_matches').insert({
-        tournament_id: tournament.id,
-        round: 1,
-        match_number: matchNumber++,
-        player1_id: p1id,
-        player2_id: p2id,
-        winner_id: winnerId,
-        mode: hasDefault ? 'walkover' : 'normal',
-        disadvantage_player_id: null,
-      })
-    }
-
-    // 奇数の場合、Byeの人を2回戦に自動登録（対戦相手は未定=null）
     if (sorted.length % 2 !== 0) {
       const byePlayer = sorted[sorted.length - 1]
       const round2MatchNumber = finalsMatches.filter(m => m.round === 2).length + 1
@@ -492,10 +452,6 @@ export default function FinalsClient({
         </div>
       )}
 
-
-
-
-
       {/* 決勝トーナメント試合一覧 */}
       {roundsInFinals.map(r => (
         <div key={r}>
@@ -535,6 +491,24 @@ export default function FinalsClient({
                 </div>
                 {match.winner && (
                   <p className="text-xs text-green-400 text-center mt-2">🏆 {match.winner.name} の勝利</p>
+                )}
+                {!isFinalsLocked && (
+                  <div className="flex justify-end mt-2">
+                    <button
+                      onClick={() => {
+                        setEditMatch(match)
+                        const currentSets = match.tournament_finals_sets
+                          .sort((a, b) => a.set_number - b.set_number)
+                        setEditSets([0, 1, 2].map(i => ({
+                          score1: currentSets[i]?.score1?.toString() ?? '',
+                          score2: currentSets[i]?.score2?.toString() ?? '',
+                        })))
+                      }}
+                      className="text-xs px-2 py-0.5 bg-purple-700/50 hover:bg-purple-600/50 rounded text-purple-300 transition"
+                    >
+                      編集
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -675,6 +649,62 @@ export default function FinalsClient({
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 試合編集モーダル */}
+      {editMatch && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-[#1e0f3a] border border-purple-800/50 rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="text-lg font-bold">試合を編集</h2>
+            <div className="flex items-center justify-between text-sm text-gray-300">
+              <span className="font-medium">{editMatch.player1?.name ?? '未定'}</span>
+              <span className="text-gray-500">vs</span>
+              <span className="font-medium">{editMatch.player2?.name ?? '未定'}</span>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs text-gray-400">セットスコア</label>
+              {editSets.map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-16">第{i + 1}セット</span>
+                  <input
+                    type="number" min="0" max="15" value={s.score1}
+                    onChange={e => {
+                      const updated = [...editSets]
+                      updated[i] = { ...updated[i], score1: e.target.value }
+                      setEditSets(updated)
+                    }}
+                    className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                  <span className="text-gray-400">-</span>
+                  <input
+                    type="number" min="0" max="15" value={s.score2}
+                    onChange={e => {
+                      const updated = [...editSets]
+                      updated[i] = { ...updated[i], score2: e.target.value }
+                      setEditSets(updated)
+                    }}
+                    className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleEditMatchSave}
+                disabled={editLoading}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
+              >
+                {editLoading ? '保存中...' : '保存'}
+              </button>
+              <button
+                onClick={() => setEditMatch(null)}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
