@@ -13,7 +13,7 @@ export default async function MyPage() {
   if (!user) redirect('/login')
 
   const player = await getPlayerByUserId(user.id)
-  if (!player) redirect('/login')
+  if (!player) redirect('/register')
 
   const [matches, doublesMatches] = await Promise.all([
     getPlayerMatches(player.id),
