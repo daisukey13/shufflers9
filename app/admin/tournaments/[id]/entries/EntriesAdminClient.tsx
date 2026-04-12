@@ -34,26 +34,21 @@ export default function EntriesAdminClient({
   const supabase = createClient()
 
   const enteredPlayerIds = entries.map(e => e.player_id)
+  const activeEntries = entries.filter(e => e.status !== 'cancelled')
+  const cancelledEntries = entries.filter(e => e.status === 'cancelled')
 
   const handleAddEntry = async () => {
     if (!selectedPlayer) return
     setLoading(true)
     setError(null)
-
     const { error } = await supabase
       .from('tournament_entries')
-      .insert({
-        tournament_id: tournament.id,
-        player_id: selectedPlayer,
-        status: 'entered',
-      })
-
+      .insert({ tournament_id: tournament.id, player_id: selectedPlayer, status: 'entered' })
     if (error) {
       setError('エントリーに失敗しました: ' + error.message)
       setLoading(false)
       return
     }
-
     setSelectedPlayer('')
     setLoading(false)
     router.refresh()
@@ -61,10 +56,7 @@ export default function EntriesAdminClient({
 
   const handleCancelApprove = async (entryId: string) => {
     if (!confirm('キャンセルを承認しますか？')) return
-    await supabase
-      .from('tournament_entries')
-      .update({ status: 'cancelled' })
-      .eq('id', entryId)
+    await supabase.from('tournament_entries').update({ status: 'cancelled' }).eq('id', entryId)
     router.refresh()
   }
 
@@ -74,11 +66,26 @@ export default function EntriesAdminClient({
     router.refresh()
   }
 
-  const activeEntries = entries.filter(e => e.status !== 'cancelled')
-  const cancelledEntries = entries.filter(e => e.status === 'cancelled')
+  const handleCloseEntry = async () => {
+    if (!confirm(`エントリーを締め切り、予選作成へ進みますか？\n（エントリー数：${activeEntries.length}名）`)) return
+    setLoading(true)
+    await supabase.from('tournaments').update({ status: 'entry_closed' }).eq('id', tournament.id)
+    setLoading(false)
+    router.push(`/admin/tournaments/${tournament.id}/qualifying`)
+  }
+
+  const handleStartQualifying = async () => {
+    if (!confirm('予選を開始しますか？')) return
+    setLoading(true)
+    await supabase.from('tournaments').update({ status: 'qualifying' }).eq('id', tournament.id)
+    setLoading(false)
+    router.push(`/admin/tournaments/${tournament.id}/qualifying`)
+  }
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
+
+      {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">📋 エントリー管理</h1>
@@ -88,6 +95,40 @@ export default function EntriesAdminClient({
           ← 大会一覧
         </Link>
       </div>
+
+      {/* エントリー締切ボタン */}
+      {tournament.status === 'open' && (
+        <div className="p-4 bg-green-900/20 border border-green-700/40 rounded-2xl flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-green-300">エントリー完了・締切</p>
+            <p className="text-xs text-gray-400 mt-0.5">締め切って予選作成へ進みます（現在 {activeEntries.length}名）</p>
+          </div>
+          <button
+            onClick={handleCloseEntry}
+            disabled={loading || activeEntries.length === 0}
+            className="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg text-sm font-bold transition whitespace-nowrap"
+          >
+            締切 → 予選作成へ
+          </button>
+        </div>
+      )}
+
+      {/* 予選開始ボタン */}
+      {tournament.status === 'entry_closed' && (
+        <div className="p-4 bg-blue-900/20 border border-blue-700/40 rounded-2xl flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-blue-300">予選管理へ進む</p>
+            <p className="text-xs text-gray-400 mt-0.5">ステータスを予選中に変更して予選管理へ移動します</p>
+          </div>
+          <button
+            onClick={handleStartQualifying}
+            disabled={loading}
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-sm font-bold transition whitespace-nowrap"
+          >
+            予選開始 → 予選管理へ
+          </button>
+        </div>
+      )}
 
       {/* 管理者によるエントリー追加 */}
       <div className="p-5 bg-purple-900/20 border border-purple-800/30 rounded-2xl space-y-3">
@@ -129,25 +170,16 @@ export default function EntriesAdminClient({
           ) : (
             activeEntries.map((entry, index) => (
               <div key={entry.id} className={`flex items-center gap-3 p-3 border rounded-xl ${entry.cancel_requested ? 'border-red-700/50 bg-red-900/10' : 'border-purple-800/30 bg-purple-900/20'}`}>
-                {/* 順番 */}
                 <span className="text-xs text-gray-500 flex-shrink-0 w-5 text-center">{index + 1}</span>
-
-                {/* アバター */}
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
                   {entry.player.avatar_url
                     ? <img src={entry.player.avatar_url} className="w-full h-full object-cover" />
                     : <span className="text-xl flex items-center justify-center h-full">👤</span>
                   }
                 </div>
-
-                {/* 情報 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Link
-                      href={`/players/${entry.player_id}`}
-                      target="_blank"
-                      className="font-medium text-white hover:text-purple-400 transition"
-                    >
+                    <Link href={`/players/${entry.player_id}`} target="_blank" className="font-medium text-white hover:text-purple-400 transition">
                       {entry.player.name}
                     </Link>
                     <span className="text-xs text-gray-500">HC {entry.player.hc} · RP {entry.player.rating}</span>
@@ -162,8 +194,6 @@ export default function EntriesAdminClient({
                     {new Date(entry.created_at).toLocaleDateString('ja-JP')}
                   </p>
                 </div>
-
-                {/* ボタン */}
                 <div className="flex gap-2 flex-shrink-0">
                   {entry.cancel_requested && (
                     <button
@@ -200,11 +230,7 @@ export default function EntriesAdminClient({
                   }
                 </div>
                 <div className="flex-1">
-                  <Link
-                    href={`/players/${entry.player_id}`}
-                    target="_blank"
-                    className="font-medium text-gray-400 hover:text-gray-300 transition"
-                  >
+                  <Link href={`/players/${entry.player_id}`} target="_blank" className="font-medium text-gray-400 hover:text-gray-300 transition">
                     {entry.player.name}
                   </Link>
                   <p className="text-xs text-gray-500">キャンセル済み</p>
