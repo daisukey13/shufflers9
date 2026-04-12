@@ -109,12 +109,16 @@ jobs:
 
           TODAY=$(date +'%Y-%m-%d')
 
+          # backupフォルダの内容を一時保存
+          cp -r backup/ /tmp/backup_temp/
+
           # backupsブランチに切り替え
           git fetch origin backups || true
           git checkout backups || git checkout --orphan backups
 
-          # backupフォルダだけmainからコピー
-          git checkout main -- backup/
+          # backupフォルダを復元
+          mkdir -p backup
+          cp -r /tmp/backup_temp/. backup/
 
           git add backup/
           git diff --cached --quiet || git commit -m "backup: ${TODAY} 自動バックアップ"
