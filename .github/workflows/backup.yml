@@ -113,7 +113,10 @@ jobs:
           # backupフォルダを一時保存
           cp -r backup/ /tmp/backup_temp/
 
-          # backupsブランチをリモートから直接取得してリセット
+          # backupフォルダを削除してからブランチ切り替え
+          rm -rf backup/
+
+          # backupsブランチをリモートから取得
           git fetch origin backups
           git checkout backups
           git reset --hard origin/backups
