@@ -53,8 +53,8 @@ export default function HeaderClient({
             <img src={avatarUrl} className="w-full h-full object-cover" />
           ) : isLoggedIn ? (
             <span className="text-lg">👤</span>
-          ) : (
-            <img src="/default-avatar.png" className="w-full h-full object-cover opacity-50" />
+            ) : (
+            <span className="text-lg">👤</span>
           )}
         </Link>
       </div>
