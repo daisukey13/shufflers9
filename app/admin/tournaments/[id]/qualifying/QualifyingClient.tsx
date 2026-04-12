@@ -352,22 +352,13 @@ export default function QualifyingClient({
         .single()
 
       if (p1 && p2) {
-        const { count: matchesP1 } = await supabase
-          .from('singles_matches')
-          .select('*', { count: 'exact', head: true })
-          .or(`player1_id.eq.${matchPlayer1},player2_id.eq.${matchPlayer1}`)
-        const { count: matchesP2 } = await supabase
-          .from('singles_matches')
-          .select('*', { count: 'exact', head: true })
-          .or(`player1_id.eq.${matchPlayer2},player2_id.eq.${matchPlayer2}`)
-
         const { data: elo } = await supabase.rpc('calc_elo', {
           rating_a: p1.rating,
           rating_b: p2.rating,
           score_a: finalScore1,
           score_b: finalScore2,
-          matches_a: matchesP1 ?? 0,
-          matches_b: matchesP2 ?? 0,
+          matches_a: p1.total_matches ?? 0,
+          matches_b: p2.total_matches ?? 0,
         })
 
         if (elo?.[0]) {
