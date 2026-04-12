@@ -15,7 +15,7 @@ type FinalsSet = { id: string; match_id: string; set_number: number; score1: num
 type FinalsMatch = {
   id: string; tournament_id: string; round: number; match_number: number
   player1_id: string | null; player2_id: string | null; winner_id: string | null
-  disadvantage_player_id: string | null; mode: string
+  disadvantage_player_id: string | null; mode: string; scheduled_time: string | null
   player1: Player | null; player2: Player | null; winner: Player | null
   tournament_finals_sets: FinalsSet[]
 }
@@ -62,6 +62,9 @@ export default function FinalsClient({
   ])
   const [editLoading, setEditLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [matchTimes, setMatchTimes] = useState<Record<string, string>>(() =>
+    Object.fromEntries(finalsMatches.map(m => [m.id, m.scheduled_time ?? '']))
+  )
 
   const router = useRouter()
   const supabase = createClient()
@@ -137,7 +140,24 @@ export default function FinalsClient({
     setEditLoading(false)
     router.refresh()
   }
+const timeOptions = (() => {
+    const options: string[] = []
+    for (let h = 8; h <= 20; h++) {
+      for (let m = 0; m < 60; m += 5) {
+        options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+      }
+    }
+    return options
+  })()
 
+  const handleSetMatchTime = async (matchId: string, value: string) => {
+    setMatchTimes(prev => ({ ...prev, [matchId]: value }))
+    await supabase
+      .from('tournament_finals_matches')
+      .update({ scheduled_time: value || null })
+      .eq('id', matchId)
+  }
+  
   const handleAutoGenerate = async () => {
     const validQualifiers = qualifiers.filter(q => q.winner && !q.winner.is_default)
     const count = validQualifiers.length
@@ -516,6 +536,26 @@ export default function FinalsClient({
                 {match.winner && (
                   <p className="text-xs text-green-400 text-center mt-2">🏆 {match.winner.name} の勝利</p>
                 )}
+                {/* 開始時間設定 */}
+                <div className="flex items-center gap-2 mt-3">
+                  <span className="text-xs text-gray-400 flex-shrink-0">⏰ 開始時間</span>
+                  {!isFinalsLocked ? (
+                    <select
+                      value={matchTimes[match.id] ?? ''}
+                      onChange={e => handleSetMatchTime(match.id, e.target.value)}
+                      className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="">未設定</option>
+                      {timeOptions.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-xs text-blue-300">
+                      {match.scheduled_time ?? '未設定'}
+                    </span>
+                  )}
+                </div>
                 {!isFinalsLocked && (
                   <div className="flex justify-end mt-2">
                     <button
