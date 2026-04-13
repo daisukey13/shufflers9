@@ -434,6 +434,7 @@ export default function QualifyingClient({
           if (hc2 !== null) await supabase.from('players').update({ hc: hc2 }).eq('id', matchPlayer2)
         }
       }
+    }
 
     setMatchPlayer1('')
     setMatchPlayer2('')
