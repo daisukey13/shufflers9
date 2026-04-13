@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Turnstile from '@/components/ui/Turnstile'
 
 type LoginMode = 'name' | 'email'
 
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<LoginMode>('name')
   const [nameOrEmail, setNameOrEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -18,8 +20,27 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!turnstileToken) {
+      setError('人間認証を完了してください')
+      return
+    }
+
     setLoading(true)
     setError(null)
+
+    // Turnstile検証
+    const verifyRes = await fetch('/api/turnstile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: turnstileToken }),
+    })
+
+    if (!verifyRes.ok) {
+      setError('人間認証に失敗しました。もう一度お試しください')
+      setLoading(false)
+      return
+    }
 
     let email = nameOrEmail.trim()
 
@@ -57,7 +78,10 @@ export default function LoginPage() {
     <div className="min-h-screen bg-transparent flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">🏒 ログイン</h1>
+          <div className="flex items-center justify-center gap-2">
+            <img src="/shuffleboard-puck-blue.png" className="w-8 h-8 object-contain" />
+            <h1 className="text-2xl font-bold text-white">ログイン</h1>
+          </div>
           <p className="text-sm text-gray-400 mt-1">Toyoura Shufflers Club</p>
         </div>
 
@@ -122,9 +146,17 @@ export default function LoginPage() {
               </Link>
             </div>
 
+            {/* Cloudflare Turnstile */}
+            <div>
+              <Turnstile
+                onVerify={(token) => setTurnstileToken(token)}
+                onError={() => setTurnstileToken(null)}
+              />
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !turnstileToken}
               className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
             >
               {loading ? 'ログイン中...' : 'ログイン'}

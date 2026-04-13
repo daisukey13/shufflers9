@@ -487,24 +487,6 @@ const timeOptions = (() => {
         </div>
       </div>
 
-      {/* 組み合わせ自動生成・全削除 */}
-      {!isFinalsLocked && (
-        <div className="p-4 bg-blue-900/20 border border-blue-700/30 rounded-xl flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-blue-300">🎲 組み合わせを自動生成</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              予選通過者をブロック順にペアリング（A vs B、C vs D...奇数の場合は最後の1人がアドバンテージ）
-            </p>
-          </div>
-          <button
-            onClick={handleAutoGenerate}
-            disabled={autoGenLoading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-sm font-medium transition whitespace-nowrap"
-          >
-            {autoGenLoading ? '生成中...' : '自動生成'}
-          </button>
-        </div>
-      )}
 
       {/* 決勝トーナメント試合一覧 */}
       {roundsInFinals.map(r => (

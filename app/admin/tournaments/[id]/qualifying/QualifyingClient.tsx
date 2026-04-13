@@ -163,6 +163,25 @@ export default function QualifyingClient({
     router.refresh()
   }
 
+  // ブロック全試合削除
+  const handleDeleteAllMatches = async (blockId: string, blockName: string) => {
+    if (!confirm(`ブロック${blockName}の試合を全て削除しますか？\n※RPや勝敗は元に戻りません`)) return
+    await supabase
+      .from('tournament_qualifying_matches')
+      .delete()
+      .eq('block_id', blockId)
+    router.refresh()
+  }
+
+  // ブロック削除
+  const handleDeleteBlock = async (blockId: string, blockName: string) => {
+    if (!confirm(`ブロック${blockName}を削除しますか？\n試合データも全て削除されます。RPや勝敗は元に戻りません`)) return
+    await supabase.from('tournament_qualifying_matches').delete().eq('block_id', blockId)
+    await supabase.from('tournament_block_players').delete().eq('block_id', blockId)
+    await supabase.from('tournament_blocks').delete().eq('id', blockId)
+    router.refresh()
+  }
+
   // ランダムブロック自動生成
   const handleAutoGenerate = async () => {
     if (enteredPlayers.length === 0) {
@@ -586,7 +605,25 @@ export default function QualifyingClient({
 
             return (
               <div key={block.id} className="bg-purple-900/20 border border-purple-800/30 rounded-2xl p-5 space-y-5">
-                <h2 className="text-lg font-bold text-yellow-100">ブロック {block.block_name}</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-yellow-100">ブロック {block.block_name}</h2>
+                  {!isQualifyingLocked && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleDeleteAllMatches(block.id, block.block_name)}
+                        className="text-xs px-2 py-1 bg-yellow-900/30 hover:bg-yellow-800/50 rounded-lg text-yellow-400 transition"
+                      >
+                        試合削除
+                      </button>
+                      <button
+                        onClick={() => handleDeleteBlock(block.id, block.block_name)}
+                        className="text-xs px-2 py-1 bg-red-900/30 hover:bg-red-800/50 rounded-lg text-red-400 transition"
+                      >
+                        ブロック削除
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* 順位表 */}
                 <div>
