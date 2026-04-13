@@ -486,6 +486,12 @@ export default function QualifyingClient({
             ← 大会一覧
           </Link>
           <Link
+            href={`/admin/tournaments/${tournament.id}/rp-check`}
+            className="px-3 py-1.5 bg-yellow-700 hover:bg-yellow-600 rounded-lg text-sm font-medium transition"
+          >
+            📊 RP確認
+          </Link>
+          <Link
             href={`/tournaments/${tournament.id}`}
             target="_blank"
             className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-medium transition"
