@@ -187,7 +187,12 @@ const timeOptions = (() => {
     }
 
     if (finalsMatches.length > 0) {
-      if (!confirm('すでに試合が登録されています。追加で組み合わせを生成しますか？')) return
+      if (!confirm('既存の試合を全て削除してから再生成しますか？')) return
+      // 既存を全削除してから生成
+      for (const m of finalsMatches) {
+        await supabase.from('tournament_finals_sets').delete().eq('match_id', m.id)
+      }
+      await supabase.from('tournament_finals_matches').delete().eq('tournament_id', tournament.id)
     } else {
       if (!confirm(`${count}名で決勝トーナメントの組み合わせを自動生成しますか？`)) return
     }
@@ -207,7 +212,28 @@ const timeOptions = (() => {
       }
     }
 
-    let matchNumber = finalsMatches.filter(m => m.round === 1).length + 1
+    // ラウンド名を選択させる
+    const totalMatches = pairs.filter(([, q2]) => q2 !== null).length
+    let roundName = '1回戦'
+    if (totalMatches === 1) {
+      const options = ['決勝', '準決勝', '1回戦', '2回戦', '3回戦']
+      const selected = window.prompt(
+        `この試合のラウンド名を選んでください：\n${options.map((o, i) => `${i + 1}: ${o}`).join('\n')}\n\n番号を入力してください`,
+        '1'
+      )
+      const idx = parseInt(selected ?? '1') - 1
+      roundName = options[idx] ?? '決勝'
+    } else if (totalMatches === 2) {
+      roundName = '準決勝'
+    }
+
+    const roundNumber = roundName === '決勝' ? 5
+      : roundName === '準決勝' ? 4
+      : roundName === '3回戦' ? 3
+      : roundName === '2回戦' ? 2
+      : 1
+
+    let matchNumber = 1
 
     for (const [q1, q2] of pairs) {
       if (!q2) continue
@@ -219,14 +245,13 @@ const timeOptions = (() => {
         ? (p1id === defaultPlayerId ? p2id : p1id)
         : null
 
-      // DEFAULTと対戦したプレーヤーにディスアドバンテージ（相手に1勝）
       const disadvantagePlayerId = hasDefault
         ? (p1id === defaultPlayerId ? p2id : p1id)
         : null
 
       await supabase.from('tournament_finals_matches').insert({
         tournament_id: tournament.id,
-        round: 1,
+        round: roundNumber,
         match_number: matchNumber++,
         player1_id: p1id,
         player2_id: p2id,
@@ -236,13 +261,13 @@ const timeOptions = (() => {
       })
     }
 
+    // 奇数の場合、最後の1人を次のラウンドにアドバンテージ付きで登録
     if (sorted.length % 2 !== 0) {
       const byePlayer = sorted[sorted.length - 1]
-      const round2MatchNumber = finalsMatches.filter(m => m.round === 2).length + 1
       await supabase.from('tournament_finals_matches').insert({
         tournament_id: tournament.id,
-        round: 2,
-        match_number: round2MatchNumber,
+        round: roundNumber + 1,
+        match_number: 1,
         player1_id: byePlayer.winner.player_id,
         player2_id: null,
         winner_id: null,
