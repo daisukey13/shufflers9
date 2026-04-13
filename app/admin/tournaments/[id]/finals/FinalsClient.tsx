@@ -29,6 +29,16 @@ const NEXT_STATUS: Record<string, { status: string; label: string; color: string
   finals: { status: 'finished', label: '大会終了', color: 'bg-red-600 hover:bg-red-700' },
 }
 
+const timeOptions = (() => {
+  const options: string[] = []
+  for (let h = 8; h <= 20; h++) {
+    for (let m = 0; m < 60; m += 5) {
+      options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+    }
+  }
+  return options
+})()
+
 export default function FinalsClient({
   tournament,
   qualifiers,
@@ -60,6 +70,7 @@ export default function FinalsClient({
     { score1: '', score2: '' },
     { score1: '', score2: '' },
   ])
+  const [editMode, setEditMode] = useState<'normal' | 'walkover' | 'forfeit'>('normal')
   const [editLoading, setEditLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [matchTimes, setMatchTimes] = useState<Record<string, string>>(() =>
@@ -110,38 +121,54 @@ export default function FinalsClient({
     if (!editMatch) return
     setEditLoading(true)
 
-    const setsToInsert = editSets
-      .map((s, i) => ({
-        match_id: editMatch.id,
-        set_number: i + 1,
-        score1: parseInt(s.score1),
-        score2: parseInt(s.score2),
-      }))
-      .filter(s => !isNaN(s.score1) && !isNaN(s.score2))
+    if (editMode === 'walkover') {
+      await supabase.from('tournament_finals_sets').delete().eq('match_id', editMatch.id)
+      await supabase.from('tournament_finals_matches').update({
+        winner_id: editMatch.player1_id,
+        mode: 'walkover',
+      }).eq('id', editMatch.id)
+    } else if (editMode === 'forfeit') {
+      await supabase.from('tournament_finals_sets').delete().eq('match_id', editMatch.id)
+      await supabase.from('tournament_finals_matches').update({
+        winner_id: editMatch.player1_id,
+        mode: 'forfeit',
+      }).eq('id', editMatch.id)
+    } else {
+      const setsToInsert = editSets
+        .map((s, i) => ({
+          match_id: editMatch.id,
+          set_number: i + 1,
+          score1: parseInt(s.score1),
+          score2: parseInt(s.score2),
+        }))
+        .filter(s => !isNaN(s.score1) && !isNaN(s.score2))
 
-    let p1wins = 0, p2wins = 0
-    setsToInsert.forEach(s => {
-      if (s.score1 > s.score2) p1wins++
-      else if (s.score2 > s.score1) p2wins++
-    })
-    const winnerId = p1wins > p2wins
-      ? editMatch.player1_id
-      : p2wins > p1wins
-        ? editMatch.player2_id
-        : null
+      let p1wins = 0, p2wins = 0
+      setsToInsert.forEach(s => {
+        if (s.score1 > s.score2) p1wins++
+        else if (s.score2 > s.score1) p2wins++
+      })
+      const winnerId = p1wins > p2wins
+        ? editMatch.player1_id
+        : p2wins > p1wins
+          ? editMatch.player2_id
+          : null
 
-    await supabase.from('tournament_finals_sets').delete().eq('match_id', editMatch.id)
-    if (setsToInsert.length > 0) {
-      await supabase.from('tournament_finals_sets').insert(setsToInsert)
+      await supabase.from('tournament_finals_sets').delete().eq('match_id', editMatch.id)
+      if (setsToInsert.length > 0) {
+        await supabase.from('tournament_finals_sets').insert(setsToInsert)
+      }
+      await supabase.from('tournament_finals_matches').update({
+        winner_id: winnerId,
+        mode: 'normal',
+      }).eq('id', editMatch.id)
     }
-    await supabase.from('tournament_finals_matches').update({ winner_id: winnerId }).eq('id', editMatch.id)
 
     setEditMatch(null)
     setEditLoading(false)
     router.refresh()
   }
 
-  // 試合削除
   const handleDeleteMatch = async (matchId: string) => {
     if (!confirm('この試合を削除しますか？\n※RPや勝敗は元に戻りません')) return
     await supabase.from('tournament_finals_sets').delete().eq('match_id', matchId)
@@ -149,7 +176,6 @@ export default function FinalsClient({
     router.refresh()
   }
 
-  // 全試合削除
   const handleDeleteAllFinalMatches = async () => {
     if (!confirm('決勝トーナメントの試合を全て削除しますか？\n※RPや勝敗は元に戻りません')) return
     for (const m of finalsMatches) {
@@ -159,16 +185,6 @@ export default function FinalsClient({
     router.refresh()
   }
 
-const timeOptions = (() => {
-    const options: string[] = []
-    for (let h = 8; h <= 20; h++) {
-      for (let m = 0; m < 60; m += 5) {
-        options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
-      }
-    }
-    return options
-  })()
-
   const handleSetMatchTime = async (matchId: string, value: string) => {
     setMatchTimes(prev => ({ ...prev, [matchId]: value }))
     await supabase
@@ -176,7 +192,7 @@ const timeOptions = (() => {
       .update({ scheduled_time: value || null })
       .eq('id', matchId)
   }
-  
+
   const handleAutoGenerate = async () => {
     const validQualifiers = qualifiers.filter(q => q.winner && !q.winner.is_default)
     const count = validQualifiers.length
@@ -188,7 +204,6 @@ const timeOptions = (() => {
 
     if (finalsMatches.length > 0) {
       if (!confirm('既存の試合を全て削除してから再生成しますか？')) return
-      // 既存を全削除してから生成
       for (const m of finalsMatches) {
         await supabase.from('tournament_finals_sets').delete().eq('match_id', m.id)
       }
@@ -212,7 +227,6 @@ const timeOptions = (() => {
       }
     }
 
-    // ラウンド名を選択させる
     const totalMatches = pairs.filter(([, q2]) => q2 !== null).length
     let roundName = '1回戦'
     if (totalMatches === 1) {
@@ -237,17 +251,11 @@ const timeOptions = (() => {
 
     for (const [q1, q2] of pairs) {
       if (!q2) continue
-
       const p1id = q1.winner.player_id
       const p2id = q2.winner.player_id
       const hasDefault = p1id === defaultPlayerId || p2id === defaultPlayerId
-      const winnerId = hasDefault
-        ? (p1id === defaultPlayerId ? p2id : p1id)
-        : null
-
-      const disadvantagePlayerId = hasDefault
-        ? (p1id === defaultPlayerId ? p2id : p1id)
-        : null
+      const winnerId = hasDefault ? (p1id === defaultPlayerId ? p2id : p1id) : null
+      const disadvantagePlayerId = hasDefault ? (p1id === defaultPlayerId ? p2id : p1id) : null
 
       await supabase.from('tournament_finals_matches').insert({
         tournament_id: tournament.id,
@@ -261,7 +269,6 @@ const timeOptions = (() => {
       })
     }
 
-    // 奇数の場合、最後の1人を次のラウンドにアドバンテージ付きで登録
     if (sorted.length % 2 !== 0) {
       const byePlayer = sorted[sorted.length - 1]
       await supabase.from('tournament_finals_matches').insert({
@@ -341,25 +348,14 @@ const timeOptions = (() => {
       const totalScore1 = setsToInsert.reduce((sum, s) => sum + s.score1, 0)
       const totalScore2 = setsToInsert.reduce((sum, s) => sum + s.score2, 0)
 
-      const { data: p1 } = await supabase
-        .from('players')
-        .select('rating, wins, losses, total_score, total_matches')
-        .eq('id', player1Id)
-        .single()
-      const { data: p2 } = await supabase
-        .from('players')
-        .select('rating, wins, losses, total_score, total_matches')
-        .eq('id', player2Id)
-        .single()
+      const { data: p1 } = await supabase.from('players').select('rating, wins, losses, total_score, total_matches').eq('id', player1Id).single()
+      const { data: p2 } = await supabase.from('players').select('rating, wins, losses, total_score, total_matches').eq('id', player2Id).single()
 
       if (p1 && p2) {
         const { data: elo } = await supabase.rpc('calc_elo', {
-          rating_a: p1.rating,
-          rating_b: p2.rating,
-          score_a: totalScore1,
-          score_b: totalScore2,
-          matches_a: p1.total_matches ?? 0,
-          matches_b: p2.total_matches ?? 0,
+          rating_a: p1.rating, rating_b: p2.rating,
+          score_a: totalScore1, score_b: totalScore2,
+          matches_a: p1.total_matches ?? 0, matches_b: p2.total_matches ?? 0,
         })
 
         if (elo?.[0]) {
@@ -418,14 +414,10 @@ const timeOptions = (() => {
   const roundsInFinals = Array.from(new Set(finalsMatches.map(m => m.round))).sort()
 
   const champion = isFinalsLocked
-    ? finalsMatches
-        .filter(m => m.round === maxRound && m.winner)
-        .sort((a, b) => b.match_number - a.match_number)[0]?.winner
+    ? finalsMatches.filter(m => m.round === maxRound && m.winner).sort((a, b) => b.match_number - a.match_number)[0]?.winner
     : null
 
-  const finalMatch = finalsMatches
-    .filter(m => m.round === maxRound)
-    .sort((a, b) => b.match_number - a.match_number)[0]
+  const finalMatch = finalsMatches.filter(m => m.round === maxRound).sort((a, b) => b.match_number - a.match_number)[0]
 
   const runnerUp = isFinalsLocked && finalMatch
     ? (finalMatch.winner_id === finalMatch.player1_id ? finalMatch.player2 : finalMatch.player1)
@@ -434,12 +426,12 @@ const timeOptions = (() => {
   return (
     <div className="space-y-8">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold">🏆 {tournament.name}</h1>
           <p className="text-sm text-gray-400 mt-1">決勝トーナメント管理</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {NEXT_STATUS[tournament.status] && (
             <button
               onClick={handleStatusChange}
@@ -449,6 +441,13 @@ const timeOptions = (() => {
               {statusLoading ? '処理中...' : `${NEXT_STATUS[tournament.status].label} →`}
             </button>
           )}
+          <Link
+            href={`/tournaments/${tournament.id}`}
+            target="_blank"
+            className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-medium transition"
+          >
+            公開ページ →
+          </Link>
           <Link href={`/admin/tournaments/${tournament.id}/qualifying`} className="text-sm text-gray-400 hover:text-white transition">
             ← 予選管理
           </Link>
@@ -460,18 +459,7 @@ const timeOptions = (() => {
           <p className="text-yellow-400 text-sm">✅ 大会終了済み。試合の編集のみ可能です。</p>
         </div>
       )}
-{/* 準優勝者 */}
-{runnerUp && (
-  <div className="p-4 bg-gray-900/40 border border-gray-600/40 rounded-2xl text-center">
-    <p className="text-gray-400 text-sm font-bold mb-2">🥈 準優勝</p>
-    <div className="flex items-center justify-center gap-3">
-      {runnerUp.avatar_url && (
-        <img src={runnerUp.avatar_url} className="w-12 h-12 rounded-full border-2 border-gray-400 object-cover" />
-      )}
-      <p className="text-xl font-bold text-gray-200">{runnerUp.name}</p>
-    </div>
-  </div>
-)}
+
       {/* 優勝者（終了後のみ） */}
       {champion && (
         <div className="p-6 bg-gradient-to-r from-yellow-900/40 to-yellow-700/20 border-2 border-yellow-400 rounded-2xl text-center">
@@ -481,6 +469,19 @@ const timeOptions = (() => {
               <img src={champion.avatar_url} className="w-16 h-16 rounded-full border-2 border-yellow-400 object-cover" />
             )}
             <p className="text-2xl font-bold text-yellow-100">{champion.name}</p>
+          </div>
+        </div>
+      )}
+
+      {/* 準優勝者 */}
+      {runnerUp && (
+        <div className="p-4 bg-gray-900/40 border border-gray-600/40 rounded-2xl text-center">
+          <p className="text-gray-400 text-sm font-bold mb-2">🥈 準優勝</p>
+          <div className="flex items-center justify-center gap-3">
+            {runnerUp.avatar_url && (
+              <img src={runnerUp.avatar_url} className="w-12 h-12 rounded-full border-2 border-gray-400 object-cover" />
+            )}
+            <p className="text-xl font-bold text-gray-200">{runnerUp.name}</p>
           </div>
         </div>
       )}
@@ -512,7 +513,24 @@ const timeOptions = (() => {
         </div>
       </div>
 
-
+      {/* 組み合わせ自動生成 */}
+      {!isFinalsLocked && (
+        <div className="p-4 bg-blue-900/20 border border-blue-700/30 rounded-xl flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-blue-300">🎲 組み合わせを自動生成</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              予選通過者をブロック順にペアリング（A vs B、C vs D...奇数の場合は最後の1人がアドバンテージ）
+            </p>
+          </div>
+          <button
+            onClick={handleAutoGenerate}
+            disabled={autoGenLoading}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-sm font-medium transition whitespace-nowrap"
+          >
+            {autoGenLoading ? '生成中...' : '自動生成'}
+          </button>
+        </div>
+      )}
 
       {/* 全試合削除 */}
       {!isFinalsLocked && finalsMatches.length > 0 && (
@@ -543,16 +561,14 @@ const timeOptions = (() => {
                     )}
                   </div>
                   <div className="text-center flex-shrink-0 space-y-1">
-                    {match.tournament_finals_sets
-                      .sort((a, b) => a.set_number - b.set_number)
-                      .map(s => (
-                        <p key={s.id} className="text-xs text-gray-300">
-                          第{s.set_number}セット: {s.score1} - {s.score2}
-                        </p>
-                      ))}
-                    {match.mode === 'walkover' && (
-                      <span className="text-xs text-yellow-400">不戦勝</span>
-                    )}
+                    {match.tournament_finals_sets.sort((a, b) => a.set_number - b.set_number).map(s => (
+                      <p key={s.id} className="text-xs text-gray-300">
+                        第{s.set_number}セット: {s.score1} - {s.score2}
+                      </p>
+                    ))}
+                    {match.mode === 'walkover' && <span className="text-xs text-yellow-400">不戦勝</span>}
+                    {match.mode === 'forfeit' && <span className="text-xs text-orange-400">棄権</span>}
+                    {!match.winner_id && match.mode === 'normal' && <span className="text-xs text-gray-500">未登録</span>}
                   </div>
                   <div className="flex-1">
                     <p className={`font-semibold ${match.winner_id === match.player2_id ? 'text-white' : 'text-gray-400'}`}>
@@ -581,9 +597,7 @@ const timeOptions = (() => {
                       ))}
                     </select>
                   ) : (
-                    <span className="text-xs text-blue-300">
-                      {match.scheduled_time ?? '未設定'}
-                    </span>
+                    <span className="text-xs text-blue-300">{match.scheduled_time ?? '未設定'}</span>
                   )}
                 </div>
                 {!isFinalsLocked && (
@@ -597,8 +611,8 @@ const timeOptions = (() => {
                     <button
                       onClick={() => {
                         setEditMatch(match)
-                        const currentSets = match.tournament_finals_sets
-                          .sort((a, b) => a.set_number - b.set_number)
+                        setEditMode(match.mode === 'walkover' ? 'walkover' : match.mode === 'forfeit' ? 'forfeit' : 'normal')
+                        const currentSets = match.tournament_finals_sets.sort((a, b) => a.set_number - b.set_number)
                         setEditSets([0, 1, 2].map(i => ({
                           score1: currentSets[i]?.score1?.toString() ?? '',
                           score2: currentSets[i]?.score2?.toString() ?? '',
@@ -647,10 +661,7 @@ const timeOptions = (() => {
 
               <div className="flex gap-2 bg-black/20 rounded-lg p-1">
                 {(['normal', 'walkover', 'forfeit'] as const).map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setMode(m)}
+                  <button key={m} type="button" onClick={() => setMode(m)}
                     className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${mode === m ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
                   >
                     {m === 'normal' ? '通常' : m === 'walkover' ? '不戦勝' : '途中棄権'}
@@ -661,9 +672,7 @@ const timeOptions = (() => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">プレーヤー1</label>
-                  <select
-                    value={player1Id}
-                    onChange={e => setPlayer1Id(e.target.value)}
+                  <select value={player1Id} onChange={e => setPlayer1Id(e.target.value)}
                     className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                   >
                     <option value="">選択</option>
@@ -674,9 +683,7 @@ const timeOptions = (() => {
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">プレーヤー2</label>
-                  <select
-                    value={player2Id}
-                    onChange={e => setPlayer2Id(e.target.value)}
+                  <select value={player2Id} onChange={e => setPlayer2Id(e.target.value)}
                     className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                   >
                     <option value="">選択</option>
@@ -689,9 +696,7 @@ const timeOptions = (() => {
 
               <div>
                 <label className="block text-xs text-gray-400 mb-1">1勝アドバンテージ</label>
-                <select
-                  value={disadvantageId}
-                  onChange={e => setDisadvantageId(e.target.value)}
+                <select value={disadvantageId} onChange={e => setDisadvantageId(e.target.value)}
                   className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                 >
                   <option value="">なし</option>
@@ -704,27 +709,17 @@ const timeOptions = (() => {
 
               {mode !== 'walkover' && player1Id !== defaultPlayerId && player2Id !== defaultPlayerId && (
                 <div className="space-y-2">
-                  <label className="block text-xs text-gray-400">セットスコア（15点先取）</label>
+                  <label className="block text-xs text-gray-400">セットスコア（15点先取・3セットマッチ）</label>
                   {sets.map((s, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <span className="text-xs text-gray-500 w-16">第{i + 1}セット</span>
-                      <input
-                        type="number" min="0" max="15" value={s.score1}
-                        onChange={e => {
-                          const updated = [...sets]
-                          updated[i] = { ...updated[i], score1: e.target.value }
-                          setSets(updated)
-                        }}
+                      <input type="number" min="0" max="15" value={s.score1}
+                        onChange={e => { const u = [...sets]; u[i] = { ...u[i], score1: e.target.value }; setSets(u) }}
                         className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                       />
                       <span className="text-gray-400">-</span>
-                      <input
-                        type="number" min="0" max="15" value={s.score2}
-                        onChange={e => {
-                          const updated = [...sets]
-                          updated[i] = { ...updated[i], score2: e.target.value }
-                          setSets(updated)
-                        }}
+                      <input type="number" min="0" max="15" value={s.score2}
+                        onChange={e => { const u = [...sets]; u[i] = { ...u[i], score2: e.target.value }; setSets(u) }}
                         className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                       />
                     </div>
@@ -734,15 +729,11 @@ const timeOptions = (() => {
 
               {(player1Id === defaultPlayerId || player2Id === defaultPlayerId) && (
                 <div className="p-3 bg-orange-900/20 border border-orange-700/30 rounded-lg">
-                  <p className="text-xs text-orange-400">
-                    ⚠️ DEFAULTとの対戦は自動的に不戦勝として処理されます
-                  </p>
+                  <p className="text-xs text-orange-400">⚠️ DEFAULTとの対戦は自動的に不戦勝として処理されます</p>
                 </div>
               )}
 
-              <button
-                onClick={handleRegisterMatch}
-                disabled={loading}
+              <button onClick={handleRegisterMatch} disabled={loading}
                 className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
               >
                 {loading ? '登録中...' : '試合結果を登録'}
@@ -751,7 +742,6 @@ const timeOptions = (() => {
           )}
         </div>
       )}
-      
 
       {/* 試合編集モーダル */}
       {editMatch && (
@@ -763,43 +753,57 @@ const timeOptions = (() => {
               <span className="text-gray-500">vs</span>
               <span className="font-medium">{editMatch.player2?.name ?? '未定'}</span>
             </div>
-            <div className="space-y-2">
-              <label className="block text-xs text-gray-400">セットスコア</label>
-              {editSets.map((s, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 w-16">第{i + 1}セット</span>
-                  <input
-                    type="number" min="0" max="15" value={s.score1}
-                    onChange={e => {
-                      const updated = [...editSets]
-                      updated[i] = { ...updated[i], score1: e.target.value }
-                      setEditSets(updated)
-                    }}
-                    className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  />
-                  <span className="text-gray-400">-</span>
-                  <input
-                    type="number" min="0" max="15" value={s.score2}
-                    onChange={e => {
-                      const updated = [...editSets]
-                      updated[i] = { ...updated[i], score2: e.target.value }
-                      setEditSets(updated)
-                    }}
-                    className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  />
-                </div>
+
+            {/* モード選択 */}
+            <div className="flex gap-2 bg-black/20 rounded-lg p-1">
+              {(['normal', 'walkover', 'forfeit'] as const).map(m => (
+                <button key={m} type="button" onClick={() => setEditMode(m)}
+                  className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${editMode === m ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                >
+                  {m === 'normal' ? '通常' : m === 'walkover' ? '不戦勝' : '棄権'}
+                </button>
               ))}
             </div>
+
+            {/* 通常モードのみセットスコア */}
+            {editMode === 'normal' && (
+              <div className="space-y-2">
+                <label className="block text-xs text-gray-400">セットスコア（3セットマッチ）</label>
+                {editSets.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-16">第{i + 1}セット</span>
+                    <input type="number" min="0" max="15" value={s.score1}
+                      onChange={e => { const u = [...editSets]; u[i] = { ...u[i], score1: e.target.value }; setEditSets(u) }}
+                      className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    />
+                    <span className="text-gray-400">-</span>
+                    <input type="number" min="0" max="15" value={s.score2}
+                      onChange={e => { const u = [...editSets]; u[i] = { ...u[i], score2: e.target.value }; setEditSets(u) }}
+                      className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {editMode === 'walkover' && (
+              <div className="p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-lg">
+                <p className="text-xs text-yellow-400">⚠️ {editMatch.player1?.name ?? '未定'} の不戦勝として登録されます</p>
+              </div>
+            )}
+            {editMode === 'forfeit' && (
+              <div className="p-3 bg-orange-900/20 border border-orange-700/30 rounded-lg">
+                <p className="text-xs text-orange-400">⚠️ {editMatch.player2?.name ?? '未定'} の棄権として {editMatch.player1?.name ?? '未定'} の勝利になります</p>
+              </div>
+            )}
+
             <div className="flex gap-3">
-              <button
-                onClick={handleEditMatchSave}
-                disabled={editLoading}
+              <button onClick={handleEditMatchSave} disabled={editLoading}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
               >
                 {editLoading ? '保存中...' : '保存'}
               </button>
-              <button
-                onClick={() => setEditMatch(null)}
+              <button onClick={() => setEditMatch(null)}
                 className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition"
               >
                 キャンセル
