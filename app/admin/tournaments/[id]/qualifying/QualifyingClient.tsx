@@ -250,6 +250,67 @@ export default function QualifyingClient({
       .update({ score1: s1, score2: s2, winner_id: winnerId })
       .eq('id', editMatch.id)
 
+    // RP・勝敗・HCを更新
+    if (winnerId && editMatch.affects_ranking) {
+      const { data: p1 } = await supabase
+        .from('players')
+        .select('rating, wins, losses, total_score, total_matches, hc')
+        .eq('id', editMatch.player1_id)
+        .single()
+      const { data: p2 } = await supabase
+        .from('players')
+        .select('rating, wins, losses, total_score, total_matches, hc')
+        .eq('id', editMatch.player2_id)
+        .single()
+
+      if (p1 && p2) {
+        const { data: elo } = await supabase.rpc('calc_elo', {
+          rating_a: p1.rating,
+          rating_b: p2.rating,
+          score_a: s1,
+          score_b: s2,
+          matches_a: p1.total_matches ?? 0,
+          matches_b: p2.total_matches ?? 0,
+        })
+
+        if (elo?.[0]) {
+          const eloResult = elo[0]
+
+          await supabase.from('players').update({
+            rating: eloResult.new_rating_a,
+            wins: s1 > s2 ? p1.wins + 1 : p1.wins,
+            losses: s1 < s2 ? p1.losses + 1 : p1.losses,
+            total_score: (p1.total_score ?? 0) + s1,
+            total_matches: (p1.total_matches ?? 0) + 1,
+          }).eq('id', editMatch.player1_id)
+
+          await supabase.from('players').update({
+            rating: eloResult.new_rating_b,
+            wins: s2 > s1 ? p2.wins + 1 : p2.wins,
+            losses: s2 < s1 ? p2.losses + 1 : p2.losses,
+            total_score: (p2.total_score ?? 0) + s2,
+            total_matches: (p2.total_matches ?? 0) + 1,
+          }).eq('id', editMatch.player2_id)
+
+          const { data: hc1 } = await supabase.rpc('calc_hc', {
+            p_wins: s1 > s2 ? p1.wins + 1 : p1.wins,
+            p_losses: s1 < s2 ? p1.losses + 1 : p1.losses,
+            p_total_score: (p1.total_score ?? 0) + s1,
+            p_total_matches: (p1.total_matches ?? 0) + 1,
+          })
+          if (hc1 !== null) await supabase.from('players').update({ hc: hc1 }).eq('id', editMatch.player1_id)
+
+          const { data: hc2 } = await supabase.rpc('calc_hc', {
+            p_wins: s2 > s1 ? p2.wins + 1 : p2.wins,
+            p_losses: s2 < s1 ? p2.losses + 1 : p2.losses,
+            p_total_score: (p2.total_score ?? 0) + s2,
+            p_total_matches: (p2.total_matches ?? 0) + 1,
+          })
+          if (hc2 !== null) await supabase.from('players').update({ hc: hc2 }).eq('id', editMatch.player2_id)
+        }
+      }
+    }
+
     setEditMatch(null)
     setEditLoading(false)
     router.refresh()
