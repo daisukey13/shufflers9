@@ -9,7 +9,7 @@ export default async function TournamentsPage() {
     .from('tournaments')
     .select('*, tournament_entries(count)')
     .order('started_at', { ascending: false, nullsFirst: false })
-
+    .order('created_at', { ascending: false })
   const statusLabel = (status: string) => {
     switch (status) {
       case 'open': return '受付中'
