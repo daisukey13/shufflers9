@@ -426,173 +426,226 @@ const champion = isFinished
                   ref={scrollRef}
                   className="overflow-x-auto pb-4"
                 >
-                  <div className="flex items-start" style={{ minWidth: 'max-content' }}>
-                    {roundsInFinals.map((r, roundIdx) => {
-                      const roundMatches = finalsMatches
-                        .filter(m => m.round === r)
-                        .sort((a, b) => a.match_number - b.match_number)
-                      // 各ラウンドの試合間のスペーシングを計算
-                      // ラウンドが進むごとに試合カードの間隔が広がる
-                      const spacingMultiplier = Math.pow(2, roundIdx)
-                      const cardHeight = 160 // 試合カードの概算高さ(px)
-                      const gap = 12 // 基本gap(px)
+                  {(() => {
+                    const CARD_W = 240
+                    const CARD_H = 160
+                    const GAP_Y = 16
+                    const COL_GAP = 60
+                    const HEADER_H = 36
+                    const firstRoundCount = finalsMatches.filter(m => m.round === roundsInFinals[0]).length
+                    const totalHeight = firstRoundCount * CARD_H + (firstRoundCount - 1) * GAP_Y
+                    const colCount = roundsInFinals.length + (champion ? 1 : 0)
+                    const totalWidth = colCount * CARD_W + (colCount - 1) * COL_GAP
 
-                      return (
-                        <div key={r} className="flex flex-col items-center" style={{ width: 280 }}>
-                          <h3 className="text-base font-bold text-yellow-100 mb-3 text-center w-full">
-                            {getRoundName(r)}
-                          </h3>
-                          <div className="flex flex-col justify-around w-full" style={{
-                            minHeight: roundIdx === 0
-                              ? undefined
-                              : finalsMatches.filter(m => m.round === roundsInFinals[0]).length * (cardHeight + gap),
-                          }}>
-                            {roundMatches.map((match, matchIdx) => (
-                              <div
-                                key={match.id}
-                                className="relative"
-                                style={{
-                                  marginTop: roundIdx === 0 && matchIdx > 0 ? gap : 0,
-                                  // ラウンド2以降は自動でjustify-aroundが効く
-                                }}
-                              >
-                                {/* コネクター線（ラウンド2以降） */}
-                                {roundIdx > 0 && (
-                                  <div
-                                    className="absolute top-1/2 -translate-y-1/2"
-                                    style={{
-                                      left: -20,
-                                      width: 20,
-                                      height: 2,
-                                      backgroundColor: 'rgba(168, 85, 247, 0.4)',
-                                    }}
-                                  />
-                                )}
-                                {/* 右側コネクター線（最終ラウンド以外） */}
-                                {roundIdx < roundsInFinals.length - 1 && (
-                                  <div
-                                    className="absolute top-1/2 -translate-y-1/2"
-                                    style={{
-                                      right: -20,
-                                      width: 20,
-                                      height: 2,
-                                      backgroundColor: 'rgba(168, 85, 247, 0.4)',
-                                    }}
-                                  />
-                                )}
-                                <div className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl" style={{ width: 240 }}>
-                                  {/* Player1 */}
-                                  <div className={`flex items-center gap-3 p-2 rounded-lg mb-2 ${isFinished && match.winner_id === match.player1_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
-                                    {match.player1?.avatar_url && (
-                                      <img src={match.player1.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <button
-                                        onClick={() => match.player1 && setPopupPlayer(match.player1)}
-                                        className={`text-sm font-semibold truncate underline decoration-dotted hover:opacity-80 ${isFinished && match.winner_id === match.player1_id ? 'text-white' : 'text-gray-400'}`}
-                                      >
-                                        {match.player1?.name ?? '未定'}
-                                      </button>
-                                      {match.disadvantage_player_id === match.player1_id && (
-                                        <p className="text-[10px] text-orange-400">1勝アドバンテージ</p>
-                                      )}
-                                    </div>
-                                    {isFinished && match.winner_id === match.player1_id && (
-                                      <span className="text-yellow-400 text-sm">👑</span>
-                                    )}
-                                  </div>
-                                  {/* セットスコア */}
-                                  {match.tournament_finals_sets.length > 0 && (
-                                    <div className="flex justify-center gap-2 my-2">
-                                      {match.tournament_finals_sets
-                                        .sort((a, b) => a.set_number - b.set_number)
-                                        .map(s => (
-                                          <div key={s.id} className="text-center">
-                                            <p className="text-[10px] text-gray-500">第{s.set_number}</p>
-                                            <p className="text-xs font-bold text-white">{s.score1}-{s.score2}</p>
-                                          </div>
-                                        ))}
-                                    </div>
-                                  )}
-                                  {match.mode === 'walkover' && (
-                                    <p className="text-center text-xs text-yellow-400 my-2">不戦勝</p>
-                                  )}
-                                  {/* Player2 */}
-                                  <div className={`flex items-center gap-3 p-2 rounded-lg ${isFinished && match.winner_id === match.player2_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
-                                    {match.player2?.avatar_url && (
-                                      <img src={match.player2.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <button
-                                        onClick={() => match.player2 && setPopupPlayer(match.player2)}
-                                        className={`text-sm font-semibold truncate underline decoration-dotted hover:opacity-80 ${isFinished && match.winner_id === match.player2_id ? 'text-white' : 'text-gray-400'}`}
-                                      >
-                                        {match.player2?.name ?? '未定'}
-                                      </button>
-                                      {match.disadvantage_player_id === match.player2_id && (
-                                        <p className="text-[10px] text-orange-400">1勝アドバンテージ</p>
-                                      )}
-                                    </div>
-                                    {isFinished && match.winner_id === match.player2_id && (
-                                      <span className="text-yellow-400 text-sm">👑</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                    // 各ラウンドの試合のY座標を計算
+                    const getMatchPositions = (roundIdx: number, matchCount: number) => {
+                      if (roundIdx === 0) {
+                        return Array.from({ length: matchCount }, (_, i) => i * (CARD_H + GAP_Y))
+                      }
+                      const prevPositions = getMatchPositions(
+                        roundIdx - 1,
+                        finalsMatches.filter(m => m.round === roundsInFinals[roundIdx - 1]).length
                       )
-                    })}
-                    {/* 優勝者カード（終了後のみ） */}
-                    {champion && (
-                      <div className="flex flex-col items-center" style={{ width: 280 }}>
-                        <h3 className="text-base font-bold text-yellow-100 mb-3 text-center w-full">&nbsp;</h3>
-                        <div className="flex items-center justify-center" style={{
-                          minHeight: finalsMatches.filter(m => m.round === roundsInFinals[0]).length * (160 + 12),
-                        }}>
-                          <div className="relative">
-                            <div
-                              className="absolute top-1/2 -translate-y-1/2"
-                              style={{
-                                left: -20,
-                                width: 20,
-                                height: 2,
-                                backgroundColor: 'rgba(168, 85, 247, 0.4)',
-                              }}
-                            />
-                            <div className="p-8 bg-gradient-to-b from-yellow-900/40 to-yellow-700/20 border-2 border-yellow-400 rounded-2xl text-center" style={{ width: 240 }}>
-                              <p className="text-yellow-400 font-bold mb-4">👑 優勝</p>
-                              {champion.avatar_url && (
-                                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-yellow-400 avatar-glow mx-auto mb-4">
-                                  <img src={champion.avatar_url} className="w-full h-full object-cover" />
+                      // 次ラウンドの各試合は、前ラウンドの対応する2試合の中間
+                      return Array.from({ length: matchCount }, (_, i) => {
+                        const top = prevPositions[i * 2] ?? prevPositions[prevPositions.length - 1] ?? 0
+                        const bottom = prevPositions[i * 2 + 1] ?? top
+                        return (top + bottom) / 2
+                      })
+                    }
+
+                    return (
+                      <div className="relative" style={{ width: totalWidth, minHeight: totalHeight + HEADER_H }}>
+                        {/* SVGブラケット線 */}
+                        <svg
+                          className="absolute inset-0 pointer-events-none"
+                          width={totalWidth}
+                          height={totalHeight + HEADER_H}
+                          style={{ zIndex: 0 }}
+                        >
+                          {roundsInFinals.map((r, roundIdx) => {
+                            if (roundIdx === 0) return null
+                            const prevRound = roundsInFinals[roundIdx - 1]
+                            const prevMatches = finalsMatches.filter(m => m.round === prevRound).sort((a, b) => a.match_number - b.match_number)
+                            const currMatches = finalsMatches.filter(m => m.round === r).sort((a, b) => a.match_number - b.match_number)
+                            const prevPositions = getMatchPositions(roundIdx - 1, prevMatches.length)
+                            const currPositions = getMatchPositions(roundIdx, currMatches.length)
+                            const prevX = (roundIdx - 1) * (CARD_W + COL_GAP)
+                            const currX = roundIdx * (CARD_W + COL_GAP)
+
+                            return currMatches.map((_, mi) => {
+                              const topIdx = mi * 2
+                              const bottomIdx = mi * 2 + 1
+                              if (topIdx >= prevPositions.length) return null
+                              const y1 = HEADER_H + prevPositions[topIdx] + CARD_H / 2
+                              const y2 = bottomIdx < prevPositions.length
+                                ? HEADER_H + prevPositions[bottomIdx] + CARD_H / 2
+                                : y1
+                              const yMid = HEADER_H + currPositions[mi] + CARD_H / 2
+                              const xRight = prevX + CARD_W
+                              const xLeft = currX
+                              const xMidPoint = xRight + (xLeft - xRight) / 2
+
+                              return (
+                                <g key={`connector-${roundIdx}-${mi}`}>
+                                  {/* 上の試合から右へ */}
+                                  <line x1={xRight} y1={y1} x2={xMidPoint} y2={y1} stroke="rgba(168,85,247,0.4)" strokeWidth={2} />
+                                  {/* 下の試合から右へ */}
+                                  {bottomIdx < prevPositions.length && (
+                                    <line x1={xRight} y1={y2} x2={xMidPoint} y2={y2} stroke="rgba(168,85,247,0.4)" strokeWidth={2} />
+                                  )}
+                                  {/* 縦線 */}
+                                  <line x1={xMidPoint} y1={y1} x2={xMidPoint} y2={y2} stroke="rgba(168,85,247,0.4)" strokeWidth={2} />
+                                  {/* 中間から次の試合へ */}
+                                  <line x1={xMidPoint} y1={yMid} x2={xLeft} y2={yMid} stroke="rgba(168,85,247,0.4)" strokeWidth={2} />
+                                </g>
+                              )
+                            })
+                          })}
+                          {/* 最終ラウンドから優勝者カードへの線 */}
+                          {champion && (() => {
+                            const lastRoundIdx = roundsInFinals.length - 1
+                            const lastMatches = finalsMatches.filter(m => m.round === roundsInFinals[lastRoundIdx])
+                            const lastPositions = getMatchPositions(lastRoundIdx, lastMatches.length)
+                            const yMid = HEADER_H + (lastPositions[0] ?? 0) + CARD_H / 2
+                            const xRight = lastRoundIdx * (CARD_W + COL_GAP) + CARD_W
+                            const xLeft = (lastRoundIdx + 1) * (CARD_W + COL_GAP)
+                            return (
+                              <line x1={xRight} y1={yMid} x2={xLeft} y2={yMid} stroke="rgba(234,179,8,0.5)" strokeWidth={2} />
+                            )
+                          })()}
+                        </svg>
+
+                        {/* ラウンドカラム */}
+                        {roundsInFinals.map((r, roundIdx) => {
+                          const roundMatches = finalsMatches
+                            .filter(m => m.round === r)
+                            .sort((a, b) => a.match_number - b.match_number)
+                          const positions = getMatchPositions(roundIdx, roundMatches.length)
+                          const xOffset = roundIdx * (CARD_W + COL_GAP)
+
+                          return (
+                            <div key={r}>
+                              {/* ラウンド名 */}
+                              <div className="absolute text-base font-bold text-yellow-100 text-center" style={{
+                                left: xOffset,
+                                top: 0,
+                                width: CARD_W,
+                              }}>
+                                {getRoundName(r)}
+                              </div>
+                              {/* 試合カード */}
+                              {roundMatches.map((match, matchIdx) => (
+                                <div
+                                  key={match.id}
+                                  className="absolute"
+                                  style={{
+                                    left: xOffset,
+                                    top: HEADER_H + positions[matchIdx],
+                                    width: CARD_W,
+                                  }}
+                                >
+                                  <div className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl">
+                                    {/* Player1 */}
+                                    <div className={`flex items-center gap-3 p-2 rounded-lg mb-2 ${isFinished && match.winner_id === match.player1_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
+                                      {match.player1?.avatar_url && (
+                                        <img src={match.player1.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <button
+                                          onClick={() => match.player1 && setPopupPlayer(match.player1)}
+                                          className={`text-sm font-semibold truncate underline decoration-dotted hover:opacity-80 ${isFinished && match.winner_id === match.player1_id ? 'text-white' : 'text-gray-400'}`}
+                                        >
+                                          {match.player1?.name ?? '未定'}
+                                        </button>
+                                        {match.disadvantage_player_id === match.player1_id && (
+                                          <p className="text-[10px] text-orange-400">1勝アドバンテージ</p>
+                                        )}
+                                      </div>
+                                      {isFinished && match.winner_id === match.player1_id && (
+                                        <span className="text-yellow-400 text-sm">👑</span>
+                                      )}
+                                    </div>
+                                    {/* セットスコア */}
+                                    {match.tournament_finals_sets.length > 0 && (
+                                      <div className="flex justify-center gap-2 my-2">
+                                        {match.tournament_finals_sets
+                                          .sort((a, b) => a.set_number - b.set_number)
+                                          .map(s => (
+                                            <div key={s.id} className="text-center">
+                                              <p className="text-[10px] text-gray-500">第{s.set_number}</p>
+                                              <p className="text-xs font-bold text-white">{s.score1}-{s.score2}</p>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    )}
+                                    {match.mode === 'walkover' && (
+                                      <p className="text-center text-xs text-yellow-400 my-2">不戦勝</p>
+                                    )}
+                                    {/* Player2 */}
+                                    <div className={`flex items-center gap-3 p-2 rounded-lg ${isFinished && match.winner_id === match.player2_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
+                                      {match.player2?.avatar_url && (
+                                        <img src={match.player2.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <button
+                                          onClick={() => match.player2 && setPopupPlayer(match.player2)}
+                                          className={`text-sm font-semibold truncate underline decoration-dotted hover:opacity-80 ${isFinished && match.winner_id === match.player2_id ? 'text-white' : 'text-gray-400'}`}
+                                        >
+                                          {match.player2?.name ?? '未定'}
+                                        </button>
+                                        {match.disadvantage_player_id === match.player2_id && (
+                                          <p className="text-[10px] text-orange-400">1勝アドバンテージ</p>
+                                        )}
+                                      </div>
+                                      {isFinished && match.winner_id === match.player2_id && (
+                                        <span className="text-yellow-400 text-sm">👑</span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
-                              <p className="text-2xl font-bold text-yellow-100 mb-3">{champion.name}</p>
-                              <div className="flex flex-col gap-1.5">
-                                <span className="text-xs px-2 py-1 rounded-full bg-purple-900/60 border border-purple-500/40 text-yellow-100">
-                                  RP {champion.rating ?? '-'}
-                                </span>
-                                <span className="text-xs px-2 py-1 rounded-full bg-blue-900/60 border border-blue-500/40 text-yellow-100">
-                                  HC {champion.hc ?? '-'}
-                                </span>
-                                <span className="text-xs px-2 py-1 rounded-full bg-yellow-900/60 border border-yellow-500/40 text-yellow-100">
-                                  #{rankMap.get(champion.id) ?? '-'}
-                                </span>
+                              ))}
+                            </div>
+                          )
+                        })}
+
+                        {/* 優勝者カード */}
+                        {champion && (() => {
+                          const champRoundIdx = roundsInFinals.length
+                          const xOffset = champRoundIdx * (CARD_W + COL_GAP)
+                          const lastRoundIdx = roundsInFinals.length - 1
+                          const lastPositions = getMatchPositions(lastRoundIdx, finalsMatches.filter(m => m.round === roundsInFinals[lastRoundIdx]).length)
+                          const yCenter = HEADER_H + (lastPositions[0] ?? 0)
+
+                          return (
+                            <div className="absolute" style={{ left: xOffset, top: yCenter - 40, width: CARD_W }}>
+                              <div className="p-6 bg-gradient-to-b from-yellow-900/40 to-yellow-700/20 border-2 border-yellow-400 rounded-2xl text-center">
+                                <p className="text-yellow-400 font-bold mb-3">👑 優勝</p>
+                                {champion.avatar_url && (
+                                  <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-yellow-400 avatar-glow mx-auto mb-3">
+                                    <img src={champion.avatar_url} className="w-full h-full object-cover" />
+                                  </div>
+                                )}
+                                <p className="text-xl font-bold text-yellow-100 mb-2">{champion.name}</p>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-900/60 border border-purple-500/40 text-yellow-100">RP {champion.rating ?? '-'}</span>
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/60 border border-blue-500/40 text-yellow-100">HC {champion.hc ?? '-'}</span>
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900/60 border border-yellow-500/40 text-yellow-100">#{rankMap.get(champion.id) ?? '-'}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
+                          )
+                        })()}
                       </div>
-                    )}
-                  </div>
+                    )
+                  })()}
                 </div>
                 <p className="text-xs text-gray-500 text-center">← スワイプで各ラウンドを確認 →</p>
               </>
             )}
           </div>
         )}
-
+      </div>
       {/* プレーヤーポップアップ */}
       {popupPlayer && (
         <div
