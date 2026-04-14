@@ -70,8 +70,13 @@ export default async function PlayerPage({
   const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
   const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
-  const winRate = player.wins + player.losses > 0
-    ? Math.round((player.wins / (player.wins + player.losses)) * 100) : 0
+// 全シングルス試合から勝敗を再計算
+  const totalSinglesWins = matches.filter((m: any) => m.winner_id === player.id).length
+  const totalSinglesLosses = matches.filter((m: any) => m.winner_id && m.winner_id !== player.id).length
+
+
+  const winRate = totalSinglesWins + totalSinglesLosses > 0
+    ? Math.round((totalSinglesWins / (totalSinglesWins + totalSinglesLosses)) * 100) : 0
   const doublesWinRate = (player.doubles_wins ?? 0) + (player.doubles_losses ?? 0) > 0
     ? Math.round(((player.doubles_wins ?? 0) / ((player.doubles_wins ?? 0) + (player.doubles_losses ?? 0))) * 100) : 0
 
@@ -137,12 +142,12 @@ export default async function PlayerPage({
                 <p className="text-xs text-gray-400">HC</p>
               </div>
               <div className="text-center">
-                <p className="text-xl font-bold text-green-400">{player.wins}</p>
+               <p className="text-xl font-bold text-green-400">{totalSinglesWins}</p>
                 <p className="text-xs text-gray-400">勝</p>
               </div>
               <div className="text-center">
-                <p className="text-xl font-bold text-red-400">{player.losses}</p>
-                <p className="text-xs text-gray-400">敗</p>
+                <p className="text-xl font-bold text-red-400">{totalSinglesLosses}</p>
+                <p className="text-xs text-gray-400">敗</p> 
               </div>
               <div className="text-center">
                 <p className="text-xl font-bold text-blue-400">{winRate}%</p>
@@ -271,7 +276,19 @@ export default async function PlayerPage({
                           )}
                       </p>
                       </div>
-                      <span className="font-bold text-white">{myScore} - {oppScore}</span>
+                      <span className="font-bold text-white">
+                        {match.source === 'finals' && match.tournament_finals_sets?.length > 0
+                          ? match.tournament_finals_sets
+                              .sort((a: any, b: any) => a.set_number - b.set_number)
+                              .map((s: any) => {
+                                const my = isPlayer1 ? s.score1 : s.score2
+                                const opp = isPlayer1 ? s.score2 : s.score1
+                                return `${my}-${opp}`
+                              })
+                              .join(' / ')
+                          : `${myScore} - ${oppScore}`
+                        }
+                      </span>
                       <span className={`text-sm font-medium flex-shrink-0 ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {ratingChange >= 0 ? '+' : ''}{ratingChange}pt
                       </span>
