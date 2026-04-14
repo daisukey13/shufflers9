@@ -1,5 +1,5 @@
 import { getPlayerById } from '@/lib/queries/players'
-import { getPlayerMatches, getPlayerDoublesMatches } from '@/lib/queries/matches'
+import { getPlayerAllSinglesMatches, getPlayerDoublesMatches } from '@/lib/queries/matches'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import TournamentBadges from '@/components/ui/TournamentBadges'
@@ -23,7 +23,7 @@ export default async function PlayerPage({
 
   const [player, matches, doublesMatches] = await Promise.all([
     getPlayerById(id),
-    getPlayerMatches(id),
+    getPlayerAllSinglesMatches(id),
     getPlayerDoublesMatches(id),
   ])
 
@@ -258,7 +258,7 @@ export default async function PlayerPage({
                   const ratingChange = isPlayer1 ? match.rating_change1 : match.rating_change2
 
                   return (
-                    <div key={match.id} className={`flex items-center gap-4 p-4 rounded-xl border-l-4 ${isWin ? 'border-green-500 bg-green-900/10' : 'border-red-500 bg-red-900/10'}`}>
+  <div key={match.id} className={`flex items-center gap-4 p-4 rounded-xl border-l-4 ${isWin ? 'border-green-500 bg-green-900/10' : 'border-red-500 bg-red-900/10'}`}>
                       <span className={`text-xs font-bold px-2 py-1 rounded flex-shrink-0 ${isWin ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
                         {isWin ? '勝' : '負'}
                       </span>
@@ -266,7 +266,10 @@ export default async function PlayerPage({
                         <p className="text-sm text-white">vs {opponent?.name ?? '不明'}</p>
                         <p className="text-xs text-gray-400">
                           {new Date(match.played_at).toLocaleDateString('ja-JP')}
-                        </p>
+                          {match.tournament_name && (
+                            <span className="ml-1.5 text-purple-400">🏆 {match.tournament_name}</span>
+                          )}
+                      </p>
                       </div>
                       <span className="font-bold text-white">{myScore} - {oppScore}</span>
                       <span className={`text-sm font-medium flex-shrink-0 ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>

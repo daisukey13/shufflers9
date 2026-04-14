@@ -131,3 +131,59 @@ export async function getRecentDoublesMatches(limit = 5) {
     .limit(limit)
   return data ?? []
 }
+export async function getPlayerAllSinglesMatches(playerId: string) {
+  const supabase = await createClient()
+
+  // 通常シングルス
+  const { data: singles } = await supabase
+    .from('singles_matches')
+    .select('*, player1:players!player1_id(*), player2:players!player2_id(*)')
+    .or(`player1_id.eq.${playerId},player2_id.eq.${playerId}`)
+    .order('played_at', { ascending: false })
+
+  // 予選
+  const { data: qualifying } = await supabase
+    .from('tournament_qualifying_matches')
+    .select('*, player1:players!player1_id(*), player2:players!player2_id(*), tournament:tournaments(name)')
+    .or(`player1_id.eq.${playerId},player2_id.eq.${playerId}`)
+    .not('winner_id', 'is', null)
+
+  // 決勝
+  const { data: finals } = await supabase
+    .from('tournament_finals_matches')
+    .select('*, player1:players!player1_id(*), player2:players!player2_id(*), tournament:tournaments(name), tournament_finals_sets(*)')
+    .or(`player1_id.eq.${playerId},player2_id.eq.${playerId}`)
+    .not('winner_id', 'is', null)
+
+  // 統一フォーマットに変換
+  const all = [
+    ...(singles ?? []).map(m => ({
+      ...m,
+      source: 'singles' as const,
+      tournament_name: null,
+    })),
+    ...(qualifying ?? []).map(m => ({
+      ...m,
+      played_at: m.created_at,
+      source: 'qualifying' as const,
+      tournament_name: m.tournament?.name ?? null,
+      rating_change1: m.player1_rating_change,
+      rating_change2: m.player2_rating_change,
+    })),
+    ...(finals ?? []).map(m => ({
+      ...m,
+      played_at: m.created_at,
+      source: 'finals' as const,
+      tournament_name: m.tournament?.name ?? null,
+      score1: m.tournament_finals_sets?.reduce((s: number, set: any) => s + set.score1, 0) ?? 0,
+      score2: m.tournament_finals_sets?.reduce((s: number, set: any) => s + set.score2, 0) ?? 0,
+      rating_change1: null,
+      rating_change2: null,
+    })),
+  ]
+
+  // 日付降順でソート
+  all.sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
+
+  return all
+}
