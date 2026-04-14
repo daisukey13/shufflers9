@@ -438,7 +438,7 @@ const champion = isFinished
                     const totalWidth = colCount * CARD_W + (colCount - 1) * COL_GAP
 
                     // 各ラウンドの試合のY座標を計算
-                    const getMatchPositions = (roundIdx: number, matchCount: number) => {
+                    const getMatchPositions = (roundIdx: number, matchCount: number): number[] => {
                       if (roundIdx === 0) {
                         return Array.from({ length: matchCount }, (_, i) => i * (CARD_H + GAP_Y))
                       }
