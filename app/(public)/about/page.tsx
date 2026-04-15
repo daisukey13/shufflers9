@@ -13,14 +13,14 @@ export default function AboutPage() {
         <div className="space-y-5">
 
           <div className="p-5 bg-blue-900/20 border border-blue-800/30 rounded-2xl space-y-3">
-            <h2 className="text-lg font-bold text-amber-300">🏓 サイトの概要</h2>
+            <h2 className="text-lg font-bold text-amber-300">🐚 サイトの概要</h2>
             <p className="text-gray-300 text-sm leading-relaxed">
               このサイトはToyoura Shufflers Clubが運営するテーブルシャッフルボードのランキングサイトです。
             </p>
           </div>
 
           <div className="p-5 bg-blue-900/20 border border-blue-800/30 rounded-2xl space-y-3">
-            <h2 className="text-lg font-bold text-amber-300">🌏 サイトの目的</h2>
+            <h2 className="text-lg font-bold text-amber-300">🍓 サイトの目的</h2>
             <p className="text-gray-300 text-sm leading-relaxed">
               このサイトの目的は、テーブルシャッフルボードを通して楽しむ仲間を世界に広げることにあります。
               従って、ルールを守って仲間と楽しむために、豊浦町のテーブルシャッフルボードでプレイできる中学生以上ならば、誰でもランキング登録をして参加できます。
