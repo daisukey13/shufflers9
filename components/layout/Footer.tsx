@@ -17,6 +17,9 @@ export default function Footer() {
             <Link href="/terms" className="hover:text-amber-400 transition">
               利用規約
             </Link>
+            <Link href="/contact" className="hover:text-amber-400 transition">
+              お問い合わせ
+            </Link>
           </div>
         </div>
       </div>
