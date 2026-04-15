@@ -218,21 +218,21 @@ export default async function HomePage() {
                     href={`/players/${player.id}`}
                     className={`flex items-center gap-4 p-4 rounded-2xl bg-blue-900/20 border-2 ${borderColor}`}
                   >
-                    <div className={`w-9 h-9 rounded-full ${badgeColor} font-extrabold flex items-center justify-center flex-shrink-0 text-sm`}>
+                    <div className={`w-9 h-9 rounded-full ${badgeColor} font-extrabold flex items-center justify-center flex-shrink-0 text-sm${rank === 1 ? ' neon-btn-gold' : ''}`}>
                       {rank}
                     </div>
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-500/50 flex-shrink-0">
+                    <div className={`w-12 h-12 rounded-full overflow-hidden border-2 border-amber-500/50 flex-shrink-0${rank === 1 ? ' avatar-glow' : ''}`}>
                       {player.avatar_url
                         ? <img src={player.avatar_url} className="w-full h-full object-cover" />
                         : <span className="text-xl flex items-center justify-center h-full bg-gray-800">👤</span>
                       }
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-amber-100 truncate">{player.name}</p>
+                      <p className={`font-bold text-amber-100 truncate${rank === 1 ? ' neon-gold' : ''}`}>{player.name}</p>
                       <p className="text-xs text-gray-400">HC {player.hc ?? 36}</p>
                     </div>
                     <div className="flex flex-col gap-1 items-end">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/60 border border-amber-500/30 text-amber-300">RP {player.rating}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full bg-blue-900/60 border border-amber-500/30 text-amber-300${rank === 1 ? ' neon-btn-gold' : ''}`}>RP {player.rating}</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 border border-green-600/30 text-green-400">勝率 {winRate(player.wins, player.losses)}%</span>
                     </div>
                   </Link>

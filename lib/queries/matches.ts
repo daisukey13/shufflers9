@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { SinglesMatch, TeamsMatch } from '@/types'
+import { calcElo } from '@/lib/elo'
 
 export async function getRecentSinglesMatches(limit = 20): Promise<SinglesMatch[]> {
   const supabase = await createClient()
@@ -186,16 +187,40 @@ export async function getPlayerAllSinglesMatches(playerId: string) {
       rating_change1: m.player1_rating_change,
       rating_change2: m.player2_rating_change,
     })),
-    ...(finals ?? []).map(m => ({
-      ...m,
-      played_at: m.created_at,
-      source: 'finals' as const,
-      tournament_name: m.tournament?.name ?? null,
-      score1: m.tournament_finals_sets?.reduce((s: number, set: any) => s + set.score1, 0) ?? 0,
-      score2: m.tournament_finals_sets?.reduce((s: number, set: any) => s + set.score2, 0) ?? 0,
-      rating_change1: null,
-      rating_change2: null,
-    })),
+    ...(finals ?? []).map(m => {
+      const sets = (m.tournament_finals_sets ?? []) as { score1: number; score2: number }[]
+      const numSets = sets.length
+      const total1 = sets.reduce((s, set) => s + (set.score1 ?? 0), 0)
+      const total2 = sets.reduce((s, set) => s + (set.score2 ?? 0), 0)
+
+      let rating_change1: number | null = null
+      let rating_change2: number | null = null
+
+      if (m.winner_id && numSets > 0 && m.mode === 'normal') {
+        const p1Rating: number = (m.player1 as any)?.rating ?? 1000
+        const p2Rating: number = (m.player2 as any)?.rating ?? 1000
+        // 3セットマッチはセットあたりの平均ポイントをELO入力に使用
+        const avg1 = total1 / numSets
+        const avg2 = total2 / numSets
+        const { changeA, changeB } = calcElo(p1Rating, p2Rating, avg1, avg2)
+        rating_change1 = changeA
+        rating_change2 = changeB
+      } else if (m.winner_id && (m.mode === 'walkover' || m.mode === 'forfeit')) {
+        rating_change1 = 0
+        rating_change2 = 0
+      }
+
+      return {
+        ...m,
+        played_at: m.created_at,
+        source: 'finals' as const,
+        tournament_name: m.tournament?.name ?? null,
+        score1: total1,
+        score2: total2,
+        rating_change1,
+        rating_change2,
+      }
+    }),
   ]
 
   // 日付降順でソート
