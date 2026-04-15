@@ -81,6 +81,7 @@ export default function MatchesClient({
     <div className="min-h-screen bg-transparent text-white px-4 py-8">
       <div className="max-w-3xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold text-amber-100 neon-gold">📋 試合結果</h1>
+        <p className="text-xs text-gray-500">※表示HC、RPは現時点のものです。</p>
 
         {/* タブ */}
         <div className="flex gap-1 bg-[#0b1520] border border-yellow-600/20 rounded-xl p-1">
