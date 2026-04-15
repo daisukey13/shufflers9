@@ -23,6 +23,8 @@ type MatchItem = {
   sets?: { set_number: number; score1: number; score2: number }[]
   player1_hc?: number | null
   player2_hc?: number | null
+  player1_rp?: number | null
+  player2_rp?: number | null
   player1_rank?: number | null
   player2_rank?: number | null
   winnerPair?: number | null
@@ -214,6 +216,10 @@ export default function MatchesClient({
                         <span className={`font-bold text-sm text-center ${isPair1Winner ? 'text-white' : 'text-gray-400'}`}>
                           {match.player1Name}
                         </span>
+                        <div className="flex gap-2 text-xs text-gray-400">
+                          {match.player1_hc != null && <span>HC {match.player1_hc}</span>}
+                          {match.player1_rp != null && <span className="text-purple-400">RP {match.player1_rp}</span>}
+                        </div>
                         {isPair1Winner && (
                           <span className={`text-xs font-bold ${upset ? 'text-yellow-400' : 'text-green-400'}`}>
                             {upset ? '⭐ 大金星' : '勝利'}
@@ -252,6 +258,10 @@ export default function MatchesClient({
                         <span className={`font-bold text-sm text-center ${!isPair1Winner && hasWinner ? 'text-white' : 'text-gray-400'}`}>
                           {match.player2Name}
                         </span>
+                        <div className="flex gap-2 text-xs text-gray-400">
+                          {match.player2_hc != null && <span>HC {match.player2_hc}</span>}
+                          {match.player2_rp != null && <span className="text-purple-400">RP {match.player2_rp}</span>}
+                        </div>
                         {!isPair1Winner && hasWinner && (
                           <span className={`text-xs font-bold ${upset ? 'text-yellow-400' : 'text-green-400'}`}>
                             {upset ? '⭐ 大金星' : '勝利'}

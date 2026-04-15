@@ -9,13 +9,13 @@ export default async function MatchesPage() {
     getRecentSinglesMatches(50),
     supabase.from('doubles_matches').select(`
       *,
-      pair1_player1:players!pair1_player1_id(id, name, avatar_url),
-      pair1_player2:players!pair1_player2_id(id, name, avatar_url),
-      pair2_player1:players!pair2_player1_id(id, name, avatar_url),
-      pair2_player2:players!pair2_player2_id(id, name, avatar_url)
+      pair1_player1:players!pair1_player1_id(id, name, avatar_url, hc, rating),
+      pair1_player2:players!pair1_player2_id(id, name, avatar_url, hc, rating),
+      pair2_player1:players!pair2_player1_id(id, name, avatar_url, hc, rating),
+      pair2_player2:players!pair2_player2_id(id, name, avatar_url, hc, rating)
     `).eq('mode', 'normal').order('played_at', { ascending: false }).limit(50),
-    supabase.from('tournament_qualifying_matches').select('*, block:tournament_blocks(block_name, tournament:tournaments(id, name)), player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url)').eq('mode', 'normal').not('winner_id', 'is', null).order('played_at', { ascending: false }).limit(50),
-    supabase.from('tournament_finals_matches').select('*, tournament:tournaments(id, name), player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), tournament_finals_sets(*)').not('winner_id', 'is', null).order('played_at', { ascending: false }).limit(50),
+    supabase.from('tournament_qualifying_matches').select('*, block:tournament_blocks(block_name, tournament:tournaments(id, name)), player1:players!player1_id(id, name, avatar_url, hc, rating), player2:players!player2_id(id, name, avatar_url, hc, rating)').eq('mode', 'normal').not('winner_id', 'is', null).order('played_at', { ascending: false }).limit(50),
+    supabase.from('tournament_finals_matches').select('*, tournament:tournaments(id, name), player1:players!player1_id(id, name, avatar_url, hc, rating), player2:players!player2_id(id, name, avatar_url, hc, rating), tournament_finals_sets(*)').not('winner_id', 'is', null).order('played_at', { ascending: false }).limit(50),
   ])
 
   type MatchItem = {
@@ -38,6 +38,8 @@ export default async function MatchesPage() {
     sets?: { set_number: number; score1: number; score2: number }[]
     player1_hc?: number | null
     player2_hc?: number | null
+    player1_rp?: number | null
+    player2_rp?: number | null
     player1_rank?: number | null
     player2_rank?: number | null
     winnerPair?: number | null
@@ -68,6 +70,8 @@ export default async function MatchesPage() {
       score2: m.score2,
       player1_hc: m.player1_hc,
       player2_hc: m.player2_hc,
+      player1_rp: m.player1?.rating ?? null,
+      player2_rp: m.player2?.rating ?? null,
       player1_rank: m.player1_rank,
       player2_rank: m.player2_rank,
     }))
@@ -118,6 +122,10 @@ export default async function MatchesPage() {
         score1: m.score1,
         score2: m.score2,
         mode: m.mode,
+        player1_hc: m.player1?.hc ?? null,
+        player2_hc: m.player2?.hc ?? null,
+        player1_rp: m.player1?.rating ?? null,
+        player2_rp: m.player2?.rating ?? null,
       })),
     ...(finalsResult.data ?? [])
       .filter((m: any) => m.player1?.name !== 'DEFAULT' && m.player2?.name !== 'DEFAULT')
@@ -137,6 +145,10 @@ export default async function MatchesPage() {
         score1: null,
         score2: null,
         sets: m.tournament_finals_sets?.sort((a: any, b: any) => a.set_number - b.set_number),
+        player1_hc: m.player1?.hc ?? null,
+        player2_hc: m.player2?.hc ?? null,
+        player1_rp: m.player1?.rating ?? null,
+        player2_rp: m.player2?.rating ?? null,
       })),
   ].sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
 
