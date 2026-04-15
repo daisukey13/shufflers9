@@ -11,8 +11,11 @@ export default function Footer() {
             <p className="text-xs text-gray-500 mt-0.5">© {year} Toyoura Shufflers Club</p>
           </div>
           <div className="flex items-center gap-4 text-xs text-gray-500">
+            <Link href="/about" className="hover:text-amber-400 transition">
+              当サイトについて
+            </Link>
             <Link href="/terms" className="hover:text-amber-400 transition">
-              当サイトについて・利用規約
+              利用規約
             </Link>
           </div>
         </div>
