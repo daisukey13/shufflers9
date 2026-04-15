@@ -8,9 +8,11 @@ export const metadata: Metadata = {
   title: 'Toyoura Shufflers Club',
   description: 'テーブルシャッフルボード クラブランキング',
   icons: {
-    icon: '/shuffleboard-puck-blue.png',
-    apple: '/shuffleboard-puck-blue.png',
-  },
+  icon: [
+    { url: '/shuffleboard-puck-blue.png', type: 'image/png' },
+  ],
+  apple: '/shuffleboard-puck-blue.png',
+},
 }
 
 export default function RootLayout({
