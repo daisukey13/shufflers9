@@ -29,6 +29,15 @@ export default async function PlayerPage({
 
   if (!player) notFound()
 
+  // 現在の順位を取得（自分より rating が高いアクティブ非管理プレーヤー数 + 1）
+  const { count: higherCount } = await supabase
+    .from('players')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_active', true)
+    .eq('is_admin', false)
+    .gt('rating', player.rating)
+  const currentRank = (higherCount ?? 0) + 1
+
   const { data: finalsParticipation } = await supabase
     .from('tournament_finals_matches')
     .select('*, tournament:tournaments(id, name, status)')
@@ -130,84 +139,109 @@ console.log('DEBUG doubles:', {
     <div className="space-y-8 max-w-3xl mx-auto px-4 py-8">
 
       {/* プロフィール */}
-      <div className="flex items-center gap-6 p-6 bg-purple-900/20 border border-purple-800/30 rounded-2xl">
-        <div className="w-20 h-20 rounded-full bg-gray-800 border-2 border-purple-500 overflow-hidden flex items-center justify-center flex-shrink-0">
-          {player.avatar_url
-            ? <img src={player.avatar_url} className="w-full h-full object-cover" />
-            : <span className="text-3xl">👤</span>
-          }
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-white">{player.name}</h1>
-            {player.address && (
-              <span className="text-sm text-gray-400">📍 {player.address}</span>
-            )}
-          </div>
-          <TournamentBadges
-            wins={player.tournament_wins ?? 0}
-            runnerUps={player.tournament_runner_ups ?? 0}
-            qualifications={player.tournament_qualifications ?? 0}
-            size="md"
-          />
+      {(() => {
+        const r = currentRank
+        const rankTextClass = r === 1 ? 'text-yellow-300 neon-gold' : r === 2 ? 'text-gray-200 neon-silver' : r === 3 ? 'text-orange-300 neon-bronze' : 'text-purple-300 neon-purple'
+        const rankSubColor  = r === 1 ? 'text-yellow-400' : r === 2 ? 'text-gray-400' : r === 3 ? 'text-orange-400' : 'text-purple-400'
+        return (
+          <div className="relative pt-16 px-5 pb-5 bg-purple-900/20 border border-purple-800/30 rounded-2xl">
+            {/* 順位 — カード左上 */}
+            <div className="absolute top-3 left-4 leading-none">
+              <div className="relative inline-block">
+                <span className={`text-5xl font-black leading-none ${rankTextClass}`}>{r}</span>
+                <span className={`absolute bottom-0 -right-5 text-sm font-bold ${rankSubColor}`}>位</span>
+              </div>
+            </div>
 
-          {/* シングルス成績 */}
-          <div className="mt-3">
-            <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-              <img src="/shuffleboard-puck-blue.png" className="w-3 h-3 object-contain" />
-              シングルス
-            </p>
-            <div className="flex gap-4">
-              <div className="text-center">
-                <p className="text-xl font-bold text-purple-400">{player.rating}</p>
-                <p className="text-xs text-gray-400">RP</p>
+            {/* メインフレックス */}
+            <div className="flex items-start gap-4">
+              {/* アバター（1位はクラウンをアバター上部に表示） */}
+              <div className="flex-shrink-0 flex flex-col items-center">
+                {r === 1 && <span className="text-2xl mb-0.5 leading-none">👑</span>}
+                <div className="w-20 h-20 rounded-full bg-gray-800 border-2 border-purple-500 overflow-hidden flex items-center justify-center">
+                  {player.avatar_url
+                    ? <img src={player.avatar_url} className="w-full h-full object-cover" />
+                    : <span className="text-3xl">👤</span>
+                  }
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-white">{player.hc ?? 36}</p>
-                <p className="text-xs text-gray-400">HC</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-green-400">{totalSinglesWins}</p>
-                <p className="text-xs text-gray-400">勝</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-red-400">{totalSinglesLosses}</p>
-                <p className="text-xs text-gray-400">敗</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-blue-400">{winRate}%</p>
-                <p className="text-xs text-gray-400">勝率</p>
+
+              {/* 情報列 */}
+              <div className="flex-1 min-w-0">
+                {player.address && (
+                  <p className="text-xs text-gray-500 mb-0.5 truncate">📍 {player.address}</p>
+                )}
+                <h1 className="text-xl font-bold text-white truncate">{player.name}</h1>
+                <TournamentBadges
+                  wins={player.tournament_wins ?? 0}
+                  runnerUps={player.tournament_runner_ups ?? 0}
+                  qualifications={player.tournament_qualifications ?? 0}
+                  size="md"
+                />
+
+                {/* シングルス成績 */}
+                <div className="mt-3">
+                  <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                    <img src="/shuffleboard-puck-blue.png" className="w-3 h-3 object-contain" />
+                    シングルス
+                  </p>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[
+                      { label: 'RP',  val: player.rating,        color: 'text-purple-400' },
+                      { label: 'HC',  val: player.hc ?? 36,      color: 'text-white' },
+                      { label: '勝',  val: totalSinglesWins,      color: 'text-green-400' },
+                      { label: '敗',  val: totalSinglesLosses,    color: 'text-red-400' },
+                    ].map(({ label, val, color }) => (
+                      <div key={label} className="text-center">
+                        <p className={`text-base font-bold ${color}`}>{val}</p>
+                        <p className="text-xs text-gray-500">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-500">勝率</span>
+                      <span className="text-blue-400 font-semibold">{winRate}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-green-600 to-emerald-400 rounded-full" style={{ width: `${winRate}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ダブルス成績 */}
+                <div className="mt-3">
+                  <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                    <img src="/shuffleboard-puck-red.png" className="w-3 h-3 object-contain" />
+                    ダブルス
+                  </p>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { label: 'RP',  val: player.doubles_rating ?? 1000, color: 'text-purple-400' },
+                      { label: '勝',  val: totalDoublesWins,               color: 'text-green-400' },
+                      { label: '敗',  val: totalDoublesLosses,             color: 'text-red-400' },
+                    ].map(({ label, val, color }) => (
+                      <div key={label} className="text-center">
+                        <p className={`text-base font-bold ${color}`}>{val}</p>
+                        <p className="text-xs text-gray-500">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-500">勝率</span>
+                      <span className="text-blue-400 font-semibold">{doublesWinRate}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-green-600 to-emerald-400 rounded-full" style={{ width: `${doublesWinRate}%` }} />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* ダブルス成績 */}
-          <div className="mt-3">
-            <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
-              <img src="/shuffleboard-puck-red.png" className="w-3 h-3 object-contain" />
-              ダブルス
-            </p>
-            <div className="flex gap-4">
-              <div className="text-center">
-                <p className="text-xl font-bold text-purple-400">{player.doubles_rating ?? 1000}</p>
-                <p className="text-xs text-gray-400">RP</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-green-400">{totalDoublesWins}</p>
-                <p className="text-xs text-gray-400">勝</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-red-400">{totalDoublesLosses}</p>
-                <p className="text-xs text-gray-400">敗</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-blue-400">{doublesWinRate}%</p>
-                <p className="text-xs text-gray-400">勝率</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        )
+      })()}
 
       {/* 大会戦績 */}
       {tournamentResults.length > 0 && (

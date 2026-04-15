@@ -103,3 +103,66 @@ body {
 .neon-btn-green {
   animation: neon-pulse-green-btn 2s ease-in-out infinite;
 }
+
+/* ── ランクバッジ ネオンアニメーション（紫・4位以下） ── */
+@keyframes neon-pulse-rank {
+  0%, 100% {
+    box-shadow: 0 0 6px 2px rgba(167, 139, 250, 0.9), 0 0 14px 4px rgba(139, 92, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 12px 4px rgba(196, 181, 253, 1), 0 0 24px 8px rgba(167, 139, 250, 0.7), 0 0 40px 12px rgba(109, 40, 217, 0.3);
+  }
+}
+.neon-rank-badge { animation: neon-pulse-rank 1.5s ease-in-out infinite; }
+
+/* ── ランクバッジ ゴールド（1位） ── */
+@keyframes neon-pulse-rank-gold {
+  0%, 100% {
+    box-shadow: 0 0 8px 3px rgba(251, 191, 36, 0.9), 0 0 20px 6px rgba(245, 158, 11, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 16px 5px rgba(253, 230, 138, 1), 0 0 32px 10px rgba(251, 191, 36, 0.7), 0 0 50px 16px rgba(217, 119, 6, 0.35);
+  }
+}
+.neon-rank-gold { animation: neon-pulse-rank-gold 1.5s ease-in-out infinite; }
+
+/* ── ランクバッジ シルバー（2位） ── */
+@keyframes neon-pulse-rank-silver {
+  0%, 100% {
+    box-shadow: 0 0 6px 2px rgba(209, 213, 219, 0.8), 0 0 14px 4px rgba(156, 163, 175, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 12px 4px rgba(243, 244, 246, 1), 0 0 24px 8px rgba(209, 213, 219, 0.65), 0 0 38px 12px rgba(107, 114, 128, 0.3);
+  }
+}
+.neon-rank-silver { animation: neon-pulse-rank-silver 1.5s ease-in-out infinite; }
+
+/* ── ランクバッジ ブロンズ（3位） ── */
+@keyframes neon-pulse-rank-bronze {
+  0%, 100% {
+    box-shadow: 0 0 6px 2px rgba(251, 146, 60, 0.9), 0 0 14px 4px rgba(234, 88, 12, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 12px 4px rgba(253, 186, 116, 1), 0 0 24px 8px rgba(251, 146, 60, 0.65), 0 0 38px 12px rgba(194, 65, 12, 0.3);
+  }
+}
+.neon-rank-bronze { animation: neon-pulse-rank-bronze 1.5s ease-in-out infinite; }
+
+/* ── 順位数字 テキストグロー ── */
+@keyframes neon-pulse-silver-text {
+  0%, 100% { text-shadow: 0 0 6px rgba(209,213,219,0.8), 0 0 16px rgba(156,163,175,0.4); }
+  50%       { text-shadow: 0 0 14px rgba(243,244,246,1), 0 0 28px rgba(209,213,219,0.7), 0 0 44px rgba(156,163,175,0.3); }
+}
+.neon-silver { animation: neon-pulse-silver-text 2s ease-in-out infinite; }
+
+@keyframes neon-pulse-bronze-text {
+  0%, 100% { text-shadow: 0 0 6px rgba(251,146,60,0.8), 0 0 16px rgba(234,88,12,0.4); }
+  50%       { text-shadow: 0 0 14px rgba(253,186,116,1), 0 0 28px rgba(251,146,60,0.7), 0 0 44px rgba(194,65,12,0.3); }
+}
+.neon-bronze { animation: neon-pulse-bronze-text 2s ease-in-out infinite; }
+
+@keyframes neon-pulse-purple-text {
+  0%, 100% { text-shadow: 0 0 6px rgba(167,139,250,0.8), 0 0 16px rgba(139,92,246,0.4); }
+  50%       { text-shadow: 0 0 14px rgba(196,181,253,1), 0 0 28px rgba(167,139,250,0.7), 0 0 44px rgba(109,40,217,0.3); }
+}
+.neon-purple { animation: neon-pulse-purple-text 2s ease-in-out infinite; }
