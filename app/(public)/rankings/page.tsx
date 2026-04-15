@@ -1,7 +1,8 @@
 import TournamentBadges from '@/components/ui/TournamentBadges'
 
-import { getPlayerRankings } from '@/lib/queries/rankings'
+import { getPlayerRankings, calcRanks, singlesTie, doublesTie } from '@/lib/queries/rankings'
 import { createClient } from '@/lib/supabase/server'
+import { Player } from '@/types'
 import Link from 'next/link'
 
 export default async function RankingsPage({
@@ -14,24 +15,35 @@ export default async function RankingsPage({
 
   const supabase = await createClient()
 
-  const [singlesPlayers, { data: doublesPlayers }] = await Promise.all([
+  const [singlesRaw, { data: doublesRaw }] = await Promise.all([
     getPlayerRankings(),
     supabase
       .from('players')
       .select('*')
       .eq('is_active', true)
       .eq('is_admin', false)
-      .order('doubles_rating', { ascending: false }),
+      .order('doubles_rating', { ascending: false })
+      .order('hc', { ascending: false }),
   ])
+
+  // ダブルスは JS 側でさらに試合数降順でソートしてからランク付与
+  const doublesSorted = [...(doublesRaw ?? [])].sort((a: Player, b: Player) => {
+    if (b.doubles_rating !== a.doubles_rating) return b.doubles_rating - a.doubles_rating
+    if (b.hc !== a.hc) return b.hc - a.hc
+    return (b.doubles_wins + b.doubles_losses) - (a.doubles_wins + a.doubles_losses)
+  })
+
+  const singlesPlayers = calcRanks(singlesRaw, singlesTie)
+  const doublesPlayers = calcRanks(doublesSorted, doublesTie)
 
   const winRate = (w: number, l: number) => {
     const g = w + l
     return g > 0 ? Math.round((w / g) * 100) : 0
   }
 
-  const renderTop3 = (players: any[], ratingKey: string) => {
-    return players.slice(0, 3).map((player, i) => {
-      const rank = i + 1
+  const renderTop3 = (players: (Player & { rank: number })[], ratingKey: string) => {
+    return players.filter(p => p.rank <= 3).map((player) => {
+      const rank = player.rank
       const wr = winRate(
         ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins,
         ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses
@@ -90,9 +102,9 @@ export default async function RankingsPage({
     })
   }
 
-  const renderRest = (players: any[], ratingKey: string, startRank: number) => {
-    return players.slice(startRank - 1).map((player, i) => {
-      const rank = i + startRank
+  const renderRest = (players: (Player & { rank: number })[], ratingKey: string) => {
+    return players.filter(p => p.rank > 3).map((player) => {
+      const rank = player.rank
       const wr = winRate(
         ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins,
         ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses
@@ -164,7 +176,7 @@ export default async function RankingsPage({
             ) : (
               <div className="space-y-3">
                 {renderTop3(singlesPlayers, 'rating')}
-                {renderRest(singlesPlayers, 'rating', 4)}
+                {renderRest(singlesPlayers, 'rating')}
               </div>
             )}
           </section>
@@ -178,7 +190,7 @@ export default async function RankingsPage({
             ) : (
               <div className="space-y-3">
                 {renderTop3(doublesPlayers, 'doubles_rating')}
-                {renderRest(doublesPlayers, 'doubles_rating', 4)}
+                {renderRest(doublesPlayers, 'doubles_rating')}
               </div>
             )}
           </section>

@@ -1,5 +1,6 @@
 import { getPlayerById } from '@/lib/queries/players'
 import { getPlayerAllSinglesMatches, getPlayerDoublesMatches } from '@/lib/queries/matches'
+import { getPlayerRankings, calcRanks, singlesTie } from '@/lib/queries/rankings'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import TournamentBadges from '@/components/ui/TournamentBadges'
@@ -21,22 +22,18 @@ export default async function PlayerPage({
 
   const supabase = await createClient()
 
-  const [player, matches, doublesMatches] = await Promise.all([
+  const [player, matches, doublesMatches, allPlayers] = await Promise.all([
     getPlayerById(id),
     getPlayerAllSinglesMatches(id),
     getPlayerDoublesMatches(id),
+    getPlayerRankings(),
   ])
 
   if (!player) notFound()
 
-  // 現在の順位を取得（自分より rating が高いアクティブ非管理プレーヤー数 + 1）
-  const { count: higherCount } = await supabase
-    .from('players')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_active', true)
-    .eq('is_admin', false)
-    .gt('rating', player.rating)
-  const currentRank = (higherCount ?? 0) + 1
+  // ランキング順位（同ポイント同順位・RP > HC > 試合数）
+  const rankedPlayers = calcRanks(allPlayers, singlesTie)
+  const currentRank = rankedPlayers.find(p => p.id === id)?.rank ?? rankedPlayers.length
 
   const { data: finalsParticipation } = await supabase
     .from('tournament_finals_matches')
