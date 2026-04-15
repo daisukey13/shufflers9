@@ -70,15 +70,40 @@ export default async function PlayerPage({
   const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
   const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
-// 全シングルス試合から勝敗を再計算
+  // 全シングルス試合から勝敗を再計算
   const totalSinglesWins = matches.filter((m: any) => m.winner_id === player.id).length
   const totalSinglesLosses = matches.filter((m: any) => m.winner_id && m.winner_id !== player.id).length
 
+  // ダブルス勝敗を再計算
+  const totalDoublesWins = doublesMatches.filter((m: any) => {
+    const isPair1 = m.pair1_player1_id === player.id || m.pair1_player2_id === player.id
+    return (isPair1 && m.winner_pair === 1) || (!isPair1 && m.winner_pair === 2)
+  }).length
+  const totalDoublesLosses = doublesMatches.filter((m: any) => {
+    const isPair1 = m.pair1_player1_id === player.id || m.pair1_player2_id === player.id
+    return (isPair1 && m.winner_pair === 2) || (!isPair1 && m.winner_pair === 1)
+  }).length
 
   const winRate = totalSinglesWins + totalSinglesLosses > 0
     ? Math.round((totalSinglesWins / (totalSinglesWins + totalSinglesLosses)) * 100) : 0
-  const doublesWinRate = (player.doubles_wins ?? 0) + (player.doubles_losses ?? 0) > 0
-    ? Math.round(((player.doubles_wins ?? 0) / ((player.doubles_wins ?? 0) + (player.doubles_losses ?? 0))) * 100) : 0
+  const doublesWinRate = totalDoublesWins + totalDoublesLosses > 0
+    ? Math.round((totalDoublesWins / (totalDoublesWins + totalDoublesLosses)) * 100) : 0
+
+console.log('DEBUG doubles:', {
+    playerId: player.id,
+    doublesMatchCount: doublesMatches.length,
+    totalDoublesWins,
+    totalDoublesLosses,
+    firstMatch: doublesMatches[0] ? {
+      pair1_player1_id: doublesMatches[0].pair1_player1_id,
+      pair1_player2_id: doublesMatches[0].pair1_player2_id,
+      winner_pair: doublesMatches[0].winner_pair,
+      typeofWinnerPair: typeof doublesMatches[0].winner_pair,
+    } : null,
+  })
+
+
+
 
   const totalSinglesPages = Math.ceil(matches.length / PER_PAGE)
   const totalDoublesPages = Math.ceil(doublesMatches.length / PER_PAGE)
@@ -142,12 +167,12 @@ export default async function PlayerPage({
                 <p className="text-xs text-gray-400">HC</p>
               </div>
               <div className="text-center">
-               <p className="text-xl font-bold text-green-400">{totalSinglesWins}</p>
+                <p className="text-xl font-bold text-green-400">{totalSinglesWins}</p>
                 <p className="text-xs text-gray-400">勝</p>
               </div>
               <div className="text-center">
                 <p className="text-xl font-bold text-red-400">{totalSinglesLosses}</p>
-                <p className="text-xs text-gray-400">敗</p> 
+                <p className="text-xs text-gray-400">敗</p>
               </div>
               <div className="text-center">
                 <p className="text-xl font-bold text-blue-400">{winRate}%</p>
@@ -168,11 +193,11 @@ export default async function PlayerPage({
                 <p className="text-xs text-gray-400">RP</p>
               </div>
               <div className="text-center">
-                <p className="text-xl font-bold text-green-400">{player.doubles_wins ?? 0}</p>
+                <p className="text-xl font-bold text-green-400">{totalDoublesWins}</p>
                 <p className="text-xs text-gray-400">勝</p>
               </div>
               <div className="text-center">
-                <p className="text-xl font-bold text-red-400">{player.doubles_losses ?? 0}</p>
+                <p className="text-xl font-bold text-red-400">{totalDoublesLosses}</p>
                 <p className="text-xs text-gray-400">敗</p>
               </div>
               <div className="text-center">
@@ -289,9 +314,11 @@ export default async function PlayerPage({
                           : `${myScore} - ${oppScore}`
                         }
                       </span>
+                      {ratingChange != null && (
                       <span className={`text-sm font-medium flex-shrink-0 ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {ratingChange >= 0 ? '+' : ''}{ratingChange}pt
                       </span>
+                      )}
                     </div>
                   )
                 })}
