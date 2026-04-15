@@ -13,7 +13,7 @@ export default function AboutPage() {
         <div className="space-y-5">
 
           <div className="p-5 bg-blue-900/20 border border-blue-800/30 rounded-2xl space-y-3">
-            <h2 className="text-lg font-bold text-amber-300">🐚 サイトの概要</h2>
+            <h2 className="text-lg font-bold text-amber-300">🐷 サイトの概要</h2>
             <p className="text-gray-300 text-sm leading-relaxed">
               このサイトはToyoura Shufflers Clubが運営するテーブルシャッフルボードのランキングサイトです。
             </p>
