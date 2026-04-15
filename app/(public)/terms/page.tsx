@@ -74,7 +74,11 @@ export default function TermsPage() {
               content: '当クラブは、必要と判断した場合には、利用者に通知することなく本規約を変更することができるものとします。変更後の規約は、本サービス上に掲示された時点から効力を生じるものとします。',
             },
             {
-              title: '第8条（準拠法・管轄裁判所）',
+              title: '第8条（退会）',
+              content: '退会は自由ですが、ご自身の試合の記録等の掲載の扱いは当クラブで決定させていただきます。退会希望の際は当サイト管理者までご連絡ください。',
+            },
+            {
+              title: '第9条（準拠法・管轄裁判所）',
               content: '本規約の解釈にあたっては、日本法を準拠法とします。本サービスに関して紛争が生じた場合には、当クラブの所在地を管轄する裁判所を専属的合意管轄とします。',
             },
           ].map((section, i) => (
@@ -90,7 +94,7 @@ export default function TermsPage() {
 
         <div className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl text-sm text-gray-400">
           <p>制定日：2026年4月9日</p>
-          <p>最終更新日：2026年4月9日</p>
+          <p>最終更新日：2026年4月15日</p>
         </div>
 
         <p className="text-center text-sm text-gray-500">
