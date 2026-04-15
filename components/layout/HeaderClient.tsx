@@ -1,4 +1,3 @@
-
 'use client'
 
 import Link from 'next/link'
@@ -21,7 +20,7 @@ export default function HeaderClient({
   const pathname = usePathname()
 
   return (
-    <header className="bg-[#12082a]/90 border-b border-purple-900/40 backdrop-blur-sm sticky top-0 z-50">
+    <header className="bg-[#0b1520]/95 border-b border-yellow-600/20 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center">
           <img
@@ -37,8 +36,8 @@ export default function HeaderClient({
               href={item.href}
               className={`text-sm transition ${
                 pathname.startsWith(item.href)
-                  ? 'text-purple-400 font-semibold'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'text-amber-400 font-semibold'
+                  : 'text-gray-400 hover:text-amber-300'
               }`}
             >
               {item.label}
@@ -47,13 +46,11 @@ export default function HeaderClient({
         </nav>
         <Link
           href="/mypage"
-          className="w-10 h-10 rounded-full border-2 border-purple-600 overflow-hidden flex items-center justify-center hover:border-purple-400 transition flex-shrink-0"
+          className="w-10 h-10 rounded-full border-2 border-amber-500/60 overflow-hidden flex items-center justify-center hover:border-amber-400 transition flex-shrink-0"
         >
           {isLoggedIn && avatarUrl ? (
             <img src={avatarUrl} className="w-full h-full object-cover" />
-          ) : isLoggedIn ? (
-            <span className="text-lg">👤</span>
-            ) : (
+          ) : (
             <span className="text-lg">👤</span>
           )}
         </Link>

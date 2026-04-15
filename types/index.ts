@@ -55,7 +55,7 @@ export type SinglesMatch = {
   player2_hc: number | null
   player1_rank: number | null
   player2_rank: number | null
-  status: 'pending' | 'confirmed'
+  status: 'pending' | 'confirmed' | 'retirement' | 'walkover'
   tournament_id: string | null
   tournament_round: number | null
   registered_by: string | null

@@ -1,11 +1,25 @@
 @import "tailwindcss";
 
-body {
-  background-color: #12082a;
-  color: white;
-  font-family: Arial, Helvetica, sans-serif;
+:root {
+  --bg-primary: #0d1720;
+  --bg-secondary: #111e2a;
+  --color-gold: #f59e0b;
+  --color-gold-light: #fbbf24;
+  --color-neon-green: #22c55e;
+  --color-text: #fef3c7;
 }
 
+body {
+  background-color: var(--bg-primary);
+  background-image: linear-gradient(160deg, #0b1520 0%, #0d1720 45%, #111e2a 100%);
+  background-attachment: fixed;
+  background-size: cover;
+  color: var(--color-text);
+  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+/* ── ゴールドグロー（1位アバターなど） ── */
 @keyframes glow-gold {
   0%, 100% {
     box-shadow: 0 0 8px 2px #fbbf24, 0 0 20px 6px #f59e0b, 0 0 40px 10px #d97706;
@@ -18,15 +32,74 @@ body {
 .avatar-glow {
   animation: glow-gold 1.5s ease-in-out infinite;
 }
+
+/* ── グリーングロー（勝利） ── */
 @keyframes glow-win {
   0%, 100% {
-    box-shadow: 0 0 6px 2px #a855f7, 0 0 14px 4px #7c3aed;
+    box-shadow: 0 0 6px 2px #22c55e, 0 0 14px 4px #16a34a;
   }
   50% {
-    box-shadow: 0 0 10px 3px #c084fc, 0 0 22px 6px #a855f7;
+    box-shadow: 0 0 10px 3px #4ade80, 0 0 22px 6px #22c55e;
   }
 }
 
 .avatar-glow-win {
   animation: glow-win 2s ease-in-out infinite;
+}
+
+/* ── ネオンテキスト アニメーション ── */
+@keyframes neon-pulse-gold-text {
+  0%, 100% {
+    text-shadow:
+      0 0 6px rgba(245, 158, 11, 0.6),
+      0 0 14px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    text-shadow:
+      0 0 12px rgba(251, 191, 36, 0.9),
+      0 0 28px rgba(245, 158, 11, 0.55),
+      0 0 48px rgba(217, 119, 6, 0.3);
+  }
+}
+
+/* ── ネオンボタン（ゴールド）アニメーション ── */
+@keyframes neon-pulse-gold-btn {
+  0%, 100% {
+    box-shadow:
+      0 0 8px rgba(245, 158, 11, 0.4),
+      0 0 18px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 16px rgba(251, 191, 36, 0.7),
+      0 0 32px rgba(245, 158, 11, 0.4),
+      0 0 50px rgba(217, 119, 6, 0.2);
+  }
+}
+
+/* ── ネオンボタン（グリーン）アニメーション ── */
+@keyframes neon-pulse-green-btn {
+  0%, 100% {
+    box-shadow:
+      0 0 8px rgba(34, 197, 94, 0.4),
+      0 0 18px rgba(34, 197, 94, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 16px rgba(74, 222, 128, 0.7),
+      0 0 32px rgba(34, 197, 94, 0.4),
+      0 0 50px rgba(22, 163, 74, 0.2);
+  }
+}
+
+.neon-gold {
+  animation: neon-pulse-gold-text 2.5s ease-in-out infinite;
+}
+
+.neon-btn-gold {
+  animation: neon-pulse-gold-btn 2s ease-in-out infinite;
+}
+
+.neon-btn-green {
+  animation: neon-pulse-green-btn 2s ease-in-out infinite;
 }

@@ -131,6 +131,22 @@ export async function getRecentDoublesMatches(limit = 5) {
     .limit(limit)
   return data ?? []
 }
+export async function getTotalMatchesCount(): Promise<number> {
+  const supabase = await createClient()
+  const [
+    { count: singlesCount },
+    { count: doublesCount },
+    { count: qualifyingCount },
+    { count: finalsCount },
+  ] = await Promise.all([
+    supabase.from('singles_matches').select('*', { count: 'exact', head: true }),
+    supabase.from('doubles_matches').select('*', { count: 'exact', head: true }),
+    supabase.from('tournament_qualifying_matches').select('*', { count: 'exact', head: true }).eq('mode', 'normal').not('winner_id', 'is', null),
+    supabase.from('tournament_finals_matches').select('*', { count: 'exact', head: true }).not('winner_id', 'is', null),
+  ])
+  return (singlesCount ?? 0) + (doublesCount ?? 0) + (qualifyingCount ?? 0) + (finalsCount ?? 0)
+}
+
 export async function getPlayerAllSinglesMatches(playerId: string) {
   const supabase = await createClient()
 
