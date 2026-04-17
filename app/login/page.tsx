@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [nameOrEmail, setNameOrEmail] = useState('')
   const [password, setPassword] = useState('')
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileKey, setTurnstileKey] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -29,12 +30,14 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    // Turnstile検証
+    // Turnstile検証（トークンは1回使い切りなので検証後にリセット）
     const verifyRes = await fetch('/api/turnstile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: turnstileToken }),
     })
+    setTurnstileToken(null)
+    setTurnstileKey(k => k + 1)
 
     if (!verifyRes.ok) {
       setError('人間認証に失敗しました。もう一度お試しください')
@@ -149,6 +152,7 @@ export default function LoginPage() {
             {/* Cloudflare Turnstile */}
             <div>
               <Turnstile
+                key={turnstileKey}
                 onVerify={(token) => setTurnstileToken(token)}
                 onError={() => setTurnstileToken(null)}
               />
