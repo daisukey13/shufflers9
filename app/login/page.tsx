@@ -38,9 +38,7 @@ export default function LoginPage() {
     setTurnstileToken(null)
 
     if (!verifyRes.ok) {
-      const errData = await verifyRes.json().catch(() => ({}))
-      console.error('Turnstile error:', errData)
-      setError(`人間認証に失敗しました。もう一度お試しください${errData.codes ? ` (${errData.codes.join(',')})` : ''}`)
+      setError('人間認証に失敗しました。もう一度お試しください')
       setLoading(false)
       return
     }
