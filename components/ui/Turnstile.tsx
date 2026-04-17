@@ -17,12 +17,16 @@ export default function Turnstile({ onVerify, onError }: Props) {
 
     const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!
 
+    const options = {
+      sitekey: siteKey,
+      callback: (token: string) => onVerify(token),
+      'error-callback': () => onError?.(),
+      'expired-callback': () => onError?.(),
+      'timeout-callback': () => onError?.(),
+    }
+
     if ((window as any).turnstile) {
-      ;(window as any).turnstile.render(ref.current, {
-        sitekey: siteKey,
-        callback: (token: string) => onVerify(token),
-        'error-callback': () => onError?.(),
-      })
+      ;(window as any).turnstile.render(ref.current, options)
       return
     }
 
@@ -34,11 +38,7 @@ export default function Turnstile({ onVerify, onError }: Props) {
 
     script.onload = () => {
       if (!ref.current || !(window as any).turnstile) return
-      ;(window as any).turnstile.render(ref.current, {
-        sitekey: siteKey,
-        callback: (token: string) => onVerify(token),
-        'error-callback': () => onError?.(),
-      })
+      ;(window as any).turnstile.render(ref.current, options)
     }
 
     return () => {
