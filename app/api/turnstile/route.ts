@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   }
 
   const secretKey = process.env.TURNSTILE_SECRET_KEY
-  console.log('TURNSTILE_SECRET_KEY present:', !!secretKey, 'length:', secretKey?.length)
+  console.error('TURNSTILE_SECRET_KEY present:', !!secretKey, 'length:', secretKey?.length, 'prefix:', secretKey?.slice(0, 6))
 
   const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
