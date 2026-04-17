@@ -7,11 +7,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'トークンがありません' }, { status: 400 })
   }
 
+  const secretKey = process.env.TURNSTILE_SECRET_KEY
+  console.log('TURNSTILE_SECRET_KEY present:', !!secretKey, 'length:', secretKey?.length)
+
   const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      secret: process.env.TURNSTILE_SECRET_KEY,
+      secret: secretKey,
       response: token,
     }),
   })
