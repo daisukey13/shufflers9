@@ -158,10 +158,10 @@ export async function getPlayerAllSinglesMatches(playerId: string) {
     .or(`player1_id.eq.${playerId},player2_id.eq.${playerId}`)
     .order('played_at', { ascending: false })
 
-  // 予選
+  // 予選（tournament は block 経由でJOIN、DEFAULTプレーヤーを除外）
   const { data: qualifying } = await supabase
     .from('tournament_qualifying_matches')
-    .select('*, player1:players!player1_id(*), player2:players!player2_id(*), tournament:tournaments(name)')
+    .select('*, player1:players!player1_id(*), player2:players!player2_id(*), block:tournament_blocks(tournament:tournaments(name))')
     .or(`player1_id.eq.${playerId},player2_id.eq.${playerId}`)
     .not('winner_id', 'is', null)
 
@@ -179,14 +179,16 @@ export async function getPlayerAllSinglesMatches(playerId: string) {
       source: 'singles' as const,
       tournament_name: null,
     })),
-    ...(qualifying ?? []).map(m => ({
-      ...m,
-      played_at: m.created_at,
-      source: 'qualifying' as const,
-      tournament_name: m.tournament?.name ?? null,
-      rating_change1: m.player1_rating_change,
-      rating_change2: m.player2_rating_change,
-    })),
+    ...(qualifying ?? [])
+      .filter((m: any) => m.player1?.name !== 'DEFAULT' && m.player2?.name !== 'DEFAULT')
+      .map((m: any) => ({
+        ...m,
+        played_at: m.created_at,
+        source: 'qualifying' as const,
+        tournament_name: m.block?.tournament?.name ?? null,
+        rating_change1: m.player1_rating_change,
+        rating_change2: m.player2_rating_change,
+      })),
     ...(finals ?? []).map(m => {
       const sets = (m.tournament_finals_sets ?? []) as { score1: number; score2: number }[]
       const numSets = sets.length
