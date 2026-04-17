@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
   const data = await res.json()
 
   if (!data.success) {
-    return NextResponse.json({ success: false, error: '認証に失敗しました' }, { status: 400 })
+    console.error('Turnstile verification failed:', data['error-codes'])
+    return NextResponse.json({ success: false, error: '認証に失敗しました', codes: data['error-codes'] }, { status: 400 })
   }
 
   return NextResponse.json({ success: true })
