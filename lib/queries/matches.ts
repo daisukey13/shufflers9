@@ -148,6 +148,47 @@ export async function getTotalMatchesCount(): Promise<number> {
   return (singlesCount ?? 0) + (doublesCount ?? 0) + (qualifyingCount ?? 0) + (finalsCount ?? 0)
 }
 
+export async function getLastRatingChangePerPlayer(): Promise<Map<string, { change: number; date: string }>> {
+  const supabase = await createClient()
+
+  const [{ data: singles }, { data: qualifying }] = await Promise.all([
+    supabase
+      .from('singles_matches')
+      .select('player1_id, player2_id, rating_change1, rating_change2, played_at')
+      .not('winner_id', 'is', null)
+      .order('played_at', { ascending: false })
+      .limit(300),
+    supabase
+      .from('tournament_qualifying_matches')
+      .select('player1_id, player2_id, player1_rating_change, player2_rating_change, created_at')
+      .eq('mode', 'normal')
+      .not('winner_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(300),
+  ])
+
+  const entries: { playerId: string; change: number | null; date: string }[] = []
+
+  singles?.forEach((m: any) => {
+    entries.push({ playerId: m.player1_id, change: m.rating_change1, date: m.played_at })
+    entries.push({ playerId: m.player2_id, change: m.rating_change2, date: m.played_at })
+  })
+  qualifying?.forEach((m: any) => {
+    entries.push({ playerId: m.player1_id, change: m.player1_rating_change, date: m.created_at })
+    entries.push({ playerId: m.player2_id, change: m.player2_rating_change, date: m.created_at })
+  })
+
+  entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+  const result = new Map<string, { change: number; date: string }>()
+  for (const e of entries) {
+    if (!result.has(e.playerId) && e.change !== null) {
+      result.set(e.playerId, { change: e.change, date: e.date })
+    }
+  }
+  return result
+}
+
 export async function getPlayerAllSinglesMatches(playerId: string) {
   const supabase = await createClient()
 

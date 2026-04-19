@@ -1,5 +1,6 @@
 import TournamentBadges from '@/components/ui/TournamentBadges'
 import { getPlayerRankings, calcRanks, singlesTie, doublesTie } from '@/lib/queries/rankings'
+import { getLastRatingChangePerPlayer } from '@/lib/queries/matches'
 import { createClient } from '@/lib/supabase/server'
 import { Player } from '@/types'
 import Link from 'next/link'
@@ -14,7 +15,7 @@ export default async function RankingsPage({
 
   const supabase = await createClient()
 
-  const [singlesRaw, { data: doublesRaw }] = await Promise.all([
+  const [singlesRaw, { data: doublesRaw }, lastRpChanges] = await Promise.all([
     getPlayerRankings(),
     supabase
       .from('players')
@@ -23,6 +24,7 @@ export default async function RankingsPage({
       .eq('is_admin', false)
       .order('doubles_rating', { ascending: false })
       .order('hc', { ascending: false }),
+    getLastRatingChangePerPlayer(),
   ])
 
   const doublesSorted = [...(doublesRaw ?? [])].sort((a: Player, b: Player) => {
@@ -85,6 +87,18 @@ export default async function RankingsPage({
     },
   }
 
+  const rpBadge = (playerId: string) => {
+    const last = lastRpChanges.get(playerId)
+    if (!last) return null
+    const c = last.change
+    const color = c > 0 ? 'text-green-400' : c < 0 ? 'text-red-400' : 'text-gray-500'
+    return (
+      <span className={`text-xs font-mono font-bold ${color}`}>
+        {c > 0 ? '+' : ''}{c}pt
+      </span>
+    )
+  }
+
   const renderPodium = (players: (Player & { rank: number })[], ratingKey: string) => {
     const top3 = players.filter(p => p.rank <= 3)
     if (top3.length === 0) return null
@@ -133,6 +147,9 @@ export default async function RankingsPage({
               {/* Points */}
               <div className={`font-extrabold font-mono ${cfg.ptClass} leading-none`}>{rating}</div>
               <div className="text-xs text-gray-500 mb-1">pt</div>
+
+              {/* Last RP change */}
+              <div className="mb-1">{rpBadge(player.id) ?? <span className="text-xs text-gray-700">-</span>}</div>
 
               {/* Win/Loss */}
               <div className="text-xs text-gray-400">
@@ -204,8 +221,11 @@ export default async function RankingsPage({
               </div>
 
               <div className="text-right flex-shrink-0">
-                <span className="font-mono font-bold text-lg text-purple-300 group-hover:text-purple-100 transition-colors">{rating}</span>
-                <span className="text-xs text-gray-600 ml-0.5">pt</span>
+                <div>
+                  <span className="font-mono font-bold text-lg text-purple-300 group-hover:text-purple-100 transition-colors">{rating}</span>
+                  <span className="text-xs text-gray-600 ml-0.5">pt</span>
+                </div>
+                <div>{rpBadge(player.id) ?? <span className="text-xs text-gray-700">-</span>}</div>
               </div>
             </Link>
           )
