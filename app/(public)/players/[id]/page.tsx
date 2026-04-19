@@ -95,18 +95,6 @@ export default async function PlayerPage({
   const doublesWinRate = totalDoublesWins + totalDoublesLosses > 0
     ? Math.round((totalDoublesWins / (totalDoublesWins + totalDoublesLosses)) * 100) : 0
 
-console.log('DEBUG doubles:', {
-    playerId: player.id,
-    doublesMatchCount: doublesMatches.length,
-    totalDoublesWins,
-    totalDoublesLosses,
-    firstMatch: doublesMatches[0] ? {
-      pair1_player1_id: doublesMatches[0].pair1_player1_id,
-      pair1_player2_id: doublesMatches[0].pair1_player2_id,
-      winner_pair: doublesMatches[0].winner_pair,
-      typeofWinnerPair: typeof doublesMatches[0].winner_pair,
-    } : null,
-  })
 
 
 
@@ -328,9 +316,13 @@ console.log('DEBUG doubles:', {
                         <p className="text-xs text-gray-400">
                           {new Date(match.played_at).toLocaleDateString('ja-JP')}
                           {match.tournament_name && (
-                            <span className="ml-1.5 text-purple-400">🏆 {match.tournament_name}</span>
+                            <span className="ml-1.5 text-purple-400">
+                              🏆 {match.tournament_name}
+                              {match.source === 'qualifying' && ' 予選'}
+                              {match.source === 'finals' && ' 本戦'}
+                            </span>
                           )}
-                      </p>
+                        </p>
                       </div>
                       <span className="font-bold text-white">
                         {match.source === 'finals' && match.tournament_finals_sets?.length > 0

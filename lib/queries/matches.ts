@@ -181,14 +181,31 @@ export async function getPlayerAllSinglesMatches(playerId: string) {
     })),
     ...(qualifying ?? [])
       .filter((m: any) => m.player1?.name !== 'DEFAULT' && m.player2?.name !== 'DEFAULT')
-      .map((m: any) => ({
-        ...m,
-        played_at: m.created_at,
-        source: 'qualifying' as const,
-        tournament_name: m.block?.tournament?.name ?? null,
-        rating_change1: m.player1_rating_change,
-        rating_change2: m.player2_rating_change,
-      })),
+      .map((m: any) => {
+        let rating_change1: number | null = m.player1_rating_change ?? null
+        let rating_change2: number | null = m.player2_rating_change ?? null
+
+        // DBに保存されていない場合（旧データ）はon-the-flyで計算
+        if (rating_change1 === null && m.winner_id && m.mode === 'normal' && m.score1 !== null && m.score2 !== null) {
+          const p1Rating: number = (m.player1 as any)?.rating ?? 1000
+          const p2Rating: number = (m.player2 as any)?.rating ?? 1000
+          const { changeA, changeB } = calcElo(p1Rating, p2Rating, m.score1, m.score2)
+          rating_change1 = changeA
+          rating_change2 = changeB
+        } else if (m.mode === 'walkover' || m.mode === 'forfeit') {
+          rating_change1 = 0
+          rating_change2 = 0
+        }
+
+        return {
+          ...m,
+          played_at: m.created_at,
+          source: 'qualifying' as const,
+          tournament_name: m.block?.tournament?.name ?? null,
+          rating_change1,
+          rating_change2,
+        }
+      }),
     ...(finals ?? []).map(m => {
       const sets = (m.tournament_finals_sets ?? []) as { score1: number; score2: number }[]
       const numSets = sets.length
