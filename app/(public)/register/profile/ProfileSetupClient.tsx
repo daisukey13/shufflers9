@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import AvatarPicker from '@/components/ui/AvatarPicker'
@@ -12,8 +12,17 @@ export default function ProfileSetupClient({ avatars }: { avatars: Avatar[] }) {
   const [avatarUrl, setAvatarUrl] = useState(avatars[0]?.url ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [playerId, setPlayerId] = useState<string | undefined>(undefined)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('players').select('id').eq('user_id', user.id).single()
+        .then(({ data }) => { if (data) setPlayerId(data.id) })
+    })
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,6 +98,7 @@ export default function ProfileSetupClient({ avatars }: { avatars: Avatar[] }) {
               avatars={avatars}
               selected={avatarUrl}
               onSelect={setAvatarUrl}
+              playerId={playerId}
             />
           </div>
 

@@ -121,7 +121,7 @@ export default function AdminPlayerEditClient({
 
   {/* アバター選択（小さく） */}
   <p className="text-xs text-gray-400 text-center">アバターを選択して変更</p>
-  <AvatarPicker avatars={avatars} selected={avatarUrl} onSelect={setAvatarUrl} />
+  <AvatarPicker avatars={avatars} selected={avatarUrl} onSelect={setAvatarUrl} playerId={player.id} />
 </div>
 
         {/* 基本情報 */}
