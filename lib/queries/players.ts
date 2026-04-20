@@ -8,10 +8,9 @@ export async function getPlayers(): Promise<Player[]> {
     .select('*')
     .eq('is_active', true)
     .eq('is_admin', false)
-    .order('total_matches', { ascending: false })
     .order('hc', { ascending: true })
-    .order('created_at', { ascending: true })
     .order('rating', { ascending: false })
+    .order('created_at', { ascending: true })
 
   if (error) throw error
   return data
