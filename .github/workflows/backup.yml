@@ -127,6 +127,18 @@ jobs:
           mkdir -p backup
           cp -r /tmp/backup_temp/. backup/
 
+          # 7日より古いバックアップを削除
+          CUTOFF=$(date -d '7 days ago' +%Y-%m-%d)
+          for dir in backup/*/; do
+            if [ -d "$dir" ]; then
+              dirname=$(basename "$dir")
+              if [[ "$dirname" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && [[ "$dirname" < "$CUTOFF" ]]; then
+                rm -rf "$dir"
+                echo "削除: $dirname"
+              fi
+            fi
+          done
+
           git add backup/
           git diff --cached --quiet || git commit -m "backup: ${TODAY} 自動バックアップ [vercel skip]"
           git push origin backups
