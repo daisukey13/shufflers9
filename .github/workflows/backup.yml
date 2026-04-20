@@ -128,5 +128,5 @@ jobs:
           cp -r /tmp/backup_temp/. backup/
 
           git add backup/
-          git diff --cached --quiet || git commit -m "backup: ${TODAY} 自動バックアップ [skip vercel]"
+          git diff --cached --quiet || git commit -m "backup: ${TODAY} 自動バックアップ [vercel skip]"
           git push origin backups
