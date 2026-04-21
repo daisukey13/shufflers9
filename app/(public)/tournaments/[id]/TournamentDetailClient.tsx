@@ -559,7 +559,10 @@ const champion = isFinished
                                           {match.player1?.name ?? '未定'}
                                         </button>
                                         {match.disadvantage_player_id === match.player1_id && (
-                                          <p className="text-[10px] text-orange-400">1勝アドバンテージ</p>
+                                          <p className="text-[10px] text-orange-400">1勝ディスアドバンテージ</p>
+                                        )}
+                                        {match.disadvantage_player_id && match.disadvantage_player_id !== match.player1_id && match.player1_id && (
+                                          <p className="text-[10px] text-blue-400">1勝アドバンテージ</p>
                                         )}
                                       </div>
                                       {isFinished && match.winner_id === match.player1_id && (
@@ -595,7 +598,10 @@ const champion = isFinished
                                           {match.player2?.name ?? '未定'}
                                         </button>
                                         {match.disadvantage_player_id === match.player2_id && (
-                                          <p className="text-[10px] text-orange-400">1勝アドバンテージ</p>
+                                          <p className="text-[10px] text-orange-400">1勝ディスアドバンテージ</p>
+                                        )}
+                                        {match.disadvantage_player_id && match.disadvantage_player_id !== match.player2_id && match.player2_id && (
+                                          <p className="text-[10px] text-blue-400">1勝アドバンテージ</p>
                                         )}
                                       </div>
                                       {isFinished && match.winner_id === match.player2_id && (

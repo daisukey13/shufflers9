@@ -653,6 +653,9 @@ export default function FinalsClient({
                     {match.disadvantage_player_id === match.player1_id && (
                       <span className="text-xs text-orange-400">1勝ディスアドバンテージ</span>
                     )}
+                    {match.disadvantage_player_id && match.disadvantage_player_id !== match.player1_id && match.player1_id && (
+                      <span className="text-xs text-blue-400">1勝アドバンテージ</span>
+                    )}
                   </div>
                   <div className="text-center flex-shrink-0 space-y-1">
                     {match.tournament_finals_sets.sort((a, b) => a.set_number - b.set_number).map(s => (
@@ -670,6 +673,9 @@ export default function FinalsClient({
                     </p>
                     {match.disadvantage_player_id === match.player2_id && (
                       <span className="text-xs text-orange-400">1勝ディスアドバンテージ</span>
+                    )}
+                    {match.disadvantage_player_id && match.disadvantage_player_id !== match.player2_id && match.player2_id && (
+                      <span className="text-xs text-blue-400">1勝アドバンテージ</span>
                     )}
                   </div>
                 </div>
