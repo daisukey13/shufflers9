@@ -19,7 +19,7 @@ type FinalsMatch = {
   player1: Player | null; player2: Player | null; winner: Player | null
   tournament_finals_sets: FinalsSet[]
 }
-type Tournament = { id: string; name: string; status: string; bonus_points: number }
+type Tournament = { id: string; name: string; status: string; format: string; bonus_points: number }
 
 const NEXT_STATUS: Record<string, { status: string; label: string; color: string }> = {
   open: { status: 'entry_closed', label: 'エントリー締切', color: 'bg-yellow-600 hover:bg-yellow-700' },
@@ -432,13 +432,16 @@ export default function FinalsClient({
     if (mode === 'normal' && winnerId && setsToInsert.length > 0 && !isDefaultMatch) {
       const totalScore1 = setsToInsert.reduce((sum, s) => sum + s.score1, 0)
       const totalScore2 = setsToInsert.reduce((sum, s) => sum + s.score2, 0)
+      const isDoubles = tournament.format === 'doubles'
 
-      const { data: p1 } = await supabase.from('players').select('rating, wins, losses, total_score, total_matches').eq('id', player1Id).single()
-      const { data: p2 } = await supabase.from('players').select('rating, wins, losses, total_score, total_matches').eq('id', player2Id).single()
+      const { data: p1 } = await supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches').eq('id', player1Id).single()
+      const { data: p2 } = await supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches').eq('id', player2Id).single()
 
       if (p1 && p2) {
+        const r1 = isDoubles ? (p1.doubles_rating ?? 1000) : p1.rating
+        const r2 = isDoubles ? (p2.doubles_rating ?? 1000) : p2.rating
         const { data: elo } = await supabase.rpc('calc_elo', {
-          rating_a: p1.rating, rating_b: p2.rating,
+          rating_a: r1, rating_b: r2,
           score_a: totalScore1, score_b: totalScore2,
           matches_a: p1.total_matches ?? 0, matches_b: p2.total_matches ?? 0,
         })
@@ -456,33 +459,54 @@ export default function FinalsClient({
             if (changeB > 0) changeB = Math.round(changeB * (1 + bonusRate))
           }
 
-          await supabase.from('players').update({
-            rating: p1.rating + changeA,
-            wins: p1wins ? p1.wins + 1 : p1.wins,
-            losses: !p1wins ? p1.losses + 1 : p1.losses,
-            total_score: (p1.total_score ?? 0) + totalScore1,
-            total_matches: (p1.total_matches ?? 0) + 1,
-          }).eq('id', player1Id)
+          const p1WinsField = isDoubles ? p1.doubles_wins ?? 0 : p1.wins
+          const p1LossesField = isDoubles ? p1.doubles_losses ?? 0 : p1.losses
+          const p2WinsField = isDoubles ? p2.doubles_wins ?? 0 : p2.wins
+          const p2LossesField = isDoubles ? p2.doubles_losses ?? 0 : p2.losses
 
-          await supabase.from('players').update({
-            rating: p2.rating + changeB,
-            wins: !p1wins ? p2.wins + 1 : p2.wins,
-            losses: p1wins ? p2.losses + 1 : p2.losses,
-            total_score: (p2.total_score ?? 0) + totalScore2,
-            total_matches: (p2.total_matches ?? 0) + 1,
-          }).eq('id', player2Id)
+          if (isDoubles) {
+            await supabase.from('players').update({
+              doubles_rating: r1 + changeA,
+              doubles_wins: p1wins ? p1WinsField + 1 : p1WinsField,
+              doubles_losses: !p1wins ? p1LossesField + 1 : p1LossesField,
+              total_score: (p1.total_score ?? 0) + totalScore1,
+              total_matches: (p1.total_matches ?? 0) + 1,
+            }).eq('id', player1Id)
+            await supabase.from('players').update({
+              doubles_rating: r2 + changeB,
+              doubles_wins: !p1wins ? p2WinsField + 1 : p2WinsField,
+              doubles_losses: p1wins ? p2LossesField + 1 : p2LossesField,
+              total_score: (p2.total_score ?? 0) + totalScore2,
+              total_matches: (p2.total_matches ?? 0) + 1,
+            }).eq('id', player2Id)
+          } else {
+            await supabase.from('players').update({
+              rating: r1 + changeA,
+              wins: p1wins ? p1WinsField + 1 : p1WinsField,
+              losses: !p1wins ? p1LossesField + 1 : p1LossesField,
+              total_score: (p1.total_score ?? 0) + totalScore1,
+              total_matches: (p1.total_matches ?? 0) + 1,
+            }).eq('id', player1Id)
+            await supabase.from('players').update({
+              rating: r2 + changeB,
+              wins: !p1wins ? p2WinsField + 1 : p2WinsField,
+              losses: p1wins ? p2LossesField + 1 : p2LossesField,
+              total_score: (p2.total_score ?? 0) + totalScore2,
+              total_matches: (p2.total_matches ?? 0) + 1,
+            }).eq('id', player2Id)
+          }
 
           const { data: hc1 } = await supabase.rpc('calc_hc', {
-            p_wins: p1wins ? p1.wins + 1 : p1.wins,
-            p_losses: !p1wins ? p1.losses + 1 : p1.losses,
+            p_wins: p1wins ? p1WinsField + 1 : p1WinsField,
+            p_losses: !p1wins ? p1LossesField + 1 : p1LossesField,
             p_total_score: (p1.total_score ?? 0) + totalScore1,
             p_total_matches: (p1.total_matches ?? 0) + 1,
           })
           if (hc1 !== null) await supabase.from('players').update({ hc: hc1 }).eq('id', player1Id)
 
           const { data: hc2 } = await supabase.rpc('calc_hc', {
-            p_wins: !p1wins ? p2.wins + 1 : p2.wins,
-            p_losses: p1wins ? p2.losses + 1 : p2.losses,
+            p_wins: !p1wins ? p2WinsField + 1 : p2WinsField,
+            p_losses: p1wins ? p2LossesField + 1 : p2LossesField,
             p_total_score: (p2.total_score ?? 0) + totalScore2,
             p_total_matches: (p2.total_matches ?? 0) + 1,
           })

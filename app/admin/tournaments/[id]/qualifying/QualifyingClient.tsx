@@ -361,21 +361,24 @@ export default function QualifyingClient({
     }
 
     if (isNormal && winnerId && finalScore1 !== null && finalScore2 !== null) {
+      const isDoubles = tournament.format === 'doubles'
       const { data: p1 } = await supabase
         .from('players')
-        .select('rating, wins, losses, total_score, total_matches, hc')
+        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches, hc')
         .eq('id', matchPlayer1)
         .single()
       const { data: p2 } = await supabase
         .from('players')
-        .select('rating, wins, losses, total_score, total_matches, hc')
+        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches, hc')
         .eq('id', matchPlayer2)
         .single()
 
       if (p1 && p2) {
+        const r1 = isDoubles ? (p1.doubles_rating ?? 1000) : p1.rating
+        const r2 = isDoubles ? (p2.doubles_rating ?? 1000) : p2.rating
         const { data: elo } = await supabase.rpc('calc_elo', {
-          rating_a: p1.rating,
-          rating_b: p2.rating,
+          rating_a: r1,
+          rating_b: r2,
           score_a: finalScore1,
           score_b: finalScore2,
           matches_a: p1.total_matches ?? 0,
@@ -393,52 +396,73 @@ export default function QualifyingClient({
             if (changeB > 0) changeB = Math.round(changeB * (1 + bonusRate))
           }
 
-          const p1NewWins = finalScore1 > finalScore2 ? p1.wins + 1 : p1.wins
-          const p1NewLosses = finalScore1 < finalScore2 ? p1.losses + 1 : p1.losses
-          const p2NewWins = finalScore2 > finalScore1 ? p2.wins + 1 : p2.wins
-          const p2NewLosses = finalScore2 < finalScore1 ? p2.losses + 1 : p2.losses
+          const p1Win = finalScore1 > finalScore2
+          const p1NewWins = isDoubles ? p1.doubles_wins ?? 0 : p1.wins
+          const p1NewLosses = isDoubles ? p1.doubles_losses ?? 0 : p1.losses
+          const p2NewWins = isDoubles ? p2.doubles_wins ?? 0 : p2.wins
+          const p2NewLosses = isDoubles ? p2.doubles_losses ?? 0 : p2.losses
+          const p1WinsAfter = p1Win ? p1NewWins + 1 : p1NewWins
+          const p1LossesAfter = !p1Win ? p1NewLosses + 1 : p1NewLosses
+          const p2WinsAfter = !p1Win ? p2NewWins + 1 : p2NewWins
+          const p2LossesAfter = p1Win ? p2NewLosses + 1 : p2NewLosses
 
           // 登録前の値・変化量を試合レコードに保存（ボーナス適用済み）
           if (insertedMatch?.id) {
             await supabase.from('tournament_qualifying_matches').update({
-              player1_rating_before: p1.rating,
-              player2_rating_before: p2.rating,
+              player1_rating_before: r1,
+              player2_rating_before: r2,
               player1_rating_change: changeA,
               player2_rating_change: changeB,
-              player1_wins_before: p1.wins,
-              player2_wins_before: p2.wins,
-              player1_losses_before: p1.losses,
-              player2_losses_before: p2.losses,
+              player1_wins_before: p1NewWins,
+              player2_wins_before: p2NewWins,
+              player1_losses_before: p1NewLosses,
+              player2_losses_before: p2NewLosses,
             }).eq('id', insertedMatch.id)
           }
 
-          await supabase.from('players').update({
-            rating: p1.rating + changeA,
-            wins: p1NewWins,
-            losses: p1NewLosses,
-            total_score: (p1.total_score ?? 0) + finalScore1,
-            total_matches: (p1.total_matches ?? 0) + 1,
-          }).eq('id', matchPlayer1)
-
-          await supabase.from('players').update({
-            rating: p2.rating + changeB,
-            wins: p2NewWins,
-            losses: p2NewLosses,
-            total_score: (p2.total_score ?? 0) + finalScore2,
-            total_matches: (p2.total_matches ?? 0) + 1,
-          }).eq('id', matchPlayer2)
+          if (isDoubles) {
+            await supabase.from('players').update({
+              doubles_rating: r1 + changeA,
+              doubles_wins: p1WinsAfter,
+              doubles_losses: p1LossesAfter,
+              total_score: (p1.total_score ?? 0) + finalScore1,
+              total_matches: (p1.total_matches ?? 0) + 1,
+            }).eq('id', matchPlayer1)
+            await supabase.from('players').update({
+              doubles_rating: r2 + changeB,
+              doubles_wins: p2WinsAfter,
+              doubles_losses: p2LossesAfter,
+              total_score: (p2.total_score ?? 0) + finalScore2,
+              total_matches: (p2.total_matches ?? 0) + 1,
+            }).eq('id', matchPlayer2)
+          } else {
+            await supabase.from('players').update({
+              rating: r1 + changeA,
+              wins: p1WinsAfter,
+              losses: p1LossesAfter,
+              total_score: (p1.total_score ?? 0) + finalScore1,
+              total_matches: (p1.total_matches ?? 0) + 1,
+            }).eq('id', matchPlayer1)
+            await supabase.from('players').update({
+              rating: r2 + changeB,
+              wins: p2WinsAfter,
+              losses: p2LossesAfter,
+              total_score: (p2.total_score ?? 0) + finalScore2,
+              total_matches: (p2.total_matches ?? 0) + 1,
+            }).eq('id', matchPlayer2)
+          }
 
           const { data: hc1 } = await supabase.rpc('calc_hc', {
-            p_wins: p1NewWins,
-            p_losses: p1NewLosses,
+            p_wins: p1WinsAfter,
+            p_losses: p1LossesAfter,
             p_total_score: (p1.total_score ?? 0) + finalScore1,
             p_total_matches: (p1.total_matches ?? 0) + 1,
           })
           if (hc1 !== null) await supabase.from('players').update({ hc: hc1 }).eq('id', matchPlayer1)
 
           const { data: hc2 } = await supabase.rpc('calc_hc', {
-            p_wins: p2NewWins,
-            p_losses: p2NewLosses,
+            p_wins: p2WinsAfter,
+            p_losses: p2LossesAfter,
             p_total_score: (p2.total_score ?? 0) + finalScore2,
             p_total_matches: (p2.total_matches ?? 0) + 1,
           })
