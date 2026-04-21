@@ -510,7 +510,7 @@ export default function FinalsClient({
                   <div>
                     <p className="text-sm font-medium text-white">{q.winner.player.name}</p>
                     {q.hasDefault && (
-                      <span className="text-[10px] text-orange-400">※1勝アドバンテージ</span>
+                      <span className="text-[10px] text-orange-400">※1勝ディスアドバンテージ</span>
                     )}
                   </div>
                 </div>
@@ -528,7 +528,7 @@ export default function FinalsClient({
           <div>
             <p className="text-sm font-semibold text-blue-300">🎲 組み合わせを自動生成</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              予選通過者をブロック順にペアリング（A vs B、C vs D...奇数の場合は最後の1人がアドバンテージ）
+              予選通過者をブロック順にペアリング（A vs B、C vs D...奇数の場合は最後の1人がディスアドバンテージ）
             </p>
           </div>
           <button
@@ -566,7 +566,7 @@ export default function FinalsClient({
                       {match.player1?.name ?? '未定'}
                     </p>
                     {match.disadvantage_player_id === match.player1_id && (
-                      <span className="text-xs text-orange-400">1勝アドバンテージ</span>
+                      <span className="text-xs text-orange-400">1勝ディスアドバンテージ</span>
                     )}
                   </div>
                   <div className="text-center flex-shrink-0 space-y-1">
@@ -584,7 +584,7 @@ export default function FinalsClient({
                       {match.player2?.name ?? '未定'}
                     </p>
                     {match.disadvantage_player_id === match.player2_id && (
-                      <span className="text-xs text-orange-400">1勝アドバンテージ</span>
+                      <span className="text-xs text-orange-400">1勝ディスアドバンテージ</span>
                     )}
                   </div>
                 </div>
@@ -704,7 +704,7 @@ export default function FinalsClient({
               </div>
 
               <div>
-                <label className="block text-xs text-gray-400 mb-1">1勝アドバンテージ</label>
+                <label className="block text-xs text-gray-400 mb-1">1勝ディスアドバンテージ</label>
                 <select value={disadvantageId} onChange={e => setDisadvantageId(e.target.value)}
                   className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                 >
