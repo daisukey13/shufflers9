@@ -8,7 +8,7 @@ export default async function RpCheckPage({ params }: { params: Promise<{ id: st
 
   const { data: tournament } = await supabase
     .from('tournaments')
-    .select('id, name')
+    .select('id, name, bonus_points')
     .eq('id', id)
     .single()
   if (!tournament) notFound()
@@ -101,11 +101,21 @@ export default async function RpCheckPage({ params }: { params: Promise<{ id: st
                               <p>{m.player2_rating_before}</p>
                             </td>
                             <td className="text-center py-3 pr-3">
-                              <p className={`font-bold ${(m.player1_rating_change ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              <p className={`font-bold ${
+                                (m.player1_rating_change ?? 0) > 0 && (tournament.bonus_points ?? 0) > 0
+                                  ? 'neon-bonus'
+                                  : (m.player1_rating_change ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                              }`}>
                                 {(m.player1_rating_change ?? 0) >= 0 ? '+' : ''}{m.player1_rating_change}
+                                {(m.player1_rating_change ?? 0) > 0 && (tournament.bonus_points ?? 0) > 0 && <span className="text-xs ml-0.5">★</span>}
                               </p>
-                              <p className={`font-bold ${(m.player2_rating_change ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              <p className={`font-bold ${
+                                (m.player2_rating_change ?? 0) > 0 && (tournament.bonus_points ?? 0) > 0
+                                  ? 'neon-bonus'
+                                  : (m.player2_rating_change ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                              }`}>
                                 {(m.player2_rating_change ?? 0) >= 0 ? '+' : ''}{m.player2_rating_change}
+                                {(m.player2_rating_change ?? 0) > 0 && (tournament.bonus_points ?? 0) > 0 && <span className="text-xs ml-0.5">★</span>}
                               </p>
                             </td>
                             <td className="text-center py-3 pr-3 text-yellow-300">

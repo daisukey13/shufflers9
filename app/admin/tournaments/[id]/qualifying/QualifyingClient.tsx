@@ -339,7 +339,7 @@ export default function QualifyingClient({
     const finalScore1 = matchMode === 'walkover' ? 15 : isNaN(s1) ? null : s1
     const finalScore2 = matchMode === 'walkover' ? 0 : isNaN(s2) ? null : s2
 
-    const { error } = await supabase
+    const { data: insertedMatch, error } = await supabase
       .from('tournament_qualifying_matches')
       .insert({
         block_id: blockId,
@@ -351,6 +351,8 @@ export default function QualifyingClient({
         mode: matchMode,
         affects_ranking: isNormal,
       })
+      .select('id')
+      .single()
 
     if (error) {
       setMatchError('登録に失敗しました: ' + error.message)
@@ -397,18 +399,18 @@ export default function QualifyingClient({
           const p2NewLosses = finalScore2 < finalScore1 ? p2.losses + 1 : p2.losses
 
           // 登録前の値・変化量を試合レコードに保存（ボーナス適用済み）
-          await supabase.from('tournament_qualifying_matches').update({
-            player1_rating_before: p1.rating,
-            player2_rating_before: p2.rating,
-            player1_rating_change: changeA,
-            player2_rating_change: changeB,
-            player1_wins_before: p1.wins,
-            player2_wins_before: p2.wins,
-            player1_losses_before: p1.losses,
-            player2_losses_before: p2.losses,
-          }).eq('block_id', blockId)
-            .eq('player1_id', matchPlayer1)
-            .eq('player2_id', matchPlayer2)
+          if (insertedMatch?.id) {
+            await supabase.from('tournament_qualifying_matches').update({
+              player1_rating_before: p1.rating,
+              player2_rating_before: p2.rating,
+              player1_rating_change: changeA,
+              player2_rating_change: changeB,
+              player1_wins_before: p1.wins,
+              player2_wins_before: p2.wins,
+              player1_losses_before: p1.losses,
+              player2_losses_before: p2.losses,
+            }).eq('id', insertedMatch.id)
+          }
 
           await supabase.from('players').update({
             rating: p1.rating + changeA,
