@@ -10,7 +10,8 @@
     "disadvantage_player_id": "9bdb68a9-fc81-4e5a-bac7-3f15300f7dbf",
     "mode": "normal",
     "played_at": "2026-04-08T12:24:33.084196+00:00",
-    "created_at": "2026-04-08T12:24:33.084196+00:00"
+    "created_at": "2026-04-08T12:24:33.084196+00:00",
+    "scheduled_time": null
   },
   {
     "id": "01da950f-8885-4ea9-8332-e25baf32873f",
@@ -23,7 +24,8 @@
     "disadvantage_player_id": null,
     "mode": "normal",
     "played_at": "2026-04-10T04:59:56.411993+00:00",
-    "created_at": "2026-04-10T04:59:56.411993+00:00"
+    "created_at": "2026-04-10T04:59:56.411993+00:00",
+    "scheduled_time": null
   },
   {
     "id": "e2b2e2cf-d874-47d6-8a34-80367c96751c",
@@ -36,7 +38,8 @@
     "disadvantage_player_id": null,
     "mode": "normal",
     "played_at": "2026-04-10T23:21:17.670888+00:00",
-    "created_at": "2026-04-10T23:21:17.670888+00:00"
+    "created_at": "2026-04-10T23:21:17.670888+00:00",
+    "scheduled_time": null
   },
   {
     "id": "159895cf-6325-46ba-9267-657cbba2f1d9",
@@ -49,7 +52,8 @@
     "disadvantage_player_id": "8e503937-18f1-4755-ba74-dfaae4d384c1",
     "mode": "normal",
     "played_at": "2026-04-10T23:23:45.622545+00:00",
-    "created_at": "2026-04-10T23:23:45.622545+00:00"
+    "created_at": "2026-04-10T23:23:45.622545+00:00",
+    "scheduled_time": null
   },
   {
     "id": "a79875b3-8111-4076-9018-b5cdec9c0785",
@@ -62,7 +66,8 @@
     "disadvantage_player_id": null,
     "mode": "normal",
     "played_at": "2026-04-11T08:59:42.854155+00:00",
-    "created_at": "2026-04-11T08:59:42.854155+00:00"
+    "created_at": "2026-04-11T08:59:42.854155+00:00",
+    "scheduled_time": null
   },
   {
     "id": "c6331032-a7b8-4b42-ada1-66af3a97cdf1",
@@ -75,7 +80,8 @@
     "disadvantage_player_id": null,
     "mode": "normal",
     "played_at": "2026-04-12T07:44:45.827327+00:00",
-    "created_at": "2026-04-12T07:44:45.827327+00:00"
+    "created_at": "2026-04-12T07:44:45.827327+00:00",
+    "scheduled_time": null
   },
   {
     "id": "949adc20-95dd-4a69-a412-7b47163fb9b1",
@@ -88,7 +94,8 @@
     "disadvantage_player_id": null,
     "mode": "normal",
     "played_at": "2026-04-12T07:49:43.246718+00:00",
-    "created_at": "2026-04-12T07:49:43.246718+00:00"
+    "created_at": "2026-04-12T07:49:43.246718+00:00",
+    "scheduled_time": null
   },
   {
     "id": "b5dd3a93-846c-410d-a33e-3435749b1c32",
@@ -101,6 +108,63 @@
     "disadvantage_player_id": null,
     "mode": "normal",
     "played_at": "2026-04-12T09:42:59.157598+00:00",
-    "created_at": "2026-04-12T09:42:59.157598+00:00"
+    "created_at": "2026-04-12T09:42:59.157598+00:00",
+    "scheduled_time": null
+  },
+  {
+    "id": "3ef23e46-c212-4a31-8da9-989ceb4174ac",
+    "tournament_id": "553afac2-77e5-48bf-9958-2873008e7498",
+    "round": 5,
+    "match_number": 1,
+    "player1_id": "ca40992b-aaf4-4097-b77c-495328315d2e",
+    "player2_id": "8e503937-18f1-4755-ba74-dfaae4d384c1",
+    "winner_id": "ca40992b-aaf4-4097-b77c-495328315d2e",
+    "disadvantage_player_id": null,
+    "mode": "normal",
+    "played_at": "2026-04-13T04:07:36.51852+00:00",
+    "created_at": "2026-04-13T04:07:36.51852+00:00",
+    "scheduled_time": "12:00"
+  },
+  {
+    "id": "bda28a91-8808-4eae-baf4-918e2058b2c3",
+    "tournament_id": "12e7365e-3bc3-49aa-9d9a-837109952855",
+    "round": 1,
+    "match_number": 1,
+    "player1_id": "7282b681-699e-43eb-b70a-144c1f4b09bf",
+    "player2_id": "ca40992b-aaf4-4097-b77c-495328315d2e",
+    "winner_id": "7282b681-699e-43eb-b70a-144c1f4b09bf",
+    "disadvantage_player_id": null,
+    "mode": "normal",
+    "played_at": "2026-04-21T04:43:14.190441+00:00",
+    "created_at": "2026-04-21T04:43:14.190441+00:00",
+    "scheduled_time": "13:40"
+  },
+  {
+    "id": "443cc379-f1fd-4219-994e-e57ef6a35985",
+    "tournament_id": "12e7365e-3bc3-49aa-9d9a-837109952855",
+    "round": 1,
+    "match_number": 2,
+    "player1_id": "b1bfef10-0ea2-41d9-81b7-e07bbbe5f888",
+    "player2_id": "4e5962af-34d6-4bb3-a143-a520b2ae848e",
+    "winner_id": "b1bfef10-0ea2-41d9-81b7-e07bbbe5f888",
+    "disadvantage_player_id": "b1bfef10-0ea2-41d9-81b7-e07bbbe5f888",
+    "mode": "walkover",
+    "played_at": "2026-04-21T07:49:43.455915+00:00",
+    "created_at": "2026-04-21T07:49:43.455915+00:00",
+    "scheduled_time": null
+  },
+  {
+    "id": "4ea75f8c-9d82-49f9-947e-063c18d5a61a",
+    "tournament_id": "12e7365e-3bc3-49aa-9d9a-837109952855",
+    "round": 5,
+    "match_number": 1,
+    "player1_id": "7282b681-699e-43eb-b70a-144c1f4b09bf",
+    "player2_id": "b1bfef10-0ea2-41d9-81b7-e07bbbe5f888",
+    "winner_id": "7282b681-699e-43eb-b70a-144c1f4b09bf",
+    "disadvantage_player_id": "b1bfef10-0ea2-41d9-81b7-e07bbbe5f888",
+    "mode": "normal",
+    "played_at": "2026-04-21T04:45:54.14395+00:00",
+    "created_at": "2026-04-21T04:45:54.14395+00:00",
+    "scheduled_time": "14:00"
   }
 ]

@@ -17,7 +17,7 @@
   },
   {
     "id": "e0d53513-5e9c-431e-811f-9f3ceb2b31a9",
-    "name": "第1回ホタ���杯",
+    "name": "第1回ホタ��杯",
     "type": "singles",
     "status": "finished",
     "description": null,
@@ -78,5 +78,21 @@
     "finals_start_time": null,
     "bonus_points": 0,
     "notes": null
+  },
+  {
+    "id": "12e7365e-3bc3-49aa-9d9a-837109952855",
+    "name": "第4回桜開花大会",
+    "type": "singles",
+    "status": "finished",
+    "description": "ボーナスポイント30%大会です。\n2026年4月25日（土曜日）\n場所：とわにーホール\n予選開始：09:10（※Aブロック第1試合）\n決勝開始予定：13:00\nボーナスポイント：30pt\n【注意事項】定員12名。時間厳守。",
+    "started_at": "2026-04-25T00:00:00+00:00",
+    "finished_at": null,
+    "created_by": null,
+    "created_at": "2026-04-21T04:28:39.046362+00:00",
+    "format": "singles",
+    "qualifying_start_time": "09:10",
+    "finals_start_time": "13:00",
+    "bonus_points": 30,
+    "notes": "定員12名。時間厳守。"
   }
 ]
