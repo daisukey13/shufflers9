@@ -7,6 +7,7 @@ import { getRecentDoublesMatches } from '@/lib/queries/matches'
 import { getLastMonthWinRanking } from '@/lib/queries/monthly-ranking'
 import RecentMatchesTabs from './RecentMatchesTabs'
 import MonthlyRankingModal from '@/components/ui/MonthlyRankingModal'
+import QuickLinkSwiper from '@/components/ui/QuickLinkSwiper'
 
 export default async function HomePage() {
   const [players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount, monthlyRanking] = await Promise.all([
@@ -67,8 +68,11 @@ export default async function HomePage() {
         <p className="relative text-gray-400 text-sm">みんなで楽しくテーブルシャッフルボード！</p>
       </section>
 
-      {/* クイックリンク */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-px bg-yellow-600/10 border-y border-yellow-600/20 mb-10">
+      {/* クイックリンク（スマホ：スワイプ） */}
+      <QuickLinkSwiper />
+
+      {/* クイックリンク（PC：グリッド） */}
+      <section className="hidden sm:grid grid-cols-2 md:grid-cols-4 gap-px bg-yellow-600/10 border-y border-yellow-600/20 mb-10">
         {[
           { label: 'ランキング', sub: '最新のランキング', href: '/rankings', disabled: false },
           { label: 'メンバー', sub: 'クラブメンバーを見る', href: '/players', disabled: false },
