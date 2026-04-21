@@ -80,7 +80,7 @@ export default function FinalsClient({
   const router = useRouter()
   const supabase = createClient()
 
-  const isFinalsLocked = tournament.status === 'finished'
+  const isFinalsLocked = false
 
   const maxRound = finalsMatches.length > 0
     ? Math.max(...finalsMatches.map(m => m.round))
@@ -202,8 +202,93 @@ export default function FinalsClient({
       return
     }
 
+    // 完了済み試合（勝者確定）がある場合は次ラウンドの生成を提案
+    const completedMatches = finalsMatches.filter(m => m.winner_id !== null)
+    if (completedMatches.length > 0 && finalsMatches.length > 0) {
+      const maxCompletedRound = Math.max(...completedMatches.map(m => m.round))
+      const nextRound = maxCompletedRound + 1
+      const hasNextRound = finalsMatches.some(m => m.round === nextRound)
+
+      if (!hasNextRound) {
+        // 次ラウンドがまだない場合、完了ラウンドの勝者から次ラウンドを生成
+        const lastRoundWinners = completedMatches
+          .filter(m => m.round === maxCompletedRound)
+          .sort((a, b) => a.match_number - b.match_number)
+          .map(m => ({
+            playerId: m.winner_id!,
+            name: m.winner?.name ?? '不明',
+            disadvantage_player_id: m.disadvantage_player_id,
+          }))
+
+        // ディスアドバンテージ（byeで上がってきた）プレーヤーも追加
+        const byeInRound = finalsMatches.filter(
+          m => m.round === maxCompletedRound && m.winner_id === null && m.player2_id === null
+        )
+        const byePlayers = byeInRound.map(m => ({
+          playerId: m.player1_id!,
+          name: m.player1?.name ?? '不明',
+          disadvantage_player_id: m.disadvantage_player_id,
+        }))
+
+        const allAdvancers = [...lastRoundWinners, ...byePlayers]
+
+        if (allAdvancers.length < 2) {
+          // 次ラウンド生成に十分な人数がいない場合は通常フロー
+        } else {
+          if (!confirm(
+            `${getRoundName(maxCompletedRound)}の勝者（${allAdvancers.map(p => p.name).join('、')}）で次ラウンドを生成しますか？`
+          )) return
+
+          setAutoGenLoading(true)
+
+          const roundNumber = nextRound
+          let matchNum = 1
+          for (let i = 0; i < allAdvancers.length; i += 2) {
+            const p1 = allAdvancers[i]
+            const p2 = allAdvancers[i + 1] ?? null
+            if (!p2) {
+              // Byeで上がる
+              await supabase.from('tournament_finals_matches').insert({
+                tournament_id: tournament.id,
+                round: roundNumber,
+                match_number: matchNum++,
+                player1_id: p1.playerId,
+                player2_id: null,
+                winner_id: null,
+                mode: 'normal',
+                disadvantage_player_id: p1.playerId,
+              })
+            } else {
+              const hasDefault = p1.playerId === defaultPlayerId || p2.playerId === defaultPlayerId
+              const winnerId = hasDefault ? (p1.playerId === defaultPlayerId ? p2.playerId : p1.playerId) : null
+              const disadv = p1.disadvantage_player_id ?? p2.disadvantage_player_id ?? null
+              await supabase.from('tournament_finals_matches').insert({
+                tournament_id: tournament.id,
+                round: roundNumber,
+                match_number: matchNum++,
+                player1_id: p1.playerId,
+                player2_id: p2.playerId,
+                winner_id: winnerId,
+                mode: hasDefault ? 'walkover' : 'normal',
+                disadvantage_player_id: disadv,
+              })
+            }
+          }
+
+          setAutoGenLoading(false)
+          router.refresh()
+          return
+        }
+      }
+    }
+
+    // 初回生成または全削除して再生成
     if (finalsMatches.length > 0) {
-      if (!confirm('既存の試合を全て削除してから再生成しますか？')) return
+      const completedCount = completedMatches.length
+      const msg = completedCount > 0
+        ? `⚠️ ${completedCount}試合の結果が含まれています。\n全て削除してから再生成しますか？`
+        : '既存の試合を全て削除してから再生成しますか？'
+      if (!confirm(msg)) return
       for (const m of finalsMatches) {
         await supabase.from('tournament_finals_sets').delete().eq('match_id', m.id)
       }
