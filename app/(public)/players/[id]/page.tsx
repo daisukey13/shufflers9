@@ -338,8 +338,13 @@ export default async function PlayerPage({
                         }
                       </span>
                       {ratingChange != null && (
-                      <span className={`text-sm font-medium flex-shrink-0 ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`text-sm font-medium flex-shrink-0 ${
+                        ratingChange > 0 && (match.bonus_points ?? 0) > 0
+                          ? 'neon-bonus'
+                          : ratingChange >= 0 ? 'text-green-400' : 'text-red-400'
+                      }`}>
                         {ratingChange >= 0 ? '+' : ''}{ratingChange}pt
+                        {ratingChange > 0 && (match.bonus_points ?? 0) > 0 && <span className="text-xs ml-0.5">★</span>}
                       </span>
                       )}
                     </div>

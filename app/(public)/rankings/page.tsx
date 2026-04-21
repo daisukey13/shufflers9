@@ -91,10 +91,11 @@ export default async function RankingsPage({
     const last = lastRpChanges.get(playerId)
     if (!last) return null
     const c = last.change
-    const color = c > 0 ? 'text-green-400' : c < 0 ? 'text-red-400' : 'text-gray-500'
+    const isBonus = c > 0 && last.hasBonus
+    const color = isBonus ? 'neon-bonus' : c > 0 ? 'text-green-400' : c < 0 ? 'text-red-400' : 'text-gray-500'
     return (
       <span className={`text-xs font-mono font-bold ${color}`}>
-        {c > 0 ? '+' : ''}{c}pt
+        {c > 0 ? '+' : ''}{c}pt{isBonus ? '★' : ''}
       </span>
     )
   }

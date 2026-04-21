@@ -164,15 +164,20 @@ export default function NewTournamentPage() {
 
         {/* ボーナスポイント */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">ボーナスポイント</label>
-          <input
-            type="number"
-            min="0"
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            ボーナスレート
+            <span className="text-xs text-gray-500 ml-1">（プラスRPのみ。マイナスRP・HCは対象外）</span>
+          </label>
+          <select
             value={bonusPoints}
             onChange={e => setBonusPoints(e.target.value)}
-            placeholder="0"
-            className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+            className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="0">なし（0%）</option>
+            {[10,20,30,40,50,60,70,80,90,100].map(v => (
+              <option key={v} value={String(v)}>{v}%ボーナス（×{(1 + v/100).toFixed(1)}倍）</option>
+            ))}
+          </select>
         </div>
 
         {/* その他注意事項 */}

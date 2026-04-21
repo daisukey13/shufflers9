@@ -148,7 +148,7 @@ export async function getTotalMatchesCount(): Promise<number> {
   return (singlesCount ?? 0) + (doublesCount ?? 0) + (qualifyingCount ?? 0) + (finalsCount ?? 0)
 }
 
-export async function getLastRatingChangePerPlayer(): Promise<Map<string, { change: number; date: string }>> {
+export async function getLastRatingChangePerPlayer(): Promise<Map<string, { change: number; date: string; hasBonus: boolean }>> {
   const supabase = await createClient()
 
   const [{ data: singles }, { data: qualifying }] = await Promise.all([
@@ -160,30 +160,31 @@ export async function getLastRatingChangePerPlayer(): Promise<Map<string, { chan
       .limit(300),
     supabase
       .from('tournament_qualifying_matches')
-      .select('player1_id, player2_id, player1_rating_change, player2_rating_change, created_at')
+      .select('player1_id, player2_id, player1_rating_change, player2_rating_change, created_at, block:tournament_blocks(tournament:tournaments(bonus_points))')
       .eq('mode', 'normal')
       .not('winner_id', 'is', null)
       .order('created_at', { ascending: false })
       .limit(300),
   ])
 
-  const entries: { playerId: string; change: number | null; date: string }[] = []
+  const entries: { playerId: string; change: number | null; date: string; hasBonus: boolean }[] = []
 
   singles?.forEach((m: any) => {
-    entries.push({ playerId: m.player1_id, change: m.rating_change1, date: m.played_at })
-    entries.push({ playerId: m.player2_id, change: m.rating_change2, date: m.played_at })
+    entries.push({ playerId: m.player1_id, change: m.rating_change1, date: m.played_at, hasBonus: false })
+    entries.push({ playerId: m.player2_id, change: m.rating_change2, date: m.played_at, hasBonus: false })
   })
   qualifying?.forEach((m: any) => {
-    entries.push({ playerId: m.player1_id, change: m.player1_rating_change, date: m.created_at })
-    entries.push({ playerId: m.player2_id, change: m.player2_rating_change, date: m.created_at })
+    const hasBonus = (m.block?.tournament?.bonus_points ?? 0) > 0
+    entries.push({ playerId: m.player1_id, change: m.player1_rating_change, date: m.created_at, hasBonus })
+    entries.push({ playerId: m.player2_id, change: m.player2_rating_change, date: m.created_at, hasBonus })
   })
 
   entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  const result = new Map<string, { change: number; date: string }>()
+  const result = new Map<string, { change: number; date: string; hasBonus: boolean }>()
   for (const e of entries) {
     if (!result.has(e.playerId) && e.change !== null) {
-      result.set(e.playerId, { change: e.change, date: e.date })
+      result.set(e.playerId, { change: e.change, date: e.date, hasBonus: e.hasBonus })
     }
   }
   return result
@@ -202,14 +203,14 @@ export async function getPlayerAllSinglesMatches(playerId: string) {
   // 予選（tournament は block 経由でJOIN、DEFAULTプレーヤーを除外）
   const { data: qualifying } = await supabase
     .from('tournament_qualifying_matches')
-    .select('*, player1:players!player1_id(*), player2:players!player2_id(*), block:tournament_blocks(tournament:tournaments(name))')
+    .select('*, player1:players!player1_id(*), player2:players!player2_id(*), block:tournament_blocks(tournament:tournaments(name, bonus_points))')
     .or(`player1_id.eq.${playerId},player2_id.eq.${playerId}`)
     .not('winner_id', 'is', null)
 
   // 決勝
   const { data: finals } = await supabase
     .from('tournament_finals_matches')
-    .select('*, player1:players!player1_id(*), player2:players!player2_id(*), tournament:tournaments(name), tournament_finals_sets(*)')
+    .select('*, player1:players!player1_id(*), player2:players!player2_id(*), tournament:tournaments(name, bonus_points), tournament_finals_sets(*)')
     .or(`player1_id.eq.${playerId},player2_id.eq.${playerId}`)
     .not('winner_id', 'is', null)
 
@@ -243,6 +244,7 @@ export async function getPlayerAllSinglesMatches(playerId: string) {
           played_at: m.created_at,
           source: 'qualifying' as const,
           tournament_name: m.block?.tournament?.name ?? null,
+          bonus_points: m.block?.tournament?.bonus_points ?? 0,
           rating_change1,
           rating_change2,
         }
@@ -256,6 +258,7 @@ export async function getPlayerAllSinglesMatches(playerId: string) {
       let rating_change1: number | null = null
       let rating_change2: number | null = null
 
+      const bonusRate = (m.tournament?.bonus_points ?? 0) / 100
       if (m.winner_id && numSets > 0 && m.mode === 'normal') {
         const p1Rating: number = (m.player1 as any)?.rating ?? 1000
         const p2Rating: number = (m.player2 as any)?.rating ?? 1000
@@ -263,8 +266,8 @@ export async function getPlayerAllSinglesMatches(playerId: string) {
         const avg1 = total1 / numSets
         const avg2 = total2 / numSets
         const { changeA, changeB } = calcElo(p1Rating, p2Rating, avg1, avg2)
-        rating_change1 = changeA
-        rating_change2 = changeB
+        rating_change1 = changeA > 0 && bonusRate > 0 ? Math.round(changeA * (1 + bonusRate)) : changeA
+        rating_change2 = changeB > 0 && bonusRate > 0 ? Math.round(changeB * (1 + bonusRate)) : changeB
       } else if (m.winner_id && (m.mode === 'walkover' || m.mode === 'forfeit')) {
         rating_change1 = 0
         rating_change2 = 0
@@ -275,6 +278,7 @@ export async function getPlayerAllSinglesMatches(playerId: string) {
         played_at: m.created_at,
         source: 'finals' as const,
         tournament_name: m.tournament?.name ?? null,
+        bonus_points: m.tournament?.bonus_points ?? 0,
         score1: total1,
         score2: total2,
         rating_change1,

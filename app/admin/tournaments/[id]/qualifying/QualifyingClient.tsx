@@ -15,7 +15,7 @@ type Match = {
   player1: { id: string; name: string; avatar_url: string | null }
   player2: { id: string; name: string; avatar_url: string | null }
 }
-type Tournament = { id: string; name: string; status: string; format: string }
+type Tournament = { id: string; name: string; status: string; format: string; bonus_points: number }
 
 const timeOptions = (() => {
   const options: string[] = []
@@ -382,17 +382,26 @@ export default function QualifyingClient({
         if (elo?.[0]) {
           const eloResult = elo[0]
 
+          // ボーナスレート適用（プラスRPのみ。マイナスRP・HCは対象外）
+          const bonusRate = (tournament.bonus_points ?? 0) / 100
+          let changeA = eloResult.change_a
+          let changeB = eloResult.change_b
+          if (bonusRate > 0) {
+            if (changeA > 0) changeA = Math.round(changeA * (1 + bonusRate))
+            if (changeB > 0) changeB = Math.round(changeB * (1 + bonusRate))
+          }
+
           const p1NewWins = finalScore1 > finalScore2 ? p1.wins + 1 : p1.wins
           const p1NewLosses = finalScore1 < finalScore2 ? p1.losses + 1 : p1.losses
           const p2NewWins = finalScore2 > finalScore1 ? p2.wins + 1 : p2.wins
           const p2NewLosses = finalScore2 < finalScore1 ? p2.losses + 1 : p2.losses
 
-          // 登録前の値・変化量を試合レコードに保存
+          // 登録前の値・変化量を試合レコードに保存（ボーナス適用済み）
           await supabase.from('tournament_qualifying_matches').update({
             player1_rating_before: p1.rating,
             player2_rating_before: p2.rating,
-            player1_rating_change: eloResult.change_a,
-            player2_rating_change: eloResult.change_b,
+            player1_rating_change: changeA,
+            player2_rating_change: changeB,
             player1_wins_before: p1.wins,
             player2_wins_before: p2.wins,
             player1_losses_before: p1.losses,
@@ -402,7 +411,7 @@ export default function QualifyingClient({
             .eq('player2_id', matchPlayer2)
 
           await supabase.from('players').update({
-            rating: eloResult.new_rating_a,
+            rating: p1.rating + changeA,
             wins: p1NewWins,
             losses: p1NewLosses,
             total_score: (p1.total_score ?? 0) + finalScore1,
@@ -410,7 +419,7 @@ export default function QualifyingClient({
           }).eq('id', matchPlayer1)
 
           await supabase.from('players').update({
-            rating: eloResult.new_rating_b,
+            rating: p2.rating + changeB,
             wins: p2NewWins,
             losses: p2NewLosses,
             total_score: (p2.total_score ?? 0) + finalScore2,

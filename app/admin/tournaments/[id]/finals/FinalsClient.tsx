@@ -19,7 +19,7 @@ type FinalsMatch = {
   player1: Player | null; player2: Player | null; winner: Player | null
   tournament_finals_sets: FinalsSet[]
 }
-type Tournament = { id: string; name: string; status: string }
+type Tournament = { id: string; name: string; status: string; bonus_points: number }
 
 const NEXT_STATUS: Record<string, { status: string; label: string; color: string }> = {
   open: { status: 'entry_closed', label: 'エントリー締切', color: 'bg-yellow-600 hover:bg-yellow-700' },
@@ -362,8 +362,17 @@ export default function FinalsClient({
           const eloResult = elo[0]
           const p1wins = winnerId === player1Id
 
+          // ボーナスレート適用（プラスRPのみ。マイナスRP・HCは対象外）
+          const bonusRate = (tournament.bonus_points ?? 0) / 100
+          let changeA = eloResult.change_a
+          let changeB = eloResult.change_b
+          if (bonusRate > 0) {
+            if (changeA > 0) changeA = Math.round(changeA * (1 + bonusRate))
+            if (changeB > 0) changeB = Math.round(changeB * (1 + bonusRate))
+          }
+
           await supabase.from('players').update({
-            rating: eloResult.new_rating_a,
+            rating: p1.rating + changeA,
             wins: p1wins ? p1.wins + 1 : p1.wins,
             losses: !p1wins ? p1.losses + 1 : p1.losses,
             total_score: (p1.total_score ?? 0) + totalScore1,
@@ -371,7 +380,7 @@ export default function FinalsClient({
           }).eq('id', player1Id)
 
           await supabase.from('players').update({
-            rating: eloResult.new_rating_b,
+            rating: p2.rating + changeB,
             wins: !p1wins ? p2.wins + 1 : p2.wins,
             losses: p1wins ? p2.losses + 1 : p2.losses,
             total_score: (p2.total_score ?? 0) + totalScore2,

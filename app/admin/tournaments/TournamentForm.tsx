@@ -10,6 +10,7 @@ type Tournament = {
   type: 'singles' | 'teams'
   status: 'open' | 'in_progress' | 'finished'
   description: string | null
+  bonus_points: number
 }
 
 export default function TournamentForm({ tournament }: { tournament?: Tournament }) {
@@ -18,6 +19,7 @@ export default function TournamentForm({ tournament }: { tournament?: Tournament
   const [type, setType] = useState<'singles' | 'teams'>(tournament?.type ?? 'singles')
   const [status, setStatus] = useState<'open' | 'in_progress' | 'finished'>(tournament?.status ?? 'open')
   const [description, setDescription] = useState(tournament?.description ?? '')
+  const [bonusPoints, setBonusPoints] = useState(tournament?.bonus_points ?? 0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -31,7 +33,7 @@ export default function TournamentForm({ tournament }: { tournament?: Tournament
     if (isEdit) {
       const { error } = await supabase
         .from('tournaments')
-        .update({ name, type, status, description: description || null })
+        .update({ name, type, status, description: description || null, bonus_points: bonusPoints })
         .eq('id', tournament.id)
 
       if (error) {
@@ -143,6 +145,23 @@ export default function TournamentForm({ tournament }: { tournament?: Tournament
               <option value="finished">終了</option>
             </select>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            ボーナスレート
+            <span className="text-xs text-gray-500 ml-1">（プラスRPのみ適用）</span>
+          </label>
+          <select
+            value={bonusPoints}
+            onChange={e => setBonusPoints(parseInt(e.target.value))}
+            className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value={0}>なし（0%）</option>
+            {[10,20,30,40,50,60,70,80,90,100].map(v => (
+              <option key={v} value={v}>{v}%ボーナス（×{(1 + v/100).toFixed(1)}倍）</option>
+            ))}
+          </select>
         </div>
 
         <div>
