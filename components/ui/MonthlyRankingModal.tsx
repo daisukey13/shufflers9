@@ -27,12 +27,11 @@ export default function MonthlyRankingModal({ entries, month }: Props) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const key = `monthly_ranking_shown_${month}`
-    if (!sessionStorage.getItem(key)) {
+    // 50%の確率で表示
+    if (Math.random() < 0.5) {
       setOpen(true)
-      sessionStorage.setItem(key, '1')
     }
-  }, [month])
+  }, [])
 
   if (!open || entries.length === 0) return null
 
