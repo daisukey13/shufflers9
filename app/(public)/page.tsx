@@ -44,28 +44,28 @@ export default async function HomePage() {
       <MonthlyRankingModal entries={monthlyRanking.entries} month={monthlyRanking.month} />
 
       {/* ヒーロー */}
-      <section className="relative text-center py-20 px-4 overflow-hidden">
+      <section className="relative text-center py-6 sm:py-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(30,60,120,0.35)_0%,_transparent_70%)] pointer-events-none" />
-        <div className="relative flex justify-center mb-4">
+        <div className="relative flex justify-center mb-2 sm:mb-4">
           <img
             src="/shuffleboard-puck-blue.png"
             alt="Shuffleboard Puck"
-            className="w-24 h-24 object-contain opacity-90"
+            className="w-12 h-12 sm:w-24 sm:h-24 object-contain opacity-90"
           />
         </div>
-        <div className="relative flex justify-center mb-6">
+        <div className="relative flex justify-center mb-2 sm:mb-6">
           <img
             src="/logo-toyoura-shufflers.png"
             alt="Toyoura Shufflers Club"
-            className="w-full max-w-2xl h-auto object-contain"
+            className="w-full max-w-xs sm:max-w-2xl h-auto object-contain"
           />
         </div>
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <div className="h-px w-12 bg-amber-500/50" />
-          <div className="w-2 h-2 rounded-full bg-amber-400" />
-          <div className="h-px w-12 bg-amber-500/50" />
+        <div className="flex items-center justify-center gap-2 mb-2 sm:mb-4">
+          <div className="h-px w-8 sm:w-12 bg-amber-500/50" />
+          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-400" />
+          <div className="h-px w-8 sm:w-12 bg-amber-500/50" />
         </div>
-        <p className="relative text-gray-400 text-sm">みんなで楽しくテーブルシャッフルボード！</p>
+        <p className="relative text-gray-400 text-xs sm:text-sm">みんなで楽しくテーブルシャッフルボード！</p>
       </section>
 
       {/* クイックリンク（スマホ：スワイプ） */}

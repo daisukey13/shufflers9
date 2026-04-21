@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
 
 const ITEMS = [
   {
@@ -12,7 +12,7 @@ const ITEMS = [
     bg: 'from-yellow-900 via-amber-800 to-yellow-950',
     border: '#f59e0b',
     glow: 'rgba(245,158,11,0.7)',
-    shine: 'from-yellow-300/30 via-amber-100/10 to-transparent',
+    shine: 'from-yellow-300/20 via-amber-100/5 to-transparent',
     badge: 'bg-yellow-400 text-yellow-900',
     disabled: false,
   },
@@ -24,7 +24,7 @@ const ITEMS = [
     bg: 'from-blue-900 via-blue-800 to-blue-950',
     border: '#3b82f6',
     glow: 'rgba(59,130,246,0.7)',
-    shine: 'from-blue-300/30 via-blue-100/10 to-transparent',
+    shine: 'from-blue-300/20 via-blue-100/5 to-transparent',
     badge: 'bg-blue-400 text-blue-900',
     disabled: false,
   },
@@ -36,7 +36,7 @@ const ITEMS = [
     bg: 'from-green-900 via-emerald-800 to-green-950',
     border: '#10b981',
     glow: 'rgba(16,185,129,0.7)',
-    shine: 'from-green-300/30 via-emerald-100/10 to-transparent',
+    shine: 'from-green-300/20 via-emerald-100/5 to-transparent',
     badge: 'bg-green-400 text-green-900',
     disabled: false,
   },
@@ -71,10 +71,8 @@ export default function QuickLinkSwiper() {
     el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' })
   }
 
-  const item = ITEMS[active]
-
   return (
-    <div className="sm:hidden mb-10">
+    <div className="sm:hidden mb-6">
       {/* スワイパー */}
       <div
         ref={scrollRef}
@@ -83,22 +81,22 @@ export default function QuickLinkSwiper() {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
       >
         {ITEMS.map((item, i) => (
-          <div key={i} className="flex-none w-full snap-center px-5 py-2">
+          <div key={i} className="flex-none w-full snap-center px-4 py-1">
             {item.disabled ? (
               <div
-                className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${item.bg} opacity-40`}
-                style={{ border: `2px solid ${item.border}`, minHeight: 200 }}
+                className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${item.bg} opacity-40`}
+                style={{ border: `2px solid ${item.border}`, height: 90 }}
               >
                 <CardContent item={item} />
               </div>
             ) : (
               <Link
                 href={item.href}
-                className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${item.bg} block active:scale-95 transition-transform`}
+                className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${item.bg} flex active:scale-95 transition-transform`}
                 style={{
                   border: `2px solid ${item.border}`,
-                  boxShadow: `0 0 24px ${item.glow}, 0 0 60px ${item.glow.replace('0.7', '0.3')}, inset 0 1px 0 rgba(255,255,255,0.15)`,
-                  minHeight: 200,
+                  boxShadow: `0 0 18px ${item.glow}, 0 0 40px ${item.glow.replace('0.7', '0.25')}, inset 0 1px 0 rgba(255,255,255,0.12)`,
+                  height: 90,
                 }}
               >
                 <CardContent item={item} />
@@ -109,16 +107,16 @@ export default function QuickLinkSwiper() {
       </div>
 
       {/* ドット */}
-      <div className="flex justify-center gap-2 mt-3">
+      <div className="flex justify-center gap-2 mt-2">
         {ITEMS.map((it, i) => (
           <button
             key={i}
             onClick={() => scrollTo(i)}
-            className="h-2 rounded-full transition-all duration-300"
+            className="h-1.5 rounded-full transition-all duration-300"
             style={{
-              width: i === active ? 24 : 8,
+              width: i === active ? 20 : 6,
               background: i === active ? it.border : '#374151',
-              boxShadow: i === active ? `0 0 8px ${it.glow}` : 'none',
+              boxShadow: i === active ? `0 0 6px ${it.glow}` : 'none',
             }}
           />
         ))}
@@ -133,13 +131,9 @@ function CardContent({ item }: { item: typeof ITEMS[0] }) {
       {/* シャイン */}
       <div className={`absolute inset-0 bg-gradient-to-br ${item.shine} pointer-events-none`} />
 
-      {/* 上部装飾ライン */}
-      <div className="absolute top-0 left-4 right-4 h-px opacity-60"
-        style={{ background: `linear-gradient(90deg, transparent, ${item.border}, transparent)` }} />
-
       {/* コーナー装飾 */}
-      {['top-1 left-1', 'top-1 right-1', 'bottom-1 left-1', 'bottom-1 right-1'].map((pos, i) => (
-        <div key={i} className={`absolute ${pos} w-3 h-3 opacity-70`}
+      {(['top-1 left-1', 'top-1 right-1', 'bottom-1 left-1', 'bottom-1 right-1'] as const).map((pos, i) => (
+        <div key={i} className={`absolute ${pos} w-2.5 h-2.5 opacity-60`}
           style={{
             borderTop: i < 2 ? `2px solid ${item.border}` : 'none',
             borderBottom: i >= 2 ? `2px solid ${item.border}` : 'none',
@@ -148,50 +142,41 @@ function CardContent({ item }: { item: typeof ITEMS[0] }) {
           }} />
       ))}
 
-      {/* メインコンテンツ */}
-      <div className="relative flex flex-col items-center justify-center gap-4 py-10 px-6">
-        {/* サブタイトル */}
-        <p className="text-xs font-bold tracking-[0.3em] opacity-60 text-white">{item.sub}</p>
-
-        {/* アイコン枠 */}
+      {/* 横並びレイアウト */}
+      <div className="relative flex items-center gap-4 px-5 h-full w-full">
+        {/* アイコン */}
         <div
-          className="relative flex items-center justify-center w-24 h-24 rounded-full"
+          className="flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0"
           style={{
             background: `radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)`,
             border: `2px solid ${item.border}`,
-            boxShadow: `0 0 20px ${item.glow}, inset 0 0 20px rgba(255,255,255,0.05)`,
+            boxShadow: `0 0 14px ${item.glow}`,
           }}
         >
-          <span className="text-5xl">{item.emoji}</span>
-          {/* リング装飾 */}
-          <div className="absolute inset-[-6px] rounded-full opacity-30"
-            style={{ border: `1px dashed ${item.border}` }} />
+          <span className="text-3xl">{item.emoji}</span>
         </div>
 
-        {/* タイトル */}
-        <div className="text-center">
-          <p className="text-2xl font-extrabold text-white tracking-wide"
-            style={{ textShadow: `0 0 20px ${item.glow}` }}>
+        {/* テキスト */}
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-bold tracking-[0.25em] opacity-50 text-white">{item.sub}</p>
+          <p className="text-xl font-extrabold text-white leading-tight"
+            style={{ textShadow: `0 0 16px ${item.glow}` }}>
             {item.label}
           </p>
         </div>
 
-        {/* バッジ */}
+        {/* 矢印 */}
         {!item.disabled && (
-          <span className={`px-4 py-1 rounded-full text-xs font-bold ${item.badge} tracking-wider uppercase`}>
-            TAP TO OPEN
-          </span>
+          <div className="flex-shrink-0 opacity-60 text-white text-lg">›</div>
         )}
         {item.disabled && (
-          <span className="px-4 py-1 rounded-full text-xs font-bold bg-gray-700 text-gray-400 tracking-wider">
-            COMING SOON
-          </span>
+          <span className="flex-shrink-0 text-[10px] font-bold text-gray-500 tracking-wider">SOON</span>
         )}
       </div>
 
-      {/* 下部グロー */}
-      <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
-        style={{ background: `linear-gradient(to top, ${item.glow.replace('0.7', '0.15')}, transparent)` }} />
+      {/* 右端グロー */}
+      <div className="absolute top-0 right-0 bottom-0 w-16 pointer-events-none"
+        style={{ background: `linear-gradient(to left, ${item.glow.replace('0.7', '0.1')}, transparent)` }} />
     </>
   )
 }
