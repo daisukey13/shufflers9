@@ -4,16 +4,19 @@ import { getRecentAllMatches, getTotalMatchesCount } from '@/lib/queries/matches
 import { getRecentNotices } from '@/lib/queries/notices'
 import { getRecentTournamentWinners } from '@/lib/queries/tournaments'
 import { getRecentDoublesMatches } from '@/lib/queries/matches'
+import { getLastMonthWinRanking } from '@/lib/queries/monthly-ranking'
 import RecentMatchesTabs from './RecentMatchesTabs'
+import MonthlyRankingModal from '@/components/ui/MonthlyRankingModal'
 
 export default async function HomePage() {
-  const [players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount] = await Promise.all([
+  const [players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount, monthlyRanking] = await Promise.all([
   getPlayerRankings(),
   getRecentAllMatches(5),
   getRecentNotices(5),
   getRecentTournamentWinners(5),
   getRecentDoublesMatches(5),
   getTotalMatchesCount(),
+  getLastMonthWinRanking(),
 ])
   const top5 = players.slice(0, 5)
   const avgRating = players.length > 0
@@ -37,6 +40,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-transparent text-amber-50">
+      <MonthlyRankingModal entries={monthlyRanking.entries} month={monthlyRanking.month} />
 
       {/* ヒーロー */}
       <section className="relative text-center py-20 px-4 overflow-hidden">
