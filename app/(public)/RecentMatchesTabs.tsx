@@ -12,6 +12,9 @@ type SinglesMatch = {
   winner_id: string | null
   played_at: string
   label: string | null
+  rating_change1: number | null
+  rating_change2: number | null
+  bonus_points: number
 }
 
 type DoublesMatch = {
@@ -79,9 +82,21 @@ export default function RecentMatchesTabs({
                   </div>
                   <div className="flex items-center gap-3">
                     <Link href={`/players/${match.player1?.id}`} className="flex-1 flex items-center gap-2 justify-end">
-                      <span className={`font-semibold text-sm truncate ${winnerId === match.player1?.id ? 'text-white' : 'text-gray-400'}`}>
-                        {match.player1?.name ?? '不明'}
-                      </span>
+                      <div className="text-right">
+                        <span className={`font-semibold text-sm truncate block ${winnerId === match.player1?.id ? 'text-white' : 'text-gray-400'}`}>
+                          {match.player1?.name ?? '不明'}
+                        </span>
+                        {match.rating_change1 != null && (
+                          <span className={`text-xs font-medium ${
+                            match.rating_change1 > 0 && match.bonus_points > 0
+                              ? 'neon-bonus'
+                              : match.rating_change1 >= 0 ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {match.rating_change1 >= 0 ? '+' : ''}{match.rating_change1}pt
+                            {match.rating_change1 > 0 && match.bonus_points > 0 && <span className="ml-0.5">★</span>}
+                          </span>
+                        )}
+                      </div>
                       <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
                         {match.player1?.avatar_url
                           ? <img src={match.player1.avatar_url} className="w-full h-full object-cover" />
@@ -100,9 +115,21 @@ export default function RecentMatchesTabs({
                           : <span className="text-2xl flex items-center justify-center h-full">👤</span>
                         }
                       </div>
-                      <span className={`font-semibold text-sm truncate ${winnerId === match.player2?.id ? 'text-white' : 'text-gray-400'}`}>
-                        {match.player2?.name ?? '不明'}
-                      </span>
+                      <div>
+                        <span className={`font-semibold text-sm truncate block ${winnerId === match.player2?.id ? 'text-white' : 'text-gray-400'}`}>
+                          {match.player2?.name ?? '不明'}
+                        </span>
+                        {match.rating_change2 != null && (
+                          <span className={`text-xs font-medium ${
+                            match.rating_change2 > 0 && match.bonus_points > 0
+                              ? 'neon-bonus'
+                              : match.rating_change2 >= 0 ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {match.rating_change2 >= 0 ? '+' : ''}{match.rating_change2}pt
+                            {match.rating_change2 > 0 && match.bonus_points > 0 && <span className="ml-0.5">★</span>}
+                          </span>
+                        )}
+                      </div>
                     </Link>
                   </div>
                 </div>

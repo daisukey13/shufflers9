@@ -58,27 +58,28 @@ export async function getRecentAllMatches(limit = 5) {
     .from('singles_matches')
     .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url)')
     .order('played_at', { ascending: false })
-    .limit(limit)
+    .limit(limit * 3)
 
  // 予選試合（スコア確定済みのみ）
   const { data: qualifying } = await supabase
     .from('tournament_qualifying_matches')
-    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), block:tournament_blocks(tournament_id, block_name, tournament:tournaments(name))')
+    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), block:tournament_blocks(tournament_id, block_name, tournament:tournaments(name, bonus_points))')
     .eq('mode', 'normal')
     .not('winner_id', 'is', null)
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .limit(limit * 3)
 
 
-    // 本戦試合（スコア確定済みのみ）
+    // 本戦試合（スコア確定済みのみ、walkoverを除く）
   const { data: finals } = await supabase
     .from('tournament_finals_matches')
     .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), tournament:tournaments(name)')
     .not('winner_id', 'is', null)
+    .neq('mode', 'walkover')
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .limit(limit * 3)
 
-  // 統合して日付順にソート
+  // 統合して日付順にソート・DEFAULTプレーヤーを除外
   const all = [
     ...(singles ?? []).map((m: any) => ({
       id: m.id,
@@ -90,6 +91,9 @@ export async function getRecentAllMatches(limit = 5) {
       winner_id: m.winner_id,
       played_at: m.played_at,
       label: null,
+      rating_change1: m.rating_change1 ?? null,
+      rating_change2: m.rating_change2 ?? null,
+      bonus_points: 0,
     })),
     ...(qualifying ?? []).map((m: any) => ({
       id: m.id,
@@ -101,6 +105,9 @@ export async function getRecentAllMatches(limit = 5) {
       winner_id: m.winner_id,
       played_at: m.created_at,
       label: m.block?.tournament?.name ? `${m.block.tournament.name} 予選` : '予選',
+      rating_change1: m.player1_rating_change ?? null,
+      rating_change2: m.player2_rating_change ?? null,
+      bonus_points: m.block?.tournament?.bonus_points ?? 0,
     })),
     ...(finals ?? []).map((m: any) => ({
       id: m.id,
@@ -112,9 +119,14 @@ export async function getRecentAllMatches(limit = 5) {
       winner_id: m.winner_id,
       played_at: m.created_at,
       label: m.tournament?.name ? `${m.tournament.name} 本戦` : '本戦',
+      rating_change1: null,
+      rating_change2: null,
+      bonus_points: 0,
     })),
-  ].sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
-   .slice(0, limit)
+  ]
+    .filter(m => m.player1?.name !== 'DEFAULT' && m.player2?.name !== 'DEFAULT')
+    .sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
+    .slice(0, limit)
 
   return all
 }
