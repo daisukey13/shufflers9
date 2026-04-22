@@ -875,6 +875,7 @@ export default function QualifyingClient({
             }
 
             const allMatchesCreated = blockMatches.length >= 3
+            const blockWinnerConfirmed = pendingPairs.length === 0 && blockMatches.some(m => m.winner_id)
 
             return (
               <div key={block.id} className="bg-purple-900/20 border border-purple-800/30 rounded-2xl p-5 space-y-5">
@@ -930,7 +931,10 @@ export default function QualifyingClient({
                             <td className="py-2 pr-4">
                               <div className="flex items-center gap-2">
                                 {s.player.avatar_url && (
-                                  <img src={s.player.avatar_url} className="w-6 h-6 rounded-full object-cover" />
+                                  <img
+                                    src={s.player.avatar_url}
+                                    className={`w-6 h-6 rounded-full object-cover ${idx === 0 && !s.is_default && blockWinnerConfirmed ? 'avatar-glow' : ''}`}
+                                  />
                                 )}
                                 <span>{s.player.name}</span>
                                 {s.is_default && <span className="text-xs text-gray-500">(DEFAULT)</span>}
