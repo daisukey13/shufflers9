@@ -55,7 +55,9 @@ export default function FinalsClient({
   defaultPlayerId: string
 }) {
   const [showMatchForm, setShowMatchForm] = useState(false)
-  const [round, setRound] = useState(1)
+  const [round, setRound] = useState(() =>
+    finalsMatches.length > 0 ? Math.max(...finalsMatches.map(m => m.round)) : 4
+  )
   const [player1Id, setPlayer1Id] = useState('')
   const [player2Id, setPlayer2Id] = useState('')
   const [scheduledTime, setScheduledTime] = useState('')
@@ -693,20 +695,17 @@ export default function FinalsClient({
       {/* 試合登録（ロック中は非表示） */}
       {!isFinalsLocked && (
         <div>
-          {/* 未プレーの自動生成マッチ（player2あり・winner未登録）がある場合は手動登録を非表示 */}
-          {finalsMatches.some(m => m.player2_id !== null && m.winner_id === null) ? (
-            <div className="p-4 bg-yellow-900/20 border border-yellow-700/30 rounded-xl text-sm text-yellow-300">
-              ⚠️ スコア未登録の試合があります。各試合の <strong>編集</strong> ボタンからスコアを入力してください。
-              <br /><span className="text-xs text-gray-400 mt-1 block">全て登録済みになると次のラウンドを自動生成できます。</span>
+          {finalsMatches.some(m => m.player2_id !== null && m.winner_id === null) && (
+            <div className="mb-3 p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-xl text-xs text-yellow-300">
+              ⚠️ スコア未登録の試合があります。各試合の <strong>編集</strong> ボタンからスコアを入力してください。全て登録済みになると次のラウンドを自動生成できます。
             </div>
-          ) : (
-            <button
-              onClick={() => setShowMatchForm(!showMatchForm)}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition"
-            >
-              {showMatchForm ? 'キャンセル' : '+ 決勝トーナメント試合を登録'}
-            </button>
           )}
+          <button
+            onClick={() => setShowMatchForm(!showMatchForm)}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition"
+          >
+            {showMatchForm ? 'キャンセル' : '+ 決勝トーナメント試合を登録'}
+          </button>
 
           {showMatchForm && (
             <div className="mt-4 p-5 bg-purple-900/20 border border-purple-800/30 rounded-2xl space-y-4">
