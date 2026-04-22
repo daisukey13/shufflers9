@@ -149,7 +149,7 @@ export default function NewTournamentPage() {
 
         {/* 決勝開始予定時間 */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">決勝開始予定時間</label>
+          <label className="block text-sm font-medium text-gray-300 mb-1">本線開始予定時間</label>
           <select
             value={finalsStartTime}
             onChange={e => setFinalsStartTime(e.target.value)}
