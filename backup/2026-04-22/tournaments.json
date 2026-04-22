@@ -1,0 +1,18 @@
+[
+  {
+    "id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "name": "第1回テスト大会",
+    "type": "singles",
+    "status": "finished",
+    "description": "RP 20％プラス\n2026年4月22日（水曜日）\n場所：とわにーホール\n予選開始：09:00（※Aブロック第1試合）\n決勝開始予定：13:00\nボーナスポイント：20pt\n【注意事項】組み合わせ発表後に確認し、時間厳守で��願いします。",
+    "started_at": "2026-04-22T00:00:00+00:00",
+    "finished_at": null,
+    "created_by": null,
+    "created_at": "2026-04-22T07:17:56.128259+00:00",
+    "format": "singles",
+    "qualifying_start_time": "09:00",
+    "finals_start_time": "13:00",
+    "bonus_points": 20,
+    "notes": "組み合わせ発表後に確認し、時間厳守でお願いします。"
+  }
+]

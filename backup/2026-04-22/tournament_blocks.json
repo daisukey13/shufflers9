@@ -1,0 +1,42 @@
+[
+  {
+    "id": "b7613c80-b9c0-4ded-83be-d7f069909f96",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "block_name": "A",
+    "created_at": "2026-04-22T07:19:37.326166+00:00",
+    "match_time_1": "09:10",
+    "match_time_2": "09:40",
+    "match_time_3": "10:10",
+    "scores_finalized": true
+  },
+  {
+    "id": "0aa2dc6e-ff5f-4f6b-9160-26aacf9a957b",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "block_name": "B",
+    "created_at": "2026-04-22T07:19:37.796536+00:00",
+    "match_time_1": "10:40",
+    "match_time_2": "11:10",
+    "match_time_3": "11:40",
+    "scores_finalized": true
+  },
+  {
+    "id": "064175a3-8630-42ac-8f03-6b9cf4caeae8",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "block_name": "C",
+    "created_at": "2026-04-22T07:19:38.191015+00:00",
+    "match_time_1": "13:00",
+    "match_time_2": "13:30",
+    "match_time_3": "14:00",
+    "scores_finalized": true
+  },
+  {
+    "id": "761367db-2be5-4d03-b4e6-30da62114e94",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "block_name": "D",
+    "created_at": "2026-04-22T07:19:38.602997+00:00",
+    "match_time_1": "14:30",
+    "match_time_2": "15:00",
+    "match_time_3": "15:30",
+    "scores_finalized": true
+  }
+]

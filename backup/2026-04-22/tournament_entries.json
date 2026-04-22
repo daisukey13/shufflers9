@@ -1,0 +1,122 @@
+[
+  {
+    "id": "97844e0c-d3a0-4bd4-bb63-f583959ca3b2",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "7e0a8c68-d856-464c-9184-e18aac0b2296",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:18:14.528412+00:00"
+  },
+  {
+    "id": "9bed745c-9661-4e57-8507-499b6cdfbeeb",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "be5eab1a-e5e7-4bb3-860d-012cd3c49bcd",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:18:22.89961+00:00"
+  },
+  {
+    "id": "d8dc4b87-42f1-4b8c-bb2f-8e840b59a30d",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "5ccd9678-5fc5-4ea0-b6d0-48fbed6a478a",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:18:29.341626+00:00"
+  },
+  {
+    "id": "401feaf9-8a48-4270-9472-cb87b65c7dce",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "686bcc9e-2bb4-451a-8a7f-68d5fcb419e2",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:18:35.772989+00:00"
+  },
+  {
+    "id": "19213fa3-4e4c-4122-aadc-4dd5a3cd08c3",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "68a6a0fa-8cf3-4494-a9a7-17812ebc93ca",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:18:41.963505+00:00"
+  },
+  {
+    "id": "6c4e88ff-608f-49d9-bdc2-e710faa0f805",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "1d82558d-2e7e-46ab-9322-bb2a5946e2fa",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:18:47.841812+00:00"
+  },
+  {
+    "id": "24ad60b6-a524-4ccb-9c4d-4496a5e438be",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "04a95689-7492-493e-982d-0510f3ee3c3a",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:18:52.958879+00:00"
+  },
+  {
+    "id": "7fa43b9d-450f-47aa-a346-8f4b2b3a1d81",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "9bc65f42-a843-407d-a77b-3942fe77ee40",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:19:00.429383+00:00"
+  },
+  {
+    "id": "8b8b074a-cce0-407b-a641-b4f553a15035",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "1fdc40c9-6af0-4da8-84e4-5d3ca6421e28",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:19:05.431422+00:00"
+  },
+  {
+    "id": "56e2cc7c-e02a-4d78-a937-d144ca808544",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "4baefd09-f65f-4ef0-9d5d-972e83a96453",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:19:16.147128+00:00"
+  },
+  {
+    "id": "b574efba-0ffb-4907-94fd-a0fc83885025",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "3ec6bb53-c2bd-421d-a898-3dc40f789c26",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:19:20.230744+00:00"
+  },
+  {
+    "id": "d6e8a992-49ff-403f-893d-acd65d9405f5",
+    "tournament_id": "c672a266-fe32-4b17-ab3c-243151ca44b3",
+    "player_id": "867859ff-c43a-40de-b3fe-a062dd74e8a6",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-04-22T07:19:23.931081+00:00"
+  }
+]
