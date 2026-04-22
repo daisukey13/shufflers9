@@ -16,7 +16,7 @@ type FinalsSet = { id: string; match_id: string; set_number: number; score1: num
 type FinalsMatch = {
   id: string; round: number; match_number: number
   player1_id: string | null; player2_id: string | null; winner_id: string | null
-  disadvantage_player_id: string | null; mode: string
+  disadvantage_player_id: string | null; mode: string; scheduled_time: string | null
   player1: Player | null; player2: Player | null; winner: Player | null
   tournament_finals_sets: FinalsSet[]
 }
@@ -546,6 +546,10 @@ const champion = isFinished
                                   }}
                                 >
                                   <div className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl">
+                                    {/* 開始時間 */}
+                                    {match.scheduled_time && (
+                                      <p className="text-[11px] text-blue-300 mb-2 text-center">⏰ {match.scheduled_time}</p>
+                                    )}
                                     {/* Player1 */}
                                     <div className={`flex items-center gap-3 p-2 rounded-lg mb-2 ${isFinished && match.winner_id === match.player1_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
                                       {match.player1?.avatar_url && (
