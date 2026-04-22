@@ -88,7 +88,11 @@ export default function TournamentDetailClient({
   const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
   const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
-const champion = isFinished
+  // 全本戦試合（Byeを除く）が完了している場合のみ優勝者を表示
+  const allFinalsComplete = finalsMatches.length > 0 &&
+    finalsMatches.filter(m => m.player2_id !== null).every(m => m.winner_id !== null)
+
+  const champion = isFinished && allFinalsComplete
     ? finalsMatches
         .filter(m => m.round === maxRound && m.winner)
         .sort((a, b) => b.match_number - a.match_number)[0]?.winner
@@ -98,7 +102,7 @@ const champion = isFinished
     .filter(m => m.round === maxRound)
     .sort((a, b) => b.match_number - a.match_number)[0]
 
-  const runnerUp = isFinished && finalMatch
+  const runnerUp = isFinished && allFinalsComplete && finalMatch
     ? (finalMatch.winner_id === finalMatch.player1_id ? finalMatch.player2 : finalMatch.player1)
     : null
 
