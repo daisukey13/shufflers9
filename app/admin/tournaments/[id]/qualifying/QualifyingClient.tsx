@@ -1221,7 +1221,7 @@ export default function QualifyingClient({
                 <div className="flex gap-3">
                   <button onClick={handleEditMatch} disabled={editLoading}
                     className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition">
-                    {editLoading ? '計算中...' : 'RP変化を確認 →'}
+                    {editLoading ? '計算中...' : editMatch.winner_id ? 'RP変化を確認 →' : '登録する'}
                   </button>
                   <button onClick={() => { setEditMatch(null); setRpPreview(null) }}
                     className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition">
