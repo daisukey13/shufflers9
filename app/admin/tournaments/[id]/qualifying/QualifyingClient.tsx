@@ -174,19 +174,72 @@ export default function QualifyingClient({
     router.refresh()
   }
 
+  // ブロック内のRP登録済み試合をロールバックするヘルパー
+  const rollbackBlockMatches = async (blockId: string) => {
+    const { data: blockMatches } = await supabase
+      .from('tournament_qualifying_matches')
+      .select('*')
+      .eq('block_id', blockId)
+      .eq('affects_ranking', true)
+      .not('winner_id', 'is', null)
+      .not('player1_rating_change', 'is', null)
+
+    if (!blockMatches || blockMatches.length === 0) return
+
+    const isDoubles = tournament.format === 'doubles'
+    // プレーヤーごとにRP差分を集計
+    const playerDeltas = new Map<string, { ratingDelta: number; winsDelta: number; lossesDelta: number }>()
+    for (const m of blockMatches) {
+      const p1Won = m.winner_id === m.player1_id
+      const get = (id: string) => playerDeltas.get(id) ?? { ratingDelta: 0, winsDelta: 0, lossesDelta: 0 }
+      const d1 = get(m.player1_id)
+      playerDeltas.set(m.player1_id, {
+        ratingDelta: d1.ratingDelta - m.player1_rating_change,
+        winsDelta: d1.winsDelta - (p1Won ? 1 : 0),
+        lossesDelta: d1.lossesDelta - (p1Won ? 0 : 1),
+      })
+      const d2 = get(m.player2_id)
+      playerDeltas.set(m.player2_id, {
+        ratingDelta: d2.ratingDelta - m.player2_rating_change,
+        winsDelta: d2.winsDelta - (p1Won ? 0 : 1),
+        lossesDelta: d2.lossesDelta - (p1Won ? 1 : 0),
+      })
+    }
+
+    // プレーヤー一括更新
+    for (const [playerId, delta] of playerDeltas.entries()) {
+      const { data: p } = await supabase.from('players')
+        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
+        .eq('id', playerId).single()
+      if (!p) continue
+      if (isDoubles) {
+        await supabase.from('players').update({
+          doubles_rating: (p.doubles_rating ?? 1000) + delta.ratingDelta,
+          doubles_wins: (p.doubles_wins ?? 0) + delta.winsDelta,
+          doubles_losses: (p.doubles_losses ?? 0) + delta.lossesDelta,
+        }).eq('id', playerId)
+      } else {
+        await supabase.from('players').update({
+          rating: p.rating + delta.ratingDelta,
+          wins: (p.wins ?? 0) + delta.winsDelta,
+          losses: (p.losses ?? 0) + delta.lossesDelta,
+        }).eq('id', playerId)
+      }
+    }
+  }
+
   // ブロック全試合削除
   const handleDeleteAllMatches = async (blockId: string, blockName: string) => {
-    if (!confirm(`ブロック${blockName}の試合を全て削除しますか？\n※RPや勝敗は元に戻りません`)) return
-    await supabase
-      .from('tournament_qualifying_matches')
-      .delete()
-      .eq('block_id', blockId)
+    if (!confirm(`ブロック${blockName}の試合を全て削除しますか？\nRP・勝敗も自動的に元に戻します。`)) return
+    await rollbackBlockMatches(blockId)
+    await supabase.from('tournament_qualifying_matches').delete().eq('block_id', blockId)
     router.refresh()
   }
 
   // ブロック削除
   const handleDeleteBlock = async (blockId: string, blockName: string) => {
-    if (!confirm(`ブロック${blockName}を削除しますか？\n試合データも全て削除されます。RPや勝敗は元に戻りません`)) return
+    if (!confirm(`ブロック${blockName}を削除しますか？\n試合データも全て削除され、RP・勝敗も元に戻します。`)) return
+    await rollbackBlockMatches(blockId)
     await supabase.from('tournament_qualifying_matches').delete().eq('block_id', blockId)
     await supabase.from('tournament_block_players').delete().eq('block_id', blockId)
     await supabase.from('tournament_blocks').delete().eq('id', blockId)
