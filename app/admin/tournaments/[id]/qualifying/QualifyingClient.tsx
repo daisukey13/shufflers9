@@ -242,6 +242,56 @@ export default function QualifyingClient({
     router.refresh()
   }
 
+  // 個別試合削除（RP自動ロールバック）
+  const handleDeleteMatch = async (match: Match) => {
+    const hasRp = match.affects_ranking && match.winner_id != null && match.player1_rating_change != null
+    const msg = hasRp
+      ? `この試合を削除します。\nRPと勝敗を自動的に元に戻します。\n\n${match.player1.name}: ${match.player1_rating_change! >= 0 ? '+' : ''}${match.player1_rating_change}pt → 取消\n${match.player2.name}: ${match.player2_rating_change! >= 0 ? '+' : ''}${match.player2_rating_change}pt → 取消\n\nよろしいですか？`
+      : `この試合を削除しますか？`
+    if (!confirm(msg)) return
+
+    const isDoubles = tournament.format === 'doubles'
+
+    if (hasRp) {
+      const { data: p1 } = await supabase.from('players')
+        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
+        .eq('id', match.player1_id).single()
+      const { data: p2 } = await supabase.from('players')
+        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
+        .eq('id', match.player2_id).single()
+
+      if (p1 && p2) {
+        const p1Won = match.winner_id === match.player1_id
+        if (isDoubles) {
+          await supabase.from('players').update({
+            doubles_rating: (p1.doubles_rating ?? 1000) - match.player1_rating_change!,
+            doubles_wins: (p1.doubles_wins ?? 0) - (p1Won ? 1 : 0),
+            doubles_losses: (p1.doubles_losses ?? 0) - (p1Won ? 0 : 1),
+          }).eq('id', match.player1_id)
+          await supabase.from('players').update({
+            doubles_rating: (p2.doubles_rating ?? 1000) - match.player2_rating_change!,
+            doubles_wins: (p2.doubles_wins ?? 0) - (p1Won ? 0 : 1),
+            doubles_losses: (p2.doubles_losses ?? 0) - (p1Won ? 1 : 0),
+          }).eq('id', match.player2_id)
+        } else {
+          await supabase.from('players').update({
+            rating: p1.rating - match.player1_rating_change!,
+            wins: (p1.wins ?? 0) - (p1Won ? 1 : 0),
+            losses: (p1.losses ?? 0) - (p1Won ? 0 : 1),
+          }).eq('id', match.player1_id)
+          await supabase.from('players').update({
+            rating: p2.rating - match.player2_rating_change!,
+            wins: (p2.wins ?? 0) - (p1Won ? 0 : 1),
+            losses: (p2.losses ?? 0) - (p1Won ? 1 : 0),
+          }).eq('id', match.player2_id)
+        }
+      }
+    }
+
+    await supabase.from('tournament_qualifying_matches').delete().eq('id', match.id)
+    router.refresh()
+  }
+
   // Step1: スコア変更内容とRP差分をプレビュー表示
   const handleEditMatch = async () => {
     if (!editMatch) return
@@ -937,16 +987,25 @@ export default function QualifyingClient({
                               {m.mode === 'walkover' ? '不戦勝' : '途中棄権'}
                             </span>
                           )}
-                          <button
-                            onClick={() => {
-                              setEditMatch(m)
-                              setEditScore1(m.score1?.toString() ?? '')
-                              setEditScore2(m.score2?.toString() ?? '')
-                            }}
-                            className="ml-auto text-xs px-2 py-0.5 bg-purple-700/50 hover:bg-purple-600/50 rounded text-purple-300 transition"
-                          >
-                            {m.winner_id ? '編集' : 'スコア入力'}
-                          </button>
+                          <div className="ml-auto flex gap-1">
+                            <button
+                              onClick={() => {
+                                setEditMatch(m)
+                                setEditScore1(m.score1?.toString() ?? '')
+                                setEditScore2(m.score2?.toString() ?? '')
+                                setRpPreview(null)
+                              }}
+                              className="text-xs px-2 py-0.5 bg-purple-700/50 hover:bg-purple-600/50 rounded text-purple-300 transition"
+                            >
+                              {m.winner_id ? '編集' : 'スコア入力'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMatch(m)}
+                              className="text-xs px-2 py-0.5 bg-red-900/50 hover:bg-red-700/60 rounded text-red-400 transition"
+                            >
+                              削除
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
