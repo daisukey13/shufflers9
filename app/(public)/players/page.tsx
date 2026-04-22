@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getPlayers } from '@/lib/queries/players'
 import { getPlayerRankings } from '@/lib/queries/rankings'
 import TournamentBadges from '@/components/ui/TournamentBadges'

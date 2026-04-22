@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import TournamentBadges from '@/components/ui/TournamentBadges'
 import { getPlayerRankings, calcRanks, singlesTie, doublesTie } from '@/lib/queries/rankings'
 import { getLastRatingChangePerPlayer } from '@/lib/queries/matches'

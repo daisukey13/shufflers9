@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { getPlayerRankings } from '@/lib/queries/rankings'
 import { getRecentAllMatches, getTotalMatchesCount } from '@/lib/queries/matches'
