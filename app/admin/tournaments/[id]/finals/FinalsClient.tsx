@@ -266,8 +266,8 @@ export default function FinalsClient({
     const completedMatches = finalsMatches.filter(m => m.winner_id !== null)
     if (completedMatches.length > 0 && finalsMatches.length > 0) {
       const maxCompletedRound = Math.max(...completedMatches.map(m => m.round))
-      const nextRound = maxCompletedRound + 1
-      const hasNextRound = finalsMatches.some(m => m.round === nextRound)
+      // 次ラウンドの存在チェック：byeではない試合（player2あり）が現ラウンドより後にあるか
+      const hasNextRound = finalsMatches.some(m => m.round > maxCompletedRound && m.player2_id !== null)
 
       if (!hasNextRound) {
         // 次ラウンドがまだない場合、完了ラウンドの勝者から次ラウンドを生成
@@ -423,17 +423,11 @@ export default function FinalsClient({
 
     if (sorted.length % 2 !== 0) {
       const byePlayer = sorted[sorted.length - 1]
-      // 次ラウンドの人数（通常試合の勝者 + bye）でラウンド番号を決定
-      const nextAdvancerCount = Math.ceil(sorted.length / 2)
-      const byeRound = nextAdvancerCount <= 2 ? 5
-        : nextAdvancerCount <= 4 ? 4
-        : nextAdvancerCount <= 8 ? 3
-        : nextAdvancerCount <= 16 ? 2
-        : 1
+      // byeは同じラウンド・連番で挿入（次ラウンド生成時に正しく検出するため）
       await supabase.from('tournament_finals_matches').insert({
         tournament_id: tournament.id,
-        round: byeRound,
-        match_number: 1,
+        round: roundNumber,
+        match_number: matchNumber++,
         player1_id: byePlayer.winner.player_id,
         player2_id: null,
         winner_id: null,

@@ -586,6 +586,11 @@ const champion = isFinished
                                       <p className="text-center text-xs text-yellow-400 my-2">不戦勝</p>
                                     )}
                                     {/* Player2 */}
+                                    {match.player2_id === null ? (
+                                      <div className="flex items-center gap-3 p-2 rounded-lg">
+                                        <span className="text-xs text-blue-400 italic">不戦通過</span>
+                                      </div>
+                                    ) : (
                                     <div className={`flex items-center gap-3 p-2 rounded-lg ${isFinished && match.winner_id === match.player2_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
                                       {match.player2?.avatar_url && (
                                         <img src={match.player2.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
@@ -608,6 +613,7 @@ const champion = isFinished
                                         <span className="text-yellow-400 text-sm">👑</span>
                                       )}
                                     </div>
+                                    )}
                                   </div>
                                 </div>
                               ))}
