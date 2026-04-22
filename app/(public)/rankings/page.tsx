@@ -103,19 +103,20 @@ export default async function RankingsPage({
   }
 
   const renderPodium = (players: (Player & { rank: number })[], ratingKey: string) => {
-    const top3 = players.filter(p => p.rank <= 3)
+    const top3 = players.slice(0, 3)
     if (top3.length === 0) return null
 
-    const ordered = [
-      top3.find(p => p.rank === 2),
-      top3.find(p => p.rank === 1),
-      top3.find(p => p.rank === 3),
-    ].filter(Boolean) as (Player & { rank: number })[]
+    // 表示順: 2位(左) → 1位(中央) → 3位(右)
+    const ordered = [top3[1], top3[0], top3[2]].filter(Boolean) as (Player & { rank: number })[]
+    // 表示位置(0=1位,1=2位,2=3位)→podiumConfig番号
+    const posConfigs = [podiumConfig[1], podiumConfig[2], podiumConfig[3]] as const
 
     return (
       <div className="grid gap-2 items-end" style={{ gridTemplateColumns: `repeat(${ordered.length}, 1fr)` }}>
-        {ordered.map((player) => {
-          const cfg = podiumConfig[player.rank as 1 | 2 | 3]
+        {ordered.map((player, idx) => {
+          // orderedの並び: [2位,1位,3位] → posConfigs index [1,0,2]
+          const posIdx = idx === 0 ? 1 : idx === 1 ? 0 : 2
+          const cfg = posConfigs[posIdx]
           const rating = ratingKey === 'doubles_rating' ? player.doubles_rating : player.rating
           const wins = ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins
           const losses = ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses
@@ -180,7 +181,7 @@ export default async function RankingsPage({
   }
 
   const renderScoreboard = (players: (Player & { rank: number })[], ratingKey: string) => {
-    const rest = players.filter(p => p.rank > 3)
+    const rest = players.slice(3)
     if (rest.length === 0) return null
 
     return (
@@ -320,7 +321,7 @@ export default async function RankingsPage({
                   <div className="text-center text-xs font-mono tracking-[0.4em] text-yellow-500/60 uppercase mb-4">── TOP 3 ──</div>
                   {renderPodium(singlesPlayers, 'rating')}
                 </div>
-                {singlesPlayers.some(p => p.rank > 3) && (
+                {singlesPlayers.length > 3 && (
                   <div>
                     <div className="text-center text-xs font-mono tracking-[0.4em] text-gray-600 uppercase mb-3">── SCOREBOARD ──</div>
                     {renderScoreboard(singlesPlayers, 'rating')}
@@ -342,7 +343,7 @@ export default async function RankingsPage({
                   <div className="text-center text-xs font-mono tracking-[0.4em] text-yellow-500/60 uppercase mb-4">── TOP 3 ──</div>
                   {renderPodium(doublesPlayers, 'doubles_rating')}
                 </div>
-                {doublesPlayers.some(p => p.rank > 3) && (
+                {doublesPlayers.length > 3 && (
                   <div>
                     <div className="text-center text-xs font-mono tracking-[0.4em] text-gray-600 uppercase mb-3">── SCOREBOARD ──</div>
                     {renderScoreboard(doublesPlayers, 'doubles_rating')}
