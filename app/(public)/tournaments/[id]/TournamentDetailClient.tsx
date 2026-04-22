@@ -92,7 +92,12 @@ export default function TournamentDetailClient({
   const allFinalsComplete = finalsMatches.length > 0 &&
     finalsMatches.filter(m => m.player2_id !== null).every(m => m.winner_id !== null)
 
-  const champion = isFinished && allFinalsComplete
+  // 最終ラウンドが1試合のみ（決勝）の場合だけ優勝者を表示
+  // 準決勝など複数試合がある場合は優勝者カードを出さない
+  const maxRoundNonByeMatches = finalsMatches.filter(m => m.round === maxRound && m.player2_id !== null)
+  const isActualFinal = maxRoundNonByeMatches.length === 1
+
+  const champion = isFinished && allFinalsComplete && isActualFinal
     ? finalsMatches
         .filter(m => m.round === maxRound && m.winner)
         .sort((a, b) => b.match_number - a.match_number)[0]?.winner
@@ -102,7 +107,7 @@ export default function TournamentDetailClient({
     .filter(m => m.round === maxRound)
     .sort((a, b) => b.match_number - a.match_number)[0]
 
-  const runnerUp = isFinished && allFinalsComplete && finalMatch
+  const runnerUp = isFinished && allFinalsComplete && isActualFinal && finalMatch
     ? (finalMatch.winner_id === finalMatch.player1_id ? finalMatch.player2 : finalMatch.player1)
     : null
 
