@@ -58,13 +58,6 @@ export default function FinalsClient({
   const [round, setRound] = useState(1)
   const [player1Id, setPlayer1Id] = useState('')
   const [player2Id, setPlayer2Id] = useState('')
-  const [disadvantageId, setDisadvantageId] = useState('')
-  const [sets, setSets] = useState([
-    { score1: '', score2: '' },
-    { score1: '', score2: '' },
-    { score1: '', score2: '' },
-  ])
-  const [mode, setMode] = useState<'normal' | 'walkover' | 'forfeit'>('normal')
   const [scheduledTime, setScheduledTime] = useState('')
   const [loading, setLoading] = useState(false)
   const [statusLoading, setStatusLoading] = useState(false)
@@ -94,20 +87,6 @@ export default function FinalsClient({
   const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
   const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
-  const calcWinner = (matchSets: { score1: string; score2: string }[]) => {
-    let p1wins = 0, p2wins = 0
-    matchSets.forEach(s => {
-      const s1 = parseInt(s.score1)
-      const s2 = parseInt(s.score2)
-      if (!isNaN(s1) && !isNaN(s2)) {
-        if (s1 > s2) p1wins++
-        else if (s2 > s1) p2wins++
-      }
-    })
-    if (p1wins > p2wins) return player1Id
-    if (p2wins > p1wins) return player2Id
-    return null
-  }
 
   const handleStatusChange = async () => {
     const next = NEXT_STATUS[tournament.status]
@@ -451,17 +430,10 @@ export default function FinalsClient({
       return
     }
 
-    const winnerId = mode === 'walkover'
-      ? player1Id
-      : player2Id === defaultPlayerId
-        ? player1Id
-        : player1Id === defaultPlayerId
-          ? player2Id
-          : calcWinner(sets)
-
+    // 組み合わせのみ登録（スコアは編集ボタンから入力）
     const matchNumber = finalsMatches.filter(m => m.round === round).length + 1
 
-    const { data: match, error: matchErr } = await supabase
+    const { error: matchErr } = await supabase
       .from('tournament_finals_matches')
       .insert({
         tournament_id: tournament.id,
@@ -469,140 +441,21 @@ export default function FinalsClient({
         match_number: matchNumber,
         player1_id: player1Id,
         player2_id: player2Id,
-        winner_id: winnerId,
-        disadvantage_player_id: disadvantageId || null,
-        mode,
+        winner_id: null,
+        disadvantage_player_id: null,
+        mode: 'normal',
         scheduled_time: scheduledTime || null,
       })
-      .select()
-      .single()
 
-    if (matchErr || !match) {
+    if (matchErr) {
       setError('登録に失敗しました: ' + matchErr?.message)
       setLoading(false)
       return
     }
 
-    const setsToInsert = mode !== 'walkover'
-      ? sets
-          .map((s, i) => ({
-            match_id: match.id,
-            set_number: i + 1,
-            score1: parseInt(s.score1),
-            score2: parseInt(s.score2),
-          }))
-          .filter(s => !isNaN(s.score1) && !isNaN(s.score2))
-      : []
-
-    if (setsToInsert.length > 0) {
-      await supabase.from('tournament_finals_sets').insert(setsToInsert)
-    }
-
-    const isDefaultMatch = player1Id === defaultPlayerId || player2Id === defaultPlayerId
-    if (mode === 'normal' && winnerId && setsToInsert.length > 0 && !isDefaultMatch) {
-      const totalScore1 = setsToInsert.reduce((sum, s) => sum + s.score1, 0)
-      const totalScore2 = setsToInsert.reduce((sum, s) => sum + s.score2, 0)
-      const isDoubles = tournament.format === 'doubles'
-
-      const { data: p1 } = await supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches').eq('id', player1Id).single()
-      const { data: p2 } = await supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches').eq('id', player2Id).single()
-
-      if (p1 && p2) {
-        const r1 = isDoubles ? (p1.doubles_rating ?? 1000) : p1.rating
-        const r2 = isDoubles ? (p2.doubles_rating ?? 1000) : p2.rating
-        const { data: elo } = await supabase.rpc('calc_elo', {
-          rating_a: r1, rating_b: r2,
-          score_a: totalScore1, score_b: totalScore2,
-          matches_a: p1.total_matches ?? 0, matches_b: p2.total_matches ?? 0,
-        })
-
-        if (elo?.[0]) {
-          const eloResult = elo[0]
-          const p1wins = winnerId === player1Id
-
-          // ボーナスレート適用（プラスRPのみ。マイナスRP・HCは対象外）
-          const bonusRate = (tournament.bonus_points ?? 0) / 100
-          let changeA = eloResult.change_a
-          let changeB = eloResult.change_b
-          if (bonusRate > 0) {
-            if (changeA > 0) changeA = Math.round(changeA * (1 + bonusRate))
-            if (changeB > 0) changeB = Math.round(changeB * (1 + bonusRate))
-          }
-
-          const p1WinsField = isDoubles ? p1.doubles_wins ?? 0 : p1.wins
-          const p1LossesField = isDoubles ? p1.doubles_losses ?? 0 : p1.losses
-          const p2WinsField = isDoubles ? p2.doubles_wins ?? 0 : p2.wins
-          const p2LossesField = isDoubles ? p2.doubles_losses ?? 0 : p2.losses
-
-          // RP変化をtournament_finals_matchesに保存（ロールバック用）
-          await supabase.from('tournament_finals_matches').update({
-            rating_before1: r1,
-            rating_before2: r2,
-            rating_change1: changeA,
-            rating_change2: changeB,
-            wins_before1: p1WinsField,
-            wins_before2: p2WinsField,
-            losses_before1: p1LossesField,
-            losses_before2: p2LossesField,
-          }).eq('id', match.id)
-
-          if (isDoubles) {
-            await supabase.from('players').update({
-              doubles_rating: r1 + changeA,
-              doubles_wins: p1wins ? p1WinsField + 1 : p1WinsField,
-              doubles_losses: !p1wins ? p1LossesField + 1 : p1LossesField,
-              total_score: (p1.total_score ?? 0) + totalScore1,
-              total_matches: (p1.total_matches ?? 0) + 1,
-            }).eq('id', player1Id)
-            await supabase.from('players').update({
-              doubles_rating: r2 + changeB,
-              doubles_wins: !p1wins ? p2WinsField + 1 : p2WinsField,
-              doubles_losses: p1wins ? p2LossesField + 1 : p2LossesField,
-              total_score: (p2.total_score ?? 0) + totalScore2,
-              total_matches: (p2.total_matches ?? 0) + 1,
-            }).eq('id', player2Id)
-          } else {
-            await supabase.from('players').update({
-              rating: r1 + changeA,
-              wins: p1wins ? p1WinsField + 1 : p1WinsField,
-              losses: !p1wins ? p1LossesField + 1 : p1LossesField,
-              total_score: (p1.total_score ?? 0) + totalScore1,
-              total_matches: (p1.total_matches ?? 0) + 1,
-            }).eq('id', player1Id)
-            await supabase.from('players').update({
-              rating: r2 + changeB,
-              wins: !p1wins ? p2WinsField + 1 : p2WinsField,
-              losses: p1wins ? p2LossesField + 1 : p2LossesField,
-              total_score: (p2.total_score ?? 0) + totalScore2,
-              total_matches: (p2.total_matches ?? 0) + 1,
-            }).eq('id', player2Id)
-          }
-
-          const { data: hc1 } = await supabase.rpc('calc_hc', {
-            p_wins: p1wins ? p1WinsField + 1 : p1WinsField,
-            p_losses: !p1wins ? p1LossesField + 1 : p1LossesField,
-            p_total_score: (p1.total_score ?? 0) + totalScore1,
-            p_total_matches: (p1.total_matches ?? 0) + 1,
-          })
-          if (hc1 !== null) await supabase.from('players').update({ hc: hc1 }).eq('id', player1Id)
-
-          const { data: hc2 } = await supabase.rpc('calc_hc', {
-            p_wins: !p1wins ? p2WinsField + 1 : p2WinsField,
-            p_losses: p1wins ? p2LossesField + 1 : p2LossesField,
-            p_total_score: (p2.total_score ?? 0) + totalScore2,
-            p_total_matches: (p2.total_matches ?? 0) + 1,
-          })
-          if (hc2 !== null) await supabase.from('players').update({ hc: hc2 }).eq('id', player2Id)
-        }
-      }
-    }
-
     setShowMatchForm(false)
     setPlayer1Id('')
     setPlayer2Id('')
-    setDisadvantageId('')
-    setSets([{ score1: '', score2: '' }, { score1: '', score2: '' }, { score1: '', score2: '' }])
-    setMode('normal')
     setScheduledTime('')
     setLoading(false)
     router.refresh()
@@ -857,6 +710,8 @@ export default function FinalsClient({
 
           {showMatchForm && (
             <div className="mt-4 p-5 bg-purple-900/20 border border-purple-800/30 rounded-2xl space-y-4">
+              <p className="text-xs text-gray-400">組み合わせと開始時間を登録します。スコアは後から編集ボタンで入力できます。</p>
+
               {error && (
                 <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
               )}
@@ -889,16 +744,6 @@ export default function FinalsClient({
                 </div>
               </div>
 
-              <div className="flex gap-2 bg-black/20 rounded-lg p-1">
-                {(['normal', 'walkover', 'forfeit'] as const).map(m => (
-                  <button key={m} type="button" onClick={() => setMode(m)}
-                    className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${mode === m ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
-                  >
-                    {m === 'normal' ? '通常' : m === 'walkover' ? '不戦勝' : '途中棄権'}
-                  </button>
-                ))}
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">プレーヤー1</label>
@@ -924,49 +769,10 @@ export default function FinalsClient({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">1勝ディスアドバンテージ</label>
-                <select value={disadvantageId} onChange={e => setDisadvantageId(e.target.value)}
-                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                >
-                  <option value="">なし</option>
-                  {[player1Id, player2Id].filter(Boolean).filter(pid => pid !== defaultPlayerId).map(pid => {
-                    const p = allPlayers.find(p => p.id === pid)
-                    return p ? <option key={p.id} value={p.id}>{p.name}</option> : null
-                  })}
-                </select>
-              </div>
-
-              {mode !== 'walkover' && player1Id !== defaultPlayerId && player2Id !== defaultPlayerId && (
-                <div className="space-y-2">
-                  <label className="block text-xs text-gray-400">セットスコア（15点先取・3セットマッチ）</label>
-                  {sets.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 w-16">第{i + 1}セット</span>
-                      <input type="number" min="0" max="15" value={s.score1}
-                        onChange={e => { const u = [...sets]; u[i] = { ...u[i], score1: e.target.value }; setSets(u) }}
-                        className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                      />
-                      <span className="text-gray-400">-</span>
-                      <input type="number" min="0" max="15" value={s.score2}
-                        onChange={e => { const u = [...sets]; u[i] = { ...u[i], score2: e.target.value }; setSets(u) }}
-                        className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {(player1Id === defaultPlayerId || player2Id === defaultPlayerId) && (
-                <div className="p-3 bg-orange-900/20 border border-orange-700/30 rounded-lg">
-                  <p className="text-xs text-orange-400">⚠️ DEFAULTとの対戦は自動的に不戦勝として処理されます</p>
-                </div>
-              )}
-
-              <button onClick={handleRegisterMatch} disabled={loading}
+              <button onClick={handleRegisterMatch} disabled={loading || !player1Id || !player2Id}
                 className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
               >
-                {loading ? '登録中...' : '試合結果を登録'}
+                {loading ? '登録中...' : '組み合わせを登録'}
               </button>
             </div>
           )}
