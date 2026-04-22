@@ -18,6 +18,10 @@ type FinalsMatch = {
   disadvantage_player_id: string | null; mode: string; scheduled_time: string | null
   player1: Player | null; player2: Player | null; winner: Player | null
   tournament_finals_sets: FinalsSet[]
+  rating_before1: number | null; rating_before2: number | null
+  rating_change1: number | null; rating_change2: number | null
+  wins_before1: number | null; wins_before2: number | null
+  losses_before1: number | null; losses_before2: number | null
 }
 type Tournament = { id: string; name: string; status: string; format: string; bonus_points: number }
 
@@ -169,15 +173,71 @@ export default function FinalsClient({
     router.refresh()
   }
 
+  const rollbackFinalsMatch = async (m: FinalsMatch) => {
+    if (
+      m.player1_id && m.player2_id && m.winner_id &&
+      m.rating_before1 != null && m.rating_before2 != null &&
+      m.rating_change1 != null && m.rating_change2 != null &&
+      m.wins_before1 != null && m.wins_before2 != null &&
+      m.losses_before1 != null && m.losses_before2 != null
+    ) {
+      const isDoubles = tournament.format === 'doubles'
+      const { data: p1 } = await supabase.from('players').select('total_score, total_matches').eq('id', m.player1_id).single()
+      const { data: p2 } = await supabase.from('players').select('total_score, total_matches').eq('id', m.player2_id).single()
+      const sets = m.tournament_finals_sets
+      const score1 = sets.reduce((s, x) => s + x.score1, 0)
+      const score2 = sets.reduce((s, x) => s + x.score2, 0)
+      if (isDoubles) {
+        await supabase.from('players').update({
+          doubles_rating: m.rating_before1,
+          doubles_wins: m.wins_before1,
+          doubles_losses: m.losses_before1,
+          total_score: Math.max(0, (p1?.total_score ?? 0) - score1),
+          total_matches: Math.max(0, (p1?.total_matches ?? 0) - 1),
+        }).eq('id', m.player1_id)
+        await supabase.from('players').update({
+          doubles_rating: m.rating_before2,
+          doubles_wins: m.wins_before2,
+          doubles_losses: m.losses_before2,
+          total_score: Math.max(0, (p2?.total_score ?? 0) - score2),
+          total_matches: Math.max(0, (p2?.total_matches ?? 0) - 1),
+        }).eq('id', m.player2_id)
+      } else {
+        await supabase.from('players').update({
+          rating: m.rating_before1,
+          wins: m.wins_before1,
+          losses: m.losses_before1,
+          total_score: Math.max(0, (p1?.total_score ?? 0) - score1),
+          total_matches: Math.max(0, (p1?.total_matches ?? 0) - 1),
+        }).eq('id', m.player1_id)
+        await supabase.from('players').update({
+          rating: m.rating_before2,
+          wins: m.wins_before2,
+          losses: m.losses_before2,
+          total_score: Math.max(0, (p2?.total_score ?? 0) - score2),
+          total_matches: Math.max(0, (p2?.total_matches ?? 0) - 1),
+        }).eq('id', m.player2_id)
+      }
+    }
+  }
+
   const handleDeleteMatch = async (matchId: string) => {
-    if (!confirm('この試合を削除しますか？\n※RPや勝敗は元に戻りません')) return
+    const match = finalsMatches.find(m => m.id === matchId)
+    if (!match) return
+    if (!confirm('この試合を削除しますか？\nRPと勝敗もロールバックされます。')) return
+    await rollbackFinalsMatch(match)
     await supabase.from('tournament_finals_sets').delete().eq('match_id', matchId)
     await supabase.from('tournament_finals_matches').delete().eq('id', matchId)
     router.refresh()
   }
 
   const handleDeleteAllFinalMatches = async () => {
-    if (!confirm('決勝トーナメントの試合を全て削除しますか？\n※RPや勝敗は元に戻りません')) return
+    if (!confirm('決勝トーナメントの試合を全て削除しますか？\nRPと勝敗もロールバックされます。')) return
+    // 完了済み試合のRP・勝敗をロールバック（登録順の逆順で処理）
+    const completed = finalsMatches.filter(m => m.winner_id && m.rating_change1 != null).reverse()
+    for (const m of completed) {
+      await rollbackFinalsMatch(m)
+    }
     for (const m of finalsMatches) {
       await supabase.from('tournament_finals_sets').delete().eq('match_id', m.id)
     }
@@ -233,7 +293,9 @@ export default function FinalsClient({
         const allAdvancers = [...lastRoundWinners, ...byePlayers]
 
         if (allAdvancers.length < 2) {
-          // 次ラウンド生成に十分な人数がいない場合は通常フロー
+          // 現在ラウンドが全て完了していない場合はエラー
+          alert(`${getRoundName(maxCompletedRound)}の全試合が完了してから自動生成してください`)
+          return
         } else {
           if (!confirm(
             `${getRoundName(maxCompletedRound)}の勝者（${allAdvancers.map(p => p.name).join('、')}）で次ラウンドを生成しますか？`
@@ -241,7 +303,12 @@ export default function FinalsClient({
 
           setAutoGenLoading(true)
 
-          const roundNumber = nextRound
+          const advancerCount = allAdvancers.length
+          const roundNumber = advancerCount <= 2 ? 5
+            : advancerCount <= 4 ? 4
+            : advancerCount <= 8 ? 3
+            : advancerCount <= 16 ? 2
+            : 1
           let matchNum = 1
           for (let i = 0; i < allAdvancers.length; i += 2) {
             const p1 = allAdvancers[i]
@@ -322,8 +389,8 @@ export default function FinalsClient({
       )
       const idx = parseInt(selected ?? '1') - 1
       roundName = options[idx] ?? '決勝'
-    } else if (totalMatches === 2) {
-      roundName = '準決勝'
+    } else {
+      roundName = '1回戦'
     }
 
     const roundNumber = roundName === '決勝' ? 5
@@ -356,9 +423,16 @@ export default function FinalsClient({
 
     if (sorted.length % 2 !== 0) {
       const byePlayer = sorted[sorted.length - 1]
+      // 次ラウンドの人数（通常試合の勝者 + bye）でラウンド番号を決定
+      const nextAdvancerCount = Math.ceil(sorted.length / 2)
+      const byeRound = nextAdvancerCount <= 2 ? 5
+        : nextAdvancerCount <= 4 ? 4
+        : nextAdvancerCount <= 8 ? 3
+        : nextAdvancerCount <= 16 ? 2
+        : 1
       await supabase.from('tournament_finals_matches').insert({
         tournament_id: tournament.id,
-        round: roundNumber + 1,
+        round: byeRound,
         match_number: 1,
         player1_id: byePlayer.winner.player_id,
         player2_id: null,
@@ -463,6 +537,18 @@ export default function FinalsClient({
           const p1LossesField = isDoubles ? p1.doubles_losses ?? 0 : p1.losses
           const p2WinsField = isDoubles ? p2.doubles_wins ?? 0 : p2.wins
           const p2LossesField = isDoubles ? p2.doubles_losses ?? 0 : p2.losses
+
+          // RP変化をtournament_finals_matchesに保存（ロールバック用）
+          await supabase.from('tournament_finals_matches').update({
+            rating_before1: r1,
+            rating_before2: r2,
+            rating_change1: changeA,
+            rating_change2: changeB,
+            wins_before1: p1WinsField,
+            wins_before2: p2WinsField,
+            losses_before1: p1LossesField,
+            losses_before2: p2LossesField,
+          }).eq('id', match.id)
 
           if (isDoubles) {
             await supabase.from('players').update({
