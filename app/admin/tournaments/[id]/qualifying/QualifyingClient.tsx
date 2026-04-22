@@ -14,6 +14,10 @@ type Match = {
   mode: string; affects_ranking: boolean; scheduled_time: string | null
   player1: { id: string; name: string; avatar_url: string | null }
   player2: { id: string; name: string; avatar_url: string | null }
+  player1_rating_change: number | null; player2_rating_change: number | null
+  player1_rating_before: number | null; player2_rating_before: number | null
+  player1_wins_before: number | null; player2_wins_before: number | null
+  player1_losses_before: number | null; player2_losses_before: number | null
 }
 type Tournament = { id: string; name: string; status: string; format: string; bonus_points: number }
 
@@ -63,6 +67,13 @@ export default function QualifyingClient({
   const [editScore1, setEditScore1] = useState('')
   const [editScore2, setEditScore2] = useState('')
   const [editLoading, setEditLoading] = useState(false)
+  const [rpPreview, setRpPreview] = useState<{
+    s1: number; s2: number; newWinnerId: string | null
+    newChangeA: number; newChangeB: number
+    p1Delta: number; p2Delta: number
+    p1WinsDelta: number; p1LossesDelta: number
+    p2WinsDelta: number; p2LossesDelta: number
+  } | null>(null)
 
   const [matchTimes, setMatchTimes] = useState<Record<string, string[]>>(() =>
     Object.fromEntries(blocks.map(b => [b.id, [b.match_time_1 ?? '', b.match_time_2 ?? '', b.match_time_3 ?? '']]))
@@ -231,26 +242,126 @@ export default function QualifyingClient({
     router.refresh()
   }
 
+  // Step1: スコア変更内容とRP差分をプレビュー表示
   const handleEditMatch = async () => {
     if (!editMatch) return
-    setEditLoading(true)
-
     const s1 = parseInt(editScore1)
     const s2 = parseInt(editScore2)
+    if (isNaN(s1) || isNaN(s2)) return
 
-    if (isNaN(s1) || isNaN(s2)) {
+    const newWinnerId = s1 > s2 ? editMatch.player1_id : s2 > s1 ? editMatch.player2_id : null
+
+    // RP記録がない試合（未登録 or affects_ranking=false）はそのまま保存
+    if (!editMatch.affects_ranking || editMatch.player1_rating_change == null) {
+      setEditLoading(true)
+      await supabase.from('tournament_qualifying_matches')
+        .update({ score1: s1, score2: s2, winner_id: newWinnerId })
+        .eq('id', editMatch.id)
+      setEditMatch(null)
+      setRpPreview(null)
       setEditLoading(false)
+      router.refresh()
       return
     }
 
-    const winnerId = s1 > s2 ? editMatch.player1_id : s2 > s1 ? editMatch.player2_id : null
+    // RP再計算：新スコアでELOを算出
+    setEditLoading(true)
+    const isDoubles = tournament.format === 'doubles'
+    const { data: p1 } = await supabase.from('players')
+      .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_matches')
+      .eq('id', editMatch.player1_id).single()
+    const { data: p2 } = await supabase.from('players')
+      .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_matches')
+      .eq('id', editMatch.player2_id).single()
 
-    await supabase
-      .from('tournament_qualifying_matches')
-      .update({ score1: s1, score2: s2, winner_id: winnerId })
-      .eq('id', editMatch.id)
+    if (!p1 || !p2) { setEditLoading(false); return }
+
+    const r1 = editMatch.player1_rating_before ?? (isDoubles ? (p1.doubles_rating ?? 1000) : p1.rating)
+    const r2 = editMatch.player2_rating_before ?? (isDoubles ? (p2.doubles_rating ?? 1000) : p2.rating)
+
+    const { data: elo } = await supabase.rpc('calc_elo', {
+      rating_a: r1, rating_b: r2,
+      score_a: s1, score_b: s2,
+      matches_a: p1.total_matches ?? 0,
+      matches_b: p2.total_matches ?? 0,
+    })
+
+    setEditLoading(false)
+    if (!elo?.[0]) return
+
+    const bonusRate = (tournament.bonus_points ?? 0) / 100
+    let newChangeA = elo[0].change_a
+    let newChangeB = elo[0].change_b
+    if (bonusRate > 0) {
+      if (newChangeA > 0) newChangeA = Math.round(newChangeA * (1 + bonusRate))
+      if (newChangeB > 0) newChangeB = Math.round(newChangeB * (1 + bonusRate))
+    }
+
+    const oldChangeA = editMatch.player1_rating_change ?? 0
+    const oldChangeB = editMatch.player2_rating_change ?? 0
+    const p1Delta = newChangeA - oldChangeA
+    const p2Delta = newChangeB - oldChangeB
+
+    // 勝敗変化の計算
+    const oldWinnerId = editMatch.winner_id
+    const p1WinsDelta = (newWinnerId === editMatch.player1_id ? 1 : 0) - (oldWinnerId === editMatch.player1_id ? 1 : 0)
+    const p1LossesDelta = (newWinnerId === editMatch.player2_id ? 1 : 0) - (oldWinnerId === editMatch.player2_id ? 1 : 0)
+    const p2WinsDelta = (newWinnerId === editMatch.player2_id ? 1 : 0) - (oldWinnerId === editMatch.player2_id ? 1 : 0)
+    const p2LossesDelta = (newWinnerId === editMatch.player1_id ? 1 : 0) - (oldWinnerId === editMatch.player1_id ? 1 : 0)
+
+    setRpPreview({ s1, s2, newWinnerId, newChangeA, newChangeB, p1Delta, p2Delta, p1WinsDelta, p1LossesDelta, p2WinsDelta, p2LossesDelta })
+  }
+
+  // Step2: RP修正を適用して保存
+  const handleConfirmEdit = async () => {
+    if (!editMatch || !rpPreview) return
+    setEditLoading(true)
+    const isDoubles = tournament.format === 'doubles'
+
+    const { data: p1 } = await supabase.from('players')
+      .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
+      .eq('id', editMatch.player1_id).single()
+    const { data: p2 } = await supabase.from('players')
+      .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
+      .eq('id', editMatch.player2_id).single()
+
+    if (p1 && p2) {
+      // 試合レコード更新
+      await supabase.from('tournament_qualifying_matches').update({
+        score1: rpPreview.s1, score2: rpPreview.s2,
+        winner_id: rpPreview.newWinnerId,
+        player1_rating_change: rpPreview.newChangeA,
+        player2_rating_change: rpPreview.newChangeB,
+      }).eq('id', editMatch.id)
+
+      // プレーヤーRP・勝敗を差分で修正
+      if (isDoubles) {
+        await supabase.from('players').update({
+          doubles_rating: (p1.doubles_rating ?? 1000) + rpPreview.p1Delta,
+          doubles_wins: (p1.doubles_wins ?? 0) + rpPreview.p1WinsDelta,
+          doubles_losses: (p1.doubles_losses ?? 0) + rpPreview.p1LossesDelta,
+        }).eq('id', editMatch.player1_id)
+        await supabase.from('players').update({
+          doubles_rating: (p2.doubles_rating ?? 1000) + rpPreview.p2Delta,
+          doubles_wins: (p2.doubles_wins ?? 0) + rpPreview.p2WinsDelta,
+          doubles_losses: (p2.doubles_losses ?? 0) + rpPreview.p2LossesDelta,
+        }).eq('id', editMatch.player2_id)
+      } else {
+        await supabase.from('players').update({
+          rating: p1.rating + rpPreview.p1Delta,
+          wins: (p1.wins ?? 0) + rpPreview.p1WinsDelta,
+          losses: (p1.losses ?? 0) + rpPreview.p1LossesDelta,
+        }).eq('id', editMatch.player1_id)
+        await supabase.from('players').update({
+          rating: p2.rating + rpPreview.p2Delta,
+          wins: (p2.wins ?? 0) + rpPreview.p2WinsDelta,
+          losses: (p2.losses ?? 0) + rpPreview.p2LossesDelta,
+        }).eq('id', editMatch.player2_id)
+      }
+    }
 
     setEditMatch(null)
+    setRpPreview(null)
     setEditLoading(false)
     router.refresh()
   }
@@ -975,34 +1086,83 @@ export default function QualifyingClient({
               <span className="font-medium">{editMatch.player2.name}</span>
             </div>
 
-            <div className="flex gap-4 items-center">
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">スコア1</label>
-                <input type="number" min="0" max="15" value={editScore1}
-                  onChange={e => setEditScore1(e.target.value)}
-                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-              <span className="text-gray-400 mt-4">-</span>
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">スコア2</label>
-                <input type="number" min="0" max="15" value={editScore2}
-                  onChange={e => setEditScore2(e.target.value)}
-                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-            </div>
+            {!rpPreview ? (
+              <>
+                <div className="flex gap-4 items-center">
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-400 mb-1">{editMatch.player1.name}</label>
+                    <input type="number" min="0" max="15" value={editScore1}
+                      onChange={e => { setEditScore1(e.target.value) }}
+                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <span className="text-gray-400 mt-4">-</span>
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-400 mb-1">{editMatch.player2.name}</label>
+                    <input type="number" min="0" max="15" value={editScore2}
+                      onChange={e => { setEditScore2(e.target.value) }}
+                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
 
-            <div className="flex gap-3">
-              <button onClick={handleEditMatch} disabled={editLoading}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition">
-                {editLoading ? '保存中...' : '保存'}
-              </button>
-              <button onClick={() => setEditMatch(null)}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition">
-                キャンセル
-              </button>
-            </div>
+                <div className="flex gap-3">
+                  <button onClick={handleEditMatch} disabled={editLoading}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition">
+                    {editLoading ? '計算中...' : 'RP変化を確認 →'}
+                  </button>
+                  <button onClick={() => { setEditMatch(null); setRpPreview(null) }}
+                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition">
+                    キャンセル
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* RP差分プレビュー */}
+                <div className="bg-orange-900/20 border border-orange-700/40 rounded-xl p-4 space-y-2 text-sm">
+                  <p className="text-orange-300 font-semibold text-xs mb-3">⚠️ RP修正内容の確認</p>
+                  <p className="text-gray-300 text-center font-bold">
+                    {rpPreview.s1} - {rpPreview.s2}
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({rpPreview.newWinnerId === editMatch.player1_id ? editMatch.player1.name : rpPreview.newWinnerId === editMatch.player2_id ? editMatch.player2.name : '引き分け'} 勝ち)
+                    </span>
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    {[
+                      { name: editMatch.player1.name, delta: rpPreview.p1Delta, newChange: rpPreview.newChangeA, wDelta: rpPreview.p1WinsDelta, lDelta: rpPreview.p1LossesDelta },
+                      { name: editMatch.player2.name, delta: rpPreview.p2Delta, newChange: rpPreview.newChangeB, wDelta: rpPreview.p2WinsDelta, lDelta: rpPreview.p2LossesDelta },
+                    ].map(({ name, delta, newChange, wDelta, lDelta }) => (
+                      <div key={name} className="text-center bg-black/30 rounded-lg p-2">
+                        <p className="text-xs text-gray-400 mb-1">{name}</p>
+                        <p className={`text-base font-bold ${newChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {newChange >= 0 ? '+' : ''}{newChange}pt
+                        </p>
+                        <p className={`text-xs font-semibold ${delta > 0 ? 'text-blue-400' : delta < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                          RP差分: {delta > 0 ? '+' : ''}{delta}
+                        </p>
+                        {(wDelta !== 0 || lDelta !== 0) && (
+                          <p className="text-xs text-yellow-400">
+                            {wDelta > 0 ? '勝+1' : wDelta < 0 ? '勝-1' : ''}{lDelta > 0 ? ' 敗+1' : lDelta < 0 ? ' 敗-1' : ''}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button onClick={handleConfirmEdit} disabled={editLoading}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition">
+                    {editLoading ? '保存中...' : '✓ RP修正して保存'}
+                  </button>
+                  <button onClick={() => setRpPreview(null)}
+                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition">
+                    戻る
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
