@@ -65,6 +65,7 @@ export default function FinalsClient({
     { score1: '', score2: '' },
   ])
   const [mode, setMode] = useState<'normal' | 'walkover' | 'forfeit'>('normal')
+  const [scheduledTime, setScheduledTime] = useState('')
   const [loading, setLoading] = useState(false)
   const [statusLoading, setStatusLoading] = useState(false)
   const [autoGenLoading, setAutoGenLoading] = useState(false)
@@ -471,6 +472,7 @@ export default function FinalsClient({
         winner_id: winnerId,
         disadvantage_player_id: disadvantageId || null,
         mode,
+        scheduled_time: scheduledTime || null,
       })
       .select()
       .single()
@@ -601,6 +603,7 @@ export default function FinalsClient({
     setDisadvantageId('')
     setSets([{ score1: '', score2: '' }, { score1: '', score2: '' }, { score1: '', score2: '' }])
     setMode('normal')
+    setScheduledTime('')
     setLoading(false)
     router.refresh()
   }
@@ -858,17 +861,32 @@ export default function FinalsClient({
                 <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>
               )}
 
-              <div>
-                <label className="block text-sm text-gray-300 mb-1">ラウンド</label>
-                <select
-                  value={round}
-                  onChange={e => setRound(parseInt(e.target.value))}
-                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  {[1, 2, 3, 4, 5].map(r => (
-                    <option key={r} value={r}>{getRoundName(r)}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1">ラウンド</label>
+                  <select
+                    value={round}
+                    onChange={e => setRound(parseInt(e.target.value))}
+                    className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    {[1, 2, 3, 4, 5].map(r => (
+                      <option key={r} value={r}>{getRoundName(r)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-300 mb-1">開始時間</label>
+                  <select
+                    value={scheduledTime}
+                    onChange={e => setScheduledTime(e.target.value)}
+                    className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">未設定</option>
+                    {timeOptions.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex gap-2 bg-black/20 rounded-lg p-1">
