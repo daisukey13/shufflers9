@@ -93,6 +93,13 @@ export default function FinalsClient({
   const handleStatusChange = async () => {
     const next = NEXT_STATUS[tournament.status]
     if (!next) return
+    if (next.status === 'finished') {
+      const incompleteFinals = finalsMatches.filter(m => m.player2_id !== null && m.winner_id === null)
+      if (incompleteFinals.length > 0) {
+        alert(`本戦にスコア未登録の試合が${incompleteFinals.length}試合あります。全試合を完了してから大会終了してください。`)
+        return
+      }
+    }
     if (!confirm(`ステータスを「${next.label}」に変更しますか？`)) return
     setStatusLoading(true)
     await supabase.from('tournaments').update({ status: next.status }).eq('id', tournament.id)
@@ -274,9 +281,17 @@ export default function FinalsClient({
 
         const allAdvancers = [...lastRoundWinners, ...byePlayers]
 
-        if (allAdvancers.length < 2) {
-          // 現在ラウンドが全て完了していない場合はエラー
+        // 現在ラウンドの全非Bye試合が完了しているか確認
+        const totalNonByeInRound = finalsMatches.filter(
+          m => m.round === maxCompletedRound && m.player2_id !== null
+        ).length
+        if (lastRoundWinners.length < totalNonByeInRound) {
           alert(`${getRoundName(maxCompletedRound)}の全試合が完了してから自動生成してください`)
+          return
+        }
+
+        if (allAdvancers.length < 2) {
+          alert('次のラウンドを生成するには2名以上の進出者が必要です')
           return
         } else {
           if (!confirm(
