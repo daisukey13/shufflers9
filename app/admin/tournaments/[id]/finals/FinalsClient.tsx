@@ -647,7 +647,7 @@ export default function FinalsClient({
                   <span className="text-xs text-gray-400 flex-shrink-0">⏰ 開始時間</span>
                   {!isFinalsLocked ? (
                     <select
-                      value={matchTimes[match.id] ?? ''}
+                      value={matchTimes[match.id] ?? match.scheduled_time ?? ''}
                       onChange={e => handleSetMatchTime(match.id, e.target.value)}
                       className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                     >
