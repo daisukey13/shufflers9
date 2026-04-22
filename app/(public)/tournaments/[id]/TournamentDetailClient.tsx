@@ -557,7 +557,9 @@ export default function TournamentDetailClient({
                                     {/* Player1 */}
                                     <div className={`flex items-center gap-3 p-2 rounded-lg mb-2 ${isFinished && match.winner_id === match.player1_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
                                       {match.player1?.avatar_url && (
-                                        <img src={match.player1.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                        <div className={`w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ${match.winner_id === match.player1_id ? 'border-2 border-green-500 avatar-glow-win' : ''}`}>
+                                          <img src={match.player1.avatar_url} className="w-full h-full object-cover" />
+                                        </div>
                                       )}
                                       <div className="flex-1 min-w-0">
                                         <button
@@ -601,7 +603,9 @@ export default function TournamentDetailClient({
                                     ) : (
                                     <div className={`flex items-center gap-3 p-2 rounded-lg ${isFinished && match.winner_id === match.player2_id ? 'bg-green-900/30 border border-green-700/30' : ''}`}>
                                       {match.player2?.avatar_url && (
-                                        <img src={match.player2.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                                        <div className={`w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ${match.winner_id === match.player2_id ? 'border-2 border-green-500 avatar-glow-win' : ''}`}>
+                                          <img src={match.player2.avatar_url} className="w-full h-full object-cover" />
+                                        </div>
                                       )}
                                       <div className="flex-1 min-w-0">
                                         <button
