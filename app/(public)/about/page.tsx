@@ -27,7 +27,7 @@ export default function AboutPage() {
               アメリカにはプロの大会もあります。当クラブはいつか世界を相手に試合できるプレーヤーが出ることを夢見ています。
             </p>
             <p className="text-gray-400 text-xs leading-relaxed p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-lg">
-              ※ 小学生については親の同伴や承認が必要です。
+              ※ 小中学生については親の同伴や承認が必要です。
             </p>
           </div>
 
