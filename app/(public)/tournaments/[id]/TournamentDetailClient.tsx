@@ -597,6 +597,9 @@ export default function TournamentDetailClient({
                                           ))}
                                       </div>
                                     )}
+                                    {match.mode === 'forfeit' && (
+                                      <p className="text-center text-xs text-red-400 my-2">棄権</p>
+                                    )}
                                     {match.mode === 'walkover' && (
                                       <p className="text-center text-xs text-yellow-400 my-2">不戦勝</p>
                                     )}
