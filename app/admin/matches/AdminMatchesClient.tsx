@@ -206,10 +206,13 @@ export default function AdminMatchesClient({
         if (elo?.[0]) {
           const newChange1 = elo[0].change_a
           const newChange2 = elo[0].change_b
-          await supabase
-            .from('singles_matches')
-            .update({ rating_change1: newChange1, rating_change2: newChange2 })
-            .eq('id', m.id)
+          const diff1 = newChange1 - (m.rating_change1 ?? 0)
+          const diff2 = newChange2 - (m.rating_change2 ?? 0)
+          await Promise.all([
+            supabase.from('singles_matches').update({ rating_change1: newChange1, rating_change2: newChange2 }).eq('id', m.id),
+            supabase.from('players').update({ rating: (cp1.rating ?? 1000) + diff1 }).eq('id', m.player1_id),
+            supabase.from('players').update({ rating: (cp2.rating ?? 1000) + diff2 }).eq('id', m.player2_id),
+          ])
 
           setRpInfo({
             entries: [
@@ -283,10 +286,15 @@ export default function AdminMatchesClient({
         if (elo?.[0]) {
           const newChange1 = elo[0].change_a
           const newChange2 = elo[0].change_b
-          await supabase
-            .from('doubles_matches')
-            .update({ rating_change1: newChange1, rating_change2: newChange2 })
-            .eq('id', m.id)
+          const diff1 = newChange1 - (m.rating_change1 ?? 0)
+          const diff2 = newChange2 - (m.rating_change2 ?? 0)
+          await Promise.all([
+            supabase.from('doubles_matches').update({ rating_change1: newChange1, rating_change2: newChange2 }).eq('id', m.id),
+            supabase.from('players').update({ doubles_rating: (dp1.doubles_rating ?? 1000) + diff1 }).eq('id', m.pair1_player1_id),
+            supabase.from('players').update({ doubles_rating: (dp2.doubles_rating ?? 1000) + diff1 }).eq('id', m.pair1_player2_id),
+            supabase.from('players').update({ doubles_rating: (dp3.doubles_rating ?? 1000) + diff2 }).eq('id', m.pair2_player1_id),
+            supabase.from('players').update({ doubles_rating: (dp4.doubles_rating ?? 1000) + diff2 }).eq('id', m.pair2_player2_id),
+          ])
 
           const pair1Name = `${m.pair1_player1?.name ?? '?'} / ${m.pair1_player2?.name ?? '?'}`
           const pair2Name = `${m.pair2_player1?.name ?? '?'} / ${m.pair2_player2?.name ?? '?'}`
@@ -316,7 +324,69 @@ export default function AdminMatchesClient({
   }
 
   const handleDelete = async (type: 'singles' | 'teams' | 'doubles', id: string) => {
-    if (!confirm('この試合を削除しますか？')) return
+    if (!confirm('この試合を削除しますか？\nRP・HC・勝敗も自動的にロールバックされます。')) return
+
+    if (type === 'singles') {
+      const m = singles.find(s => s.id === id)
+      if (m && m.player1_id && m.player2_id) {
+        const [{ data: p1 }, { data: p2 }] = await Promise.all([
+          supabase.from('players').select('rating, wins, losses, total_score, total_matches').eq('id', m.player1_id).single(),
+          supabase.from('players').select('rating, wins, losses, total_score, total_matches').eq('id', m.player2_id).single(),
+        ])
+        if (p1 && p2) {
+          const win1 = m.winner_id === m.player1_id ? 1 : 0
+          const loss1 = m.winner_id !== null && m.winner_id !== m.player1_id ? 1 : 0
+          const win2 = m.winner_id === m.player2_id ? 1 : 0
+          const loss2 = m.winner_id !== null && m.winner_id !== m.player2_id ? 1 : 0
+          const newWins1 = Math.max(0, (p1.wins ?? 0) - win1)
+          const newLosses1 = Math.max(0, (p1.losses ?? 0) - loss1)
+          const newScore1 = Math.max(0, (p1.total_score ?? 0) - m.score1)
+          const newMatches1 = Math.max(0, (p1.total_matches ?? 0) - 1)
+          const newWins2 = Math.max(0, (p2.wins ?? 0) - win2)
+          const newLosses2 = Math.max(0, (p2.losses ?? 0) - loss2)
+          const newScore2 = Math.max(0, (p2.total_score ?? 0) - m.score2)
+          const newMatches2 = Math.max(0, (p2.total_matches ?? 0) - 1)
+          await Promise.all([
+            supabase.from('players').update({
+              rating: (p1.rating ?? 1000) - (m.rating_change1 ?? 0),
+              wins: newWins1, losses: newLosses1, total_score: newScore1, total_matches: newMatches1,
+            }).eq('id', m.player1_id),
+            supabase.from('players').update({
+              rating: (p2.rating ?? 1000) - (m.rating_change2 ?? 0),
+              wins: newWins2, losses: newLosses2, total_score: newScore2, total_matches: newMatches2,
+            }).eq('id', m.player2_id),
+          ])
+          const [{ data: hc1 }, { data: hc2 }] = await Promise.all([
+            supabase.rpc('calc_hc', { p_wins: newWins1, p_losses: newLosses1, p_total_score: newScore1, p_total_matches: newMatches1 }),
+            supabase.rpc('calc_hc', { p_wins: newWins2, p_losses: newLosses2, p_total_score: newScore2, p_total_matches: newMatches2 }),
+          ])
+          await Promise.all([
+            hc1 !== null ? supabase.from('players').update({ hc: hc1 }).eq('id', m.player1_id) : Promise.resolve(),
+            hc2 !== null ? supabase.from('players').update({ hc: hc2 }).eq('id', m.player2_id) : Promise.resolve(),
+          ])
+        }
+      }
+    } else if (type === 'doubles') {
+      const m = doubles.find(d => d.id === id)
+      if (m) {
+        const ids = [m.pair1_player1_id, m.pair1_player2_id, m.pair2_player1_id, m.pair2_player2_id]
+        const results = await Promise.all(ids.map(pid => supabase.from('players').select('doubles_rating, doubles_wins, doubles_losses').eq('id', pid).single()))
+        const [dp1, dp2, dp3, dp4] = results.map(r => r.data)
+        if (dp1 && dp2 && dp3 && dp4) {
+          const p1Win = m.winner_pair === 1 ? 1 : 0
+          const p1Loss = m.winner_pair === 2 ? 1 : 0
+          const p2Win = m.winner_pair === 2 ? 1 : 0
+          const p2Loss = m.winner_pair === 1 ? 1 : 0
+          await Promise.all([
+            supabase.from('players').update({ doubles_rating: (dp1.doubles_rating ?? 1000) - (m.rating_change1 ?? 0), doubles_wins: Math.max(0, (dp1.doubles_wins ?? 0) - p1Win), doubles_losses: Math.max(0, (dp1.doubles_losses ?? 0) - p1Loss) }).eq('id', m.pair1_player1_id),
+            supabase.from('players').update({ doubles_rating: (dp2.doubles_rating ?? 1000) - (m.rating_change1 ?? 0), doubles_wins: Math.max(0, (dp2.doubles_wins ?? 0) - p1Win), doubles_losses: Math.max(0, (dp2.doubles_losses ?? 0) - p1Loss) }).eq('id', m.pair1_player2_id),
+            supabase.from('players').update({ doubles_rating: (dp3.doubles_rating ?? 1000) - (m.rating_change2 ?? 0), doubles_wins: Math.max(0, (dp3.doubles_wins ?? 0) - p2Win), doubles_losses: Math.max(0, (dp3.doubles_losses ?? 0) - p2Loss) }).eq('id', m.pair2_player1_id),
+            supabase.from('players').update({ doubles_rating: (dp4.doubles_rating ?? 1000) - (m.rating_change2 ?? 0), doubles_wins: Math.max(0, (dp4.doubles_wins ?? 0) - p2Win), doubles_losses: Math.max(0, (dp4.doubles_losses ?? 0) - p2Loss) }).eq('id', m.pair2_player2_id),
+          ])
+        }
+      }
+    }
+
     const table = type === 'singles' ? 'singles_matches' : type === 'teams' ? 'teams_matches' : 'doubles_matches'
     const { error } = await supabase.from(table).delete().eq('id', id)
     if (error) { alert('削除に失敗しました'); return }
@@ -517,29 +587,8 @@ export default function AdminMatchesClient({
                     </div>
 
                     <div className="p-3 bg-green-900/20 border border-green-700/30 rounded-xl">
-                      <p className="text-xs text-green-300">✅ HC・勝敗統計は自動的に修正されました</p>
+                      <p className="text-xs text-green-300">✅ HC・勝敗・RPは自動的に修正されました</p>
                     </div>
-
-                    {(rpInfo.entries.some(e => e.newChange - e.oldChange !== 0) || rpInfo.winnerChanged) && (
-                      <div className="p-4 bg-gray-900/40 border border-gray-700/40 rounded-xl space-y-2">
-                        <h3 className="text-xs font-semibold text-gray-300">🔧 RPのみ手動修正が必要です（Supabase）</h3>
-                        <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-                          <li>Supabaseの <code className="text-purple-300">players</code> テーブルを開く</li>
-                          {rpInfo.entries.map((e, i) => {
-                            const diff = e.newChange - e.oldChange
-                            if (diff === 0) return null
-                            return (
-                              <li key={i}>
-                                <span className="text-white">{e.name}</span> の <code className="text-purple-300">rating</code> に{' '}
-                                <span className={`font-bold ${diff > 0 ? 'text-yellow-400' : 'text-orange-400'}`}>
-                                  {diff > 0 ? `+${diff}` : diff} を加算
-                                </span>
-                              </li>
-                            )
-                          })}
-                        </ol>
-                      </div>
-                    )}
                   </>
                 )}
 
@@ -547,7 +596,7 @@ export default function AdminMatchesClient({
                   <div className="text-xs text-gray-400 space-y-1">
                     <p>途中棄権・不戦勝のためELO再計算はスキップしました。RPの変動はありません。</p>
                     {rpInfo.winnerChanged && (
-                      <p className="text-yellow-300">⚠️ 勝者が変わりました。Supabaseの <code className="text-purple-300">players</code> テーブルで wins / losses を手動修正してください。</p>
+                      <p className="text-yellow-300">⚠️ 勝者が変わりました。棄権・不戦勝試合の勝敗統計はSupabaseで手動確認してください。</p>
                     )}
                   </div>
                 )}
