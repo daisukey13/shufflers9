@@ -8,6 +8,7 @@ export async function getPlayerRankings(): Promise<Player[]> {
     .select('*')
     .eq('is_active', true)
     .eq('is_admin', false)
+    .gt('total_matches', 0)
     .order('rating', { ascending: false })
     .order('hc', { ascending: false })
     .order('total_matches', { ascending: false })
