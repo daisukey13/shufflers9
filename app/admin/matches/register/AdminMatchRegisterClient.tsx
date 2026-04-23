@@ -51,6 +51,7 @@ export default function AdminMatchRegisterClient({
         .select('id, name, avatar_url, rating, hc, doubles_rating')
         .eq('is_active', true)
         .eq('is_admin', false)
+        .gt('total_matches', 0)
         .order('rating', { ascending: false })
       if (data) setRankedPlayers(data)
     }
