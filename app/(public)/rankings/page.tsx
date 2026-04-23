@@ -24,6 +24,7 @@ export default async function RankingsPage({
       .select('*')
       .eq('is_active', true)
       .eq('is_admin', false)
+      .or('doubles_wins.gt.0,doubles_losses.gt.0')
       .order('doubles_rating', { ascending: false })
       .order('hc', { ascending: false }),
     getLastRatingChangePerPlayer(),
