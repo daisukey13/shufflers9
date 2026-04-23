@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { calcElo } from '@/lib/elo'
 
 type Player = { id: string; name: string; avatar_url: string | null }
 type Qualifier = {
@@ -111,21 +112,47 @@ export default function FinalsClient({
   }
 
   const handleEditMatchSave = async () => {
-    if (!editMatch) return
+    if (!editMatch || !editMatch.player1_id || !editMatch.player2_id) return
     setEditLoading(true)
 
-    if (editMode === 'walkover') {
+    // 既スコア保存済み試合を再編集する場合はロールバック
+    if (editMatch.winner_id && editMatch.rating_before1 != null) {
+      await rollbackFinalsMatch(editMatch)
+    }
+
+    // 最新のプレーヤーデータ取得（ロールバック後）
+    const [{ data: p1Data }, { data: p2Data }] = await Promise.all([
+      supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches').eq('id', editMatch.player1_id).single(),
+      supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches').eq('id', editMatch.player2_id).single(),
+    ])
+
+    const isDoubles = tournament.format === 'doubles'
+    const p1Rating = isDoubles ? (p1Data?.doubles_rating ?? 1000) : (p1Data?.rating ?? 1000)
+    const p2Rating = isDoubles ? (p2Data?.doubles_rating ?? 1000) : (p2Data?.rating ?? 1000)
+    const p1Wins = isDoubles ? (p1Data?.doubles_wins ?? 0) : (p1Data?.wins ?? 0)
+    const p2Wins = isDoubles ? (p2Data?.doubles_wins ?? 0) : (p2Data?.wins ?? 0)
+    const p1Losses = isDoubles ? (p1Data?.doubles_losses ?? 0) : (p1Data?.losses ?? 0)
+    const p2Losses = isDoubles ? (p2Data?.doubles_losses ?? 0) : (p2Data?.losses ?? 0)
+
+    if (editMode === 'walkover' || editMode === 'forfeit') {
+      const winnerId = editMatch.player1_id
       await supabase.from('tournament_finals_sets').delete().eq('match_id', editMatch.id)
       await supabase.from('tournament_finals_matches').update({
-        winner_id: editMatch.player1_id,
-        mode: 'walkover',
+        winner_id: winnerId,
+        mode: editMode,
+        rating_before1: p1Rating, rating_before2: p2Rating,
+        rating_change1: 0, rating_change2: 0,
+        wins_before1: p1Wins, wins_before2: p2Wins,
+        losses_before1: p1Losses, losses_before2: p2Losses,
       }).eq('id', editMatch.id)
-    } else if (editMode === 'forfeit') {
-      await supabase.from('tournament_finals_sets').delete().eq('match_id', editMatch.id)
-      await supabase.from('tournament_finals_matches').update({
-        winner_id: editMatch.player1_id,
-        mode: 'forfeit',
-      }).eq('id', editMatch.id)
+      // レーティング変化なし、勝敗のみ更新
+      if (isDoubles) {
+        await supabase.from('players').update({ doubles_wins: p1Wins + 1, total_matches: (p1Data?.total_matches ?? 0) + 1 }).eq('id', editMatch.player1_id)
+        await supabase.from('players').update({ doubles_losses: p2Losses + 1, total_matches: (p2Data?.total_matches ?? 0) + 1 }).eq('id', editMatch.player2_id)
+      } else {
+        await supabase.from('players').update({ wins: p1Wins + 1, total_matches: (p1Data?.total_matches ?? 0) + 1 }).eq('id', editMatch.player1_id)
+        await supabase.from('players').update({ losses: p2Losses + 1, total_matches: (p2Data?.total_matches ?? 0) + 1 }).eq('id', editMatch.player2_id)
+      }
     } else {
       const setsToInsert = editSets
         .map((s, i) => ({
@@ -147,6 +174,20 @@ export default function FinalsClient({
           ? editMatch.player2_id
           : null
 
+      const numSets = setsToInsert.length
+      const total1 = setsToInsert.reduce((s, x) => s + x.score1, 0)
+      const total2 = setsToInsert.reduce((s, x) => s + x.score2, 0)
+
+      let rc1 = 0, rc2 = 0
+      if (winnerId && numSets > 0) {
+        const avg1 = total1 / numSets
+        const avg2 = total2 / numSets
+        const { changeA, changeB } = calcElo(p1Rating, p2Rating, avg1, avg2)
+        const bonusRate = (tournament.bonus_points ?? 0) / 100
+        rc1 = changeA > 0 && bonusRate > 0 ? Math.round(changeA * (1 + bonusRate)) : changeA
+        rc2 = changeB > 0 && bonusRate > 0 ? Math.round(changeB * (1 + bonusRate)) : changeB
+      }
+
       await supabase.from('tournament_finals_sets').delete().eq('match_id', editMatch.id)
       if (setsToInsert.length > 0) {
         await supabase.from('tournament_finals_sets').insert(setsToInsert)
@@ -154,7 +195,45 @@ export default function FinalsClient({
       await supabase.from('tournament_finals_matches').update({
         winner_id: winnerId,
         mode: 'normal',
+        rating_before1: p1Rating, rating_before2: p2Rating,
+        rating_change1: rc1, rating_change2: rc2,
+        wins_before1: p1Wins, wins_before2: p2Wins,
+        losses_before1: p1Losses, losses_before2: p2Losses,
       }).eq('id', editMatch.id)
+
+      if (winnerId) {
+        if (isDoubles) {
+          await supabase.from('players').update({
+            doubles_rating: p1Rating + rc1,
+            doubles_wins: p1Wins + (winnerId === editMatch.player1_id ? 1 : 0),
+            doubles_losses: p1Losses + (winnerId === editMatch.player2_id ? 1 : 0),
+            total_score: (p1Data?.total_score ?? 0) + total1,
+            total_matches: (p1Data?.total_matches ?? 0) + 1,
+          }).eq('id', editMatch.player1_id)
+          await supabase.from('players').update({
+            doubles_rating: p2Rating + rc2,
+            doubles_wins: p2Wins + (winnerId === editMatch.player2_id ? 1 : 0),
+            doubles_losses: p2Losses + (winnerId === editMatch.player1_id ? 1 : 0),
+            total_score: (p2Data?.total_score ?? 0) + total2,
+            total_matches: (p2Data?.total_matches ?? 0) + 1,
+          }).eq('id', editMatch.player2_id)
+        } else {
+          await supabase.from('players').update({
+            rating: p1Rating + rc1,
+            wins: p1Wins + (winnerId === editMatch.player1_id ? 1 : 0),
+            losses: p1Losses + (winnerId === editMatch.player2_id ? 1 : 0),
+            total_score: (p1Data?.total_score ?? 0) + total1,
+            total_matches: (p1Data?.total_matches ?? 0) + 1,
+          }).eq('id', editMatch.player1_id)
+          await supabase.from('players').update({
+            rating: p2Rating + rc2,
+            wins: p2Wins + (winnerId === editMatch.player2_id ? 1 : 0),
+            losses: p2Losses + (winnerId === editMatch.player1_id ? 1 : 0),
+            total_score: (p2Data?.total_score ?? 0) + total2,
+            total_matches: (p2Data?.total_matches ?? 0) + 1,
+          }).eq('id', editMatch.player2_id)
+        }
+      }
     }
 
     setEditMatch(null)
