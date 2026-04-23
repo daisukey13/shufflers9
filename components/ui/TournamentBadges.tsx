@@ -51,7 +51,10 @@ function BadgeGroup({ emoji, count, label, color, size }: {
 }
 
 export default function TournamentBadges({ wins, runnerUps, qualifications, size = 'sm' }: BadgeProps) {
-  if (wins === 0 && runnerUps === 0 && qualifications === 0) return null
+  // 優勝・準優勝した大会は既にバッジがあるので本戦進出バッジから除外
+  const qualOnly = Math.max(0, qualifications - wins - runnerUps)
+
+  if (wins === 0 && runnerUps === 0 && qualOnly === 0) return null
 
   return (
     <div className="flex items-center gap-1 flex-wrap">
@@ -71,7 +74,7 @@ export default function TournamentBadges({ wins, runnerUps, qualifications, size
       />
       <BadgeGroup
         emoji="🎖️"
-        count={qualifications}
+        count={qualOnly}
         label="本戦進出"
         color="text-orange-400"
         size={size}
