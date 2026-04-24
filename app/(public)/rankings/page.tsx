@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import TournamentBadges from '@/components/ui/TournamentBadges'
 import { getPlayerRankings, calcRanks, singlesTie, doublesTie } from '@/lib/queries/rankings'
 import { getLastRatingChangePerPlayer } from '@/lib/queries/matches'
+import { getThisMonthWinRate, getRecentRatingGrowth } from '@/lib/queries/monthly-ranking'
 import { createClient } from '@/lib/supabase/server'
 import { Player } from '@/types'
 import Link from 'next/link'
@@ -17,7 +18,7 @@ export default async function RankingsPage({
 
   const supabase = await createClient()
 
-  const [singlesRaw, { data: doublesRaw }, lastRpChanges] = await Promise.all([
+  const [singlesRaw, { data: doublesRaw }, lastRpChanges, thisMonthWinRate, recentGrowth] = await Promise.all([
     getPlayerRankings(),
     supabase
       .from('players')
@@ -28,6 +29,8 @@ export default async function RankingsPage({
       .order('doubles_rating', { ascending: false })
       .order('hc', { ascending: false }),
     getLastRatingChangePerPlayer(),
+    getThisMonthWinRate(),
+    getRecentRatingGrowth(),
   ])
 
   const doublesSorted = [...(doublesRaw ?? [])].sort((a: Player, b: Player) => {
@@ -286,6 +289,49 @@ export default async function RankingsPage({
             <div className="h-px w-20 bg-gradient-to-l from-transparent to-yellow-500/40" />
           </div>
         </div>
+
+        {/* 短期表彰 */}
+        {(thisMonthWinRate || recentGrowth) && (
+          <div className="space-y-2">
+            <div className="text-center text-xs font-mono tracking-[0.4em] text-purple-400/50 uppercase">── HOT AWARDS ──</div>
+            <div className="grid grid-cols-2 gap-3">
+              {thisMonthWinRate && (
+                <Link
+                  href={`/players/${thisMonthWinRate.id}`}
+                  className="flex flex-col items-center gap-1.5 p-3 bg-gradient-to-b from-yellow-900/30 to-black/30 border border-yellow-700/40 rounded-2xl hover:border-yellow-500/60 transition text-center"
+                >
+                  <div className="text-xs font-mono text-yellow-400/80 tracking-wider">🏅 今月の勝率王</div>
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-yellow-600/40 flex-shrink-0">
+                    {thisMonthWinRate.avatar_url
+                      ? <img src={thisMonthWinRate.avatar_url} className="w-full h-full object-cover" />
+                      : <span className="text-lg flex items-center justify-center h-full bg-gray-800">👤</span>
+                    }
+                  </div>
+                  <p className="text-xs font-semibold text-white truncate w-full">{thisMonthWinRate.name}</p>
+                  <p className="text-2xl font-extrabold font-mono text-yellow-300 leading-none">{thisMonthWinRate.value}</p>
+                  <p className="text-xs text-gray-500">{thisMonthWinRate.sub}</p>
+                </Link>
+              )}
+              {recentGrowth && (
+                <Link
+                  href={`/players/${recentGrowth.id}`}
+                  className="flex flex-col items-center gap-1.5 p-3 bg-gradient-to-b from-green-900/30 to-black/30 border border-green-700/40 rounded-2xl hover:border-green-500/60 transition text-center"
+                >
+                  <div className="text-xs font-mono text-green-400/80 tracking-wider">📈 直近10試合の上昇王</div>
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-green-600/40 flex-shrink-0">
+                    {recentGrowth.avatar_url
+                      ? <img src={recentGrowth.avatar_url} className="w-full h-full object-cover" />
+                      : <span className="text-lg flex items-center justify-center h-full bg-gray-800">👤</span>
+                    }
+                  </div>
+                  <p className="text-xs font-semibold text-white truncate w-full">{recentGrowth.name}</p>
+                  <p className="text-2xl font-extrabold font-mono text-green-300 leading-none">{recentGrowth.value}</p>
+                  <p className="text-xs text-gray-500">{recentGrowth.sub}</p>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* タブ */}
         <div className="flex gap-2 bg-black/50 backdrop-blur-sm border border-purple-900/40 rounded-xl p-1">
