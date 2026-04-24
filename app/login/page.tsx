@@ -71,11 +71,11 @@ export default function LoginPage() {
       return
     }
 
-    // is_active チェック（削除済みプレーヤーはログイン不可）
+    // is_active チェック・管理者判定
     if (authData.user) {
       const { data: player } = await supabase
         .from('players')
-        .select('is_active')
+        .select('is_active, is_admin')
         .eq('user_id', authData.user.id)
         .single()
 
@@ -85,9 +85,15 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
+
+      if (player?.is_admin) {
+        router.push('/admin')
+        router.refresh()
+        return
+      }
     }
 
-    router.push('/')
+    router.push('/mypage')
     router.refresh()
   }
 
