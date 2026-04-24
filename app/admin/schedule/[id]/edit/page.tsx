@@ -101,12 +101,15 @@ export default function EditEventPage() {
     setAddingParticipant(true)
     setParticipantError(null)
 
-    const { error } = await supabase
-      .from('event_participants')
-      .insert({ event_id: id, player_id: selectedPlayerId })
+    const res = await fetch(`/api/admin/events/${id}/participants`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_id: selectedPlayerId }),
+    })
 
-    if (error && error.code !== '23505') {
-      setParticipantError('追加に失敗しました: ' + error.message)
+    if (!res.ok) {
+      const data = await res.json()
+      setParticipantError('追加に失敗しました: ' + (data.error ?? ''))
       setAddingParticipant(false)
       return
     }
@@ -123,11 +126,11 @@ export default function EditEventPage() {
 
   const handleRemoveParticipant = async (playerId: string) => {
     setRemovingId(playerId)
-    await supabase
-      .from('event_participants')
-      .delete()
-      .eq('event_id', id)
-      .eq('player_id', playerId)
+    await fetch(`/api/admin/events/${id}/participants`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_id: playerId }),
+    })
     setParticipants(prev => prev.filter(p => p.player_id !== playerId))
     setRemovingId(null)
   }
