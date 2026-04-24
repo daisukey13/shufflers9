@@ -8,6 +8,7 @@ const navItems = [
   { href: '/players', label: 'メンバー' },
   { href: '/matches', label: '試合結果' },
   { href: '/tournaments', label: '大会' },
+  { href: '/schedule', label: 'スケジュール' },
 ]
 
 export default function HeaderClient({

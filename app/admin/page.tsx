@@ -22,6 +22,7 @@ export default async function AdminDashboard() {
     { href: '/admin/notices', label: '📢 お知らせ管理', sub: 'お知らせの作成・編集', icon: null },
     { href: '/admin/ranking-config', label: '⚙️ ランキング設定', sub: 'ランキング計算パラメータ設定', icon: null },
     { href: '/admin/line', label: '💬 LINE通知', sub: 'フォロワー全員へ一斉配信', icon: null },
+    { href: '/admin/schedule', label: '📅 スケジュール管理', sub: '練習・イベント日程の作成・編集', icon: null },
   ]
 
   return (
