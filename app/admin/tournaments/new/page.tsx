@@ -34,25 +34,12 @@ export default function NewTournamentPage() {
     setLoading(true)
     setError(null)
 
-    const dateObj = startedAt ? new Date(startedAt) : null
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土']
-    const dateText = dateObj
-      ? `${dateObj.getFullYear()}年${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${weekdays[dateObj.getDay()]}曜日）`
-      : null
-    const venueText = venue.trim() ? `場所：${venue.trim()}` : null
-    const qualifyingText = qualifyingStartTime ? `予選開始：${qualifyingStartTime}（※Aブロック第1試合）` : null
-    const finalsText = finalsStartTime ? `決勝開始予定：${finalsStartTime}` : null
-    const bonusText = bonusPoints ? `ボーナスポイント：${bonusPoints}pt` : null
-    const noteText = notes.trim() ? `【注意事項】${notes.trim()}` : null
-
-    const extraLines = [dateText, venueText, qualifyingText, finalsText, bonusText, noteText].filter(Boolean)
-    const fullDescription = [description.trim(), ...extraLines].filter(Boolean).join('\n')
-
     const { data, error } = await supabase
       .from('tournaments')
       .insert({
         name: name.trim(),
-        description: fullDescription || null,
+        description: description.trim() || null,
+        venue: venue.trim() || null,
         format,
         type: 'singles',
         status: 'open',
@@ -123,7 +110,7 @@ export default function NewTournamentPage() {
             type="text"
             value={venue}
             onChange={e => setVenue(e.target.value)}
-            placeholder="とわにーホール"
+            placeholder="とわにー（北海道豊浦町）"
             className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
