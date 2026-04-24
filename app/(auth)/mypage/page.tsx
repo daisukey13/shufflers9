@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import LogoutButton from '@/components/ui/LogoutButton'
 import TournamentBadges from '@/components/ui/TournamentBadges'
+import RankChart from '@/components/ui/RankChart'
 
 export default async function MyPage() {
   const supabase = await createClient()
@@ -85,6 +86,17 @@ export default async function MyPage() {
   const tournamentResults = Array.from(tournamentMap.values())
   const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
   const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
+
+  // Rank history: last 5 singles matches (oldest → newest) + current rank
+  const last5 = matches.slice(0, 5).reverse()
+  const rankHistory = [
+    ...last5.map((m, i) => {
+      const isP1 = m.player1_id === player.id
+      const r = isP1 ? m.player1_rank : m.player2_rank
+      return r ? { label: `試合${i + 1}`, rank: r as number } : null
+    }).filter(Boolean) as { label: string; rank: number }[],
+    { label: '現在', rank },
+  ]
 
   const singlesWinRate = player.wins + player.losses > 0
     ? Math.round((player.wins / (player.wins + player.losses)) * 100) : 0
@@ -189,6 +201,11 @@ export default async function MyPage() {
               </div>
               <p className="text-xs text-gray-400 text-right">勝率 {singlesWinRate}% · {totalMatches}試合</p>
             </div>
+            {rankHistory.length >= 2 && (
+              <div className="mt-3">
+                <RankChart points={rankHistory} />
+              </div>
+            )}
           </div>
 
           {/* ダブルス成績 */}

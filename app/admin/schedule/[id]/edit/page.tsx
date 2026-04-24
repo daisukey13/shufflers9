@@ -5,6 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 
+type Participant = {
+  player_id: string
+  player: { id: string; name: string; avatar_url: string | null }
+}
+
+type Player = { id: string; name: string; avatar_url: string | null }
+
 export default function EditEventPage() {
   const params = useParams()
   const id = params.id as string
@@ -19,22 +26,46 @@ export default function EditEventPage() {
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // 参加者管理
+  const [participants, setParticipants] = useState<Participant[]>([])
+  const [allPlayers, setAllPlayers] = useState<Player[]>([])
+  const [selectedPlayerId, setSelectedPlayerId] = useState('')
+  const [addingParticipant, setAddingParticipant] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [participantError, setParticipantError] = useState<string | null>(null)
+
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.from('events').select('*').eq('id', id).single()
-      if (data) {
-        setTitle(data.title ?? '')
-        setEventType(data.event_type ?? 'practice')
-        setStartsAt(data.starts_at ? new Date(data.starts_at).toISOString().slice(0, 16) : '')
-        setEndsAt(data.ends_at ? new Date(data.ends_at).toISOString().slice(0, 16) : '')
-        setVenue(data.venue ?? '')
-        setDescription(data.description ?? '')
-        setNotes(data.notes ?? '')
-        setIsPublished(data.is_published ?? true)
+      const [{ data: ev }, { data: parts }, { data: players }] = await Promise.all([
+        supabase.from('events').select('*').eq('id', id).single(),
+        supabase
+          .from('event_participants')
+          .select('player_id, player:players(id, name, avatar_url)')
+          .eq('event_id', id),
+        supabase
+          .from('players')
+          .select('id, name, avatar_url')
+          .eq('is_active', true)
+          .eq('is_admin', false)
+          .order('name'),
+      ])
+
+      if (ev) {
+        setTitle(ev.title ?? '')
+        setEventType(ev.event_type ?? 'practice')
+        setStartsAt(ev.starts_at ? new Date(ev.starts_at).toISOString().slice(0, 16) : '')
+        setEndsAt(ev.ends_at ? new Date(ev.ends_at).toISOString().slice(0, 16) : '')
+        setVenue(ev.venue ?? '')
+        setDescription(ev.description ?? '')
+        setNotes(ev.notes ?? '')
+        setIsPublished(ev.is_published ?? true)
       }
+      if (parts) setParticipants(parts as any)
+      if (players) setAllPlayers(players)
       setFetching(false)
     }
     load()
@@ -64,6 +95,45 @@ export default function EditEventPage() {
 
     router.push('/admin/schedule')
   }
+
+  const handleAddParticipant = async () => {
+    if (!selectedPlayerId) return
+    setAddingParticipant(true)
+    setParticipantError(null)
+
+    const { error } = await supabase
+      .from('event_participants')
+      .insert({ event_id: id, player_id: selectedPlayerId })
+
+    if (error && error.code !== '23505') {
+      setParticipantError('追加に失敗しました: ' + error.message)
+      setAddingParticipant(false)
+      return
+    }
+
+    // リロード
+    const { data } = await supabase
+      .from('event_participants')
+      .select('player_id, player:players(id, name, avatar_url)')
+      .eq('event_id', id)
+    if (data) setParticipants(data as any)
+    setSelectedPlayerId('')
+    setAddingParticipant(false)
+  }
+
+  const handleRemoveParticipant = async (playerId: string) => {
+    setRemovingId(playerId)
+    await supabase
+      .from('event_participants')
+      .delete()
+      .eq('event_id', id)
+      .eq('player_id', playerId)
+    setParticipants(prev => prev.filter(p => p.player_id !== playerId))
+    setRemovingId(null)
+  }
+
+  const participantIds = new Set(participants.map(p => p.player_id))
+  const unregisteredPlayers = allPlayers.filter(p => !participantIds.has(p.id))
 
   if (fetching) return <div className="text-gray-400 text-sm p-8">読み込み中...</div>
 
@@ -145,6 +215,64 @@ export default function EditEventPage() {
           {loading ? '更新中...' : '変更を保存'}
         </button>
       </form>
+
+      {/* 参加者管理 */}
+      <div className="bg-purple-900/20 border border-purple-800/30 rounded-2xl p-6 space-y-4">
+        <h2 className="text-sm font-semibold text-gray-300">👥 参加者管理（{participants.length}名）</h2>
+
+        {/* 追加フォーム */}
+        <div className="flex gap-2">
+          <select
+            value={selectedPlayerId}
+            onChange={e => setSelectedPlayerId(e.target.value)}
+            className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="">プレーヤーを選択...</option>
+            {unregisteredPlayers.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleAddParticipant}
+            disabled={!selectedPlayerId || addingParticipant}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition"
+          >
+            {addingParticipant ? '...' : '追加'}
+          </button>
+        </div>
+
+        {participantError && (
+          <p className="text-xs text-red-400">{participantError}</p>
+        )}
+
+        {/* 参加者一覧 */}
+        {participants.length === 0 ? (
+          <p className="text-sm text-gray-500">参加者はまだいません</p>
+        ) : (
+          <div className="space-y-2">
+            {participants.map(p => (
+              <div key={p.player_id} className="flex items-center gap-3 py-2 px-3 bg-[#12082a] border border-purple-800/20 rounded-lg">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center flex-shrink-0">
+                  {p.player?.avatar_url
+                    ? <img src={p.player.avatar_url} className="w-full h-full object-cover" />
+                    : <span className="text-sm">👤</span>
+                  }
+                </div>
+                <span className="flex-1 text-sm text-white">{p.player?.name ?? '不明'}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveParticipant(p.player_id)}
+                  disabled={removingId === p.player_id}
+                  className="text-xs px-2 py-1 bg-red-900/40 hover:bg-red-900/70 text-red-400 rounded-lg transition disabled:opacity-50"
+                >
+                  {removingId === p.player_id ? '...' : '削除'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
