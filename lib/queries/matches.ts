@@ -56,14 +56,14 @@ export async function getRecentAllMatches(limit = 5) {
   // シングルス試合
   const { data: singles } = await supabase
     .from('singles_matches')
-    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url)')
+    .select('*, player1:players!player1_id(id, name, avatar_url, is_active), player2:players!player2_id(id, name, avatar_url, is_active)')
     .order('played_at', { ascending: false })
     .limit(limit * 3)
 
  // 予選試合（スコア確定済みのみ）
   const { data: qualifying } = await supabase
     .from('tournament_qualifying_matches')
-    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), block:tournament_blocks(tournament_id, block_name, tournament:tournaments(name, bonus_points))')
+    .select('*, player1:players!player1_id(id, name, avatar_url, is_active), player2:players!player2_id(id, name, avatar_url, is_active), block:tournament_blocks(tournament_id, block_name, tournament:tournaments(name, bonus_points))')
     .eq('mode', 'normal')
     .not('winner_id', 'is', null)
     .order('created_at', { ascending: false })
@@ -73,7 +73,7 @@ export async function getRecentAllMatches(limit = 5) {
     // 本戦試合（スコア確定済みのみ、walkoverを除く）
   const { data: finals } = await supabase
     .from('tournament_finals_matches')
-    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), tournament:tournaments(name)')
+    .select('*, player1:players!player1_id(id, name, avatar_url, is_active), player2:players!player2_id(id, name, avatar_url, is_active), tournament:tournaments(name)')
     .not('winner_id', 'is', null)
     .neq('mode', 'walkover')
     .order('created_at', { ascending: false })

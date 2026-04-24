@@ -9,13 +9,13 @@ export default async function MatchesPage() {
     getRecentSinglesMatches(50),
     supabase.from('doubles_matches').select(`
       *,
-      pair1_player1:players!pair1_player1_id(id, name, avatar_url, hc, rating),
-      pair1_player2:players!pair1_player2_id(id, name, avatar_url, hc, rating),
-      pair2_player1:players!pair2_player1_id(id, name, avatar_url, hc, rating),
-      pair2_player2:players!pair2_player2_id(id, name, avatar_url, hc, rating)
+      pair1_player1:players!pair1_player1_id(id, name, avatar_url, hc, rating, is_active),
+      pair1_player2:players!pair1_player2_id(id, name, avatar_url, hc, rating, is_active),
+      pair2_player1:players!pair2_player1_id(id, name, avatar_url, hc, rating, is_active),
+      pair2_player2:players!pair2_player2_id(id, name, avatar_url, hc, rating, is_active)
     `).eq('mode', 'normal').order('played_at', { ascending: false }).limit(50),
-    supabase.from('tournament_qualifying_matches').select('*, block:tournament_blocks(block_name, tournament:tournaments(id, name)), player1:players!player1_id(id, name, avatar_url, hc, rating), player2:players!player2_id(id, name, avatar_url, hc, rating)').eq('mode', 'normal').not('winner_id', 'is', null).order('played_at', { ascending: false }).limit(50),
-    supabase.from('tournament_finals_matches').select('*, tournament:tournaments(id, name), player1:players!player1_id(id, name, avatar_url, hc, rating), player2:players!player2_id(id, name, avatar_url, hc, rating), tournament_finals_sets(*)').not('winner_id', 'is', null).order('played_at', { ascending: false }).limit(50),
+    supabase.from('tournament_qualifying_matches').select('*, block:tournament_blocks(block_name, tournament:tournaments(id, name)), player1:players!player1_id(id, name, avatar_url, hc, rating, is_active), player2:players!player2_id(id, name, avatar_url, hc, rating, is_active)').eq('mode', 'normal').not('winner_id', 'is', null).order('played_at', { ascending: false }).limit(50),
+    supabase.from('tournament_finals_matches').select('*, tournament:tournaments(id, name), player1:players!player1_id(id, name, avatar_url, hc, rating, is_active), player2:players!player2_id(id, name, avatar_url, hc, rating, is_active), tournament_finals_sets(*)').not('winner_id', 'is', null).order('played_at', { ascending: false }).limit(50),
   ])
 
   type MatchItem = {
@@ -32,6 +32,8 @@ export default async function MatchesPage() {
     player2Name: string
     player1Avatar: string | null
     player2Avatar: string | null
+    player1IsActive?: boolean
+    player2IsActive?: boolean
     score1: number | null
     score2: number | null
     mode?: string
@@ -66,6 +68,8 @@ export default async function MatchesPage() {
       player2Name: m.player2?.name ?? '不明',
       player1Avatar: m.player1?.avatar_url ?? null,
       player2Avatar: m.player2?.avatar_url ?? null,
+      player1IsActive: m.player1?.is_active !== false,
+      player2IsActive: m.player2?.is_active !== false,
       score1: m.score1,
       score2: m.score2,
       player1_hc: m.player1_hc,
@@ -119,6 +123,8 @@ export default async function MatchesPage() {
         player2Name: m.player2?.name ?? '不明',
         player1Avatar: m.player1?.avatar_url ?? null,
         player2Avatar: m.player2?.avatar_url ?? null,
+        player1IsActive: m.player1?.is_active !== false,
+        player2IsActive: m.player2?.is_active !== false,
         score1: m.score1,
         score2: m.score2,
         mode: m.mode,
@@ -142,6 +148,8 @@ export default async function MatchesPage() {
         player2Name: m.player2?.name ?? '不明',
         player1Avatar: m.player1?.avatar_url ?? null,
         player2Avatar: m.player2?.avatar_url ?? null,
+        player1IsActive: m.player1?.is_active !== false,
+        player2IsActive: m.player2?.is_active !== false,
         score1: null,
         score2: null,
         sets: m.tournament_finals_sets?.sort((a: any, b: any) => a.set_number - b.set_number),

@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import Link from 'next/link'
 
-type Player = { id: string; name: string; avatar_url: string | null; hc?: number; rating?: number }
+type Player = { id: string; name: string; avatar_url: string | null; hc?: number; rating?: number; is_active?: boolean }
 type BlockPlayer = { id: string; block_id: string; player_id: string; is_default: boolean; player: Player }
 type Block = { id: string; tournament_id: string; block_name: string; match_time_1: string | null; match_time_2: string | null; match_time_3: string | null; scores_finalized: boolean; tournament_block_players: BlockPlayer[] }
 type QualifyingMatch = {
@@ -204,12 +204,8 @@ export default function TournamentDetailClient({
               <div>
                 <p className="text-xs text-gray-400 mb-2">エントリー済み {entries.filter(e => !e.cancel_requested).length}名</p>
                 <div className="space-y-1">
-                  {entries.filter(e => !e.cancel_requested).map(entry => (
-                    <Link
-                      key={entry.id}
-                      href={`/players/${entry.player.id}`}
-                      className="flex items-center gap-3 p-2 bg-black/20 rounded-lg hover:bg-purple-900/30 transition"
-                    >
+                  {entries.filter(e => !e.cancel_requested).map(entry => {
+                    const inner = <>
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
                         {entry.player.avatar_url
                           ? <img src={entry.player.avatar_url} className="w-full h-full object-cover" />
@@ -220,8 +216,11 @@ export default function TournamentDetailClient({
                       {entry.preferred_dates && (
                         <span className="text-xs text-gray-500 truncate">{entry.preferred_dates}</span>
                       )}
-                    </Link>
-                  ))}
+                    </>
+                    return entry.player.is_active !== false
+                      ? <Link key={entry.id} href={`/players/${entry.player.id}`} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg hover:bg-purple-900/30 transition">{inner}</Link>
+                      : <div key={entry.id} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg">{inner}</div>
+                  })}
                 </div>
               </div>
             )}
@@ -694,13 +693,15 @@ export default function TournamentDetailClient({
               )}
               <div>
                 <p className="font-bold text-white text-lg">{popupPlayer.name}</p>
-                <Link
-                  href={`/players/${popupPlayer.id}`}
-                  className="text-xs text-purple-400 hover:text-purple-300"
-                  onClick={() => setPopupPlayer(null)}
-                >
-                  プロフィールを見る →
-                </Link>
+                {popupPlayer.is_active !== false && (
+                  <Link
+                    href={`/players/${popupPlayer.id}`}
+                    className="text-xs text-purple-400 hover:text-purple-300"
+                    onClick={() => setPopupPlayer(null)}
+                  >
+                    プロフィールを見る →
+                  </Link>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">

@@ -24,7 +24,7 @@ export async function getPlayerById(id: string): Promise<Player | null> {
     .eq('id', id)
     .single()
 
-  if (error) return null
+  if (error || !data || !data.is_active) return null
   return data
 }
 

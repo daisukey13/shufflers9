@@ -17,6 +17,8 @@ type MatchItem = {
   player2Name: string
   player1Avatar: string | null
   player2Avatar: string | null
+  player1IsActive?: boolean
+  player2IsActive?: boolean
   score1: number | null
   score2: number | null
   mode?: string
@@ -201,32 +203,22 @@ export default function MatchesClient({
                     </div>
                   ) : (
                     <div className="flex items-center gap-4">
-                      <Link href={`/players/${match.player1Id}`} className="flex-1 flex flex-col items-center gap-2">
-                        <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${
-                          upset && isPair1Winner
-                            ? 'border-yellow-400 avatar-glow'
-                            : isPair1Winner && hasWinner
-                              ? 'border-amber-400 avatar-glow-win'
-                              : 'border-yellow-600/30'
-                        }`}>
-                          {match.player1Avatar
-                            ? <img src={match.player1Avatar} className="w-full h-full object-cover" />
-                            : <span className="text-3xl flex items-center justify-center h-full">👤</span>
-                          }
-                        </div>
-                        <span className={`font-bold text-sm text-center ${isPair1Winner ? 'text-white' : 'text-gray-400'}`}>
-                          {match.player1Name}
-                        </span>
-                        <div className="flex gap-2 text-xs text-gray-400">
-                          {match.player1_hc != null && <span>HC {match.player1_hc}</span>}
-                          {match.player1_rp != null && <span className="text-purple-400">RP {match.player1_rp}</span>}
-                        </div>
-                        {isPair1Winner && (
-                          <span className={`text-xs font-bold ${upset ? 'text-yellow-400' : 'text-green-400'}`}>
-                            {upset ? '⭐ 大金星' : '勝利'}
-                          </span>
-                        )}
-                      </Link>
+                      {(() => {
+                        const p1Inner = <>
+                          <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${upset && isPair1Winner ? 'border-yellow-400 avatar-glow' : isPair1Winner && hasWinner ? 'border-amber-400 avatar-glow-win' : 'border-yellow-600/30'}`}>
+                            {match.player1Avatar ? <img src={match.player1Avatar} className="w-full h-full object-cover" /> : <span className="text-3xl flex items-center justify-center h-full">👤</span>}
+                          </div>
+                          <span className={`font-bold text-sm text-center ${isPair1Winner ? 'text-white' : 'text-gray-400'}`}>{match.player1Name}</span>
+                          <div className="flex gap-2 text-xs text-gray-400">
+                            {match.player1_hc != null && <span>HC {match.player1_hc}</span>}
+                            {match.player1_rp != null && <span className="text-purple-400">RP {match.player1_rp}</span>}
+                          </div>
+                          {isPair1Winner && <span className={`text-xs font-bold ${upset ? 'text-yellow-400' : 'text-green-400'}`}>{upset ? '⭐ 大金星' : '勝利'}</span>}
+                        </>
+                        return match.player1IsActive !== false
+                          ? <Link href={`/players/${match.player1Id}`} className="flex-1 flex flex-col items-center gap-2">{p1Inner}</Link>
+                          : <div className="flex-1 flex flex-col items-center gap-2">{p1Inner}</div>
+                      })()}
 
                       <div className="text-center flex-shrink-0 space-y-1">
                         <div className="w-12 h-12 rounded-full bg-red-700 flex items-center justify-center text-sm font-bold mx-auto">VS</div>
@@ -243,32 +235,22 @@ export default function MatchesClient({
                         )}
                       </div>
 
-                      <Link href={`/players/${match.player2Id}`} className="flex-1 flex flex-col items-center gap-2">
-                        <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${
-                          upset && !isPair1Winner && hasWinner
-                            ? 'border-yellow-400 avatar-glow'
-                            : !isPair1Winner && hasWinner
-                              ? 'border-amber-400 avatar-glow-win'
-                              : 'border-yellow-600/30'
-                        }`}>
-                          {match.player2Avatar
-                            ? <img src={match.player2Avatar} className="w-full h-full object-cover" />
-                            : <span className="text-3xl flex items-center justify-center h-full">👤</span>
-                          }
-                        </div>
-                        <span className={`font-bold text-sm text-center ${!isPair1Winner && hasWinner ? 'text-white' : 'text-gray-400'}`}>
-                          {match.player2Name}
-                        </span>
-                        <div className="flex gap-2 text-xs text-gray-400">
-                          {match.player2_hc != null && <span>HC {match.player2_hc}</span>}
-                          {match.player2_rp != null && <span className="text-purple-400">RP {match.player2_rp}</span>}
-                        </div>
-                        {!isPair1Winner && hasWinner && (
-                          <span className={`text-xs font-bold ${upset ? 'text-yellow-400' : 'text-green-400'}`}>
-                            {upset ? '⭐ 大金星' : '勝利'}
-                          </span>
-                        )}
-                      </Link>
+                      {(() => {
+                        const p2Inner = <>
+                          <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${upset && !isPair1Winner && hasWinner ? 'border-yellow-400 avatar-glow' : !isPair1Winner && hasWinner ? 'border-amber-400 avatar-glow-win' : 'border-yellow-600/30'}`}>
+                            {match.player2Avatar ? <img src={match.player2Avatar} className="w-full h-full object-cover" /> : <span className="text-3xl flex items-center justify-center h-full">👤</span>}
+                          </div>
+                          <span className={`font-bold text-sm text-center ${!isPair1Winner && hasWinner ? 'text-white' : 'text-gray-400'}`}>{match.player2Name}</span>
+                          <div className="flex gap-2 text-xs text-gray-400">
+                            {match.player2_hc != null && <span>HC {match.player2_hc}</span>}
+                            {match.player2_rp != null && <span className="text-purple-400">RP {match.player2_rp}</span>}
+                          </div>
+                          {!isPair1Winner && hasWinner && <span className={`text-xs font-bold ${upset ? 'text-yellow-400' : 'text-green-400'}`}>{upset ? '⭐ 大金星' : '勝利'}</span>}
+                        </>
+                        return match.player2IsActive !== false
+                          ? <Link href={`/players/${match.player2Id}`} className="flex-1 flex flex-col items-center gap-2">{p2Inner}</Link>
+                          : <div className="flex-1 flex flex-col items-center gap-2">{p2Inner}</div>
+                      })()}
                     </div>
                   )}
                 </div>

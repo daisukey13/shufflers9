@@ -18,7 +18,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
 
   const { data: blocks } = await supabase
     .from('tournament_blocks')
-    .select('*, tournament_block_players(*, player:players(id, name, avatar_url, hc, rating))')
+    .select('*, tournament_block_players(*, player:players(id, name, avatar_url, hc, rating, is_active))')
     .eq('tournament_id', id)
     .order('block_name')
 
@@ -71,7 +71,7 @@ export default async function TournamentDetailPage({ params }: { params: Promise
   // エントリー済みプレーヤー一覧
   const { data: entries } = await supabase
     .from('tournament_entries')
-    .select('*, player:players(id, name, avatar_url)')
+    .select('*, player:players(id, name, avatar_url, is_active)')
     .eq('tournament_id', id)
     .neq('status', 'cancelled')
     .order('created_at')

@@ -411,11 +411,13 @@ export default async function MyPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="mt-2 text-right">
-                        <Link href={`/players/${opponent?.id}`} className="text-xs text-purple-400 hover:text-purple-300">
-                          相手プロフィール →
-                        </Link>
-                      </div>
+                      {opponent?.is_active !== false && (
+                        <div className="mt-2 text-right">
+                          <Link href={`/players/${opponent?.id}`} className="text-xs text-purple-400 hover:text-purple-300">
+                            相手プロフィール →
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
