@@ -24,6 +24,7 @@ type Tournament = {
   id: string; name: string; status: string; format: string; description: string | null
   started_at: string | null; qualifying_start_time: string | null; finals_start_time: string | null
   bonus_points: number; notes: string | null; venue: string | null
+  entry_fee: string | null; live_url: string | null
 }
 type Entry = { id: string; status: string; cancel_requested: boolean; preferred_dates: string | null; player: Player }
 
@@ -178,7 +179,16 @@ export default function TournamentDetailClient({
                 ? `${tournament.bonus_points}%（勝利RPに対して）`
                 : 'なし',
             })
-            rows.push({ label: '参加料', value: '無料' })
+            rows.push({ label: '参加料', value: tournament.entry_fee ?? '無料' })
+            if (tournament.live_url) rows.push({
+              label: 'ライブ中継',
+              value: (
+                <a href={tournament.live_url} target="_blank" rel="noopener noreferrer"
+                  className="text-purple-400 hover:text-purple-300 underline break-all">
+                  {tournament.live_url}
+                </a>
+              ),
+            })
             if (tournament.notes) rows.push({ label: 'その他', value: tournament.notes })
             if (tournament.description) rows.push({ label: '説明', value: tournament.description })
 

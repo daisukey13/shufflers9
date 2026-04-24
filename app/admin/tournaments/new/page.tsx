@@ -19,10 +19,12 @@ export default function NewTournamentPage() {
   const [description, setDescription] = useState('')
   const [format, setFormat] = useState<'singles' | 'doubles'>('singles')
   const [startedAt, setStartedAt] = useState('')
-  const [venue, setVenue] = useState('とわにーホール')
-  const [qualifyingStartTime, setQualifyingStartTime] = useState('')
-  const [finalsStartTime, setFinalsStartTime] = useState('')
+  const [venue, setVenue] = useState('とわにー交流ホール（北海道豊浦町）')
+  const [qualifyingStartTime, setQualifyingStartTime] = useState('09:10')
+  const [finalsStartTime, setFinalsStartTime] = useState('13:00')
   const [bonusPoints, setBonusPoints] = useState('')
+  const [entryFee, setEntryFee] = useState('無料')
+  const [liveUrl, setLiveUrl] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,6 +42,8 @@ export default function NewTournamentPage() {
         name: name.trim(),
         description: description.trim() || null,
         venue: venue.trim() || null,
+        entry_fee: entryFee.trim() || null,
+        live_url: liveUrl.trim() || null,
         format,
         type: 'singles',
         status: 'open',
@@ -165,6 +169,32 @@ export default function NewTournamentPage() {
               <option key={v} value={String(v)}>{v}%ボーナス（×{(1 + v/100).toFixed(1)}倍）</option>
             ))}
           </select>
+        </div>
+
+        {/* 参加料 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">参加料</label>
+          <input
+            type="text"
+            value={entryFee}
+            onChange={e => setEntryFee(e.target.value)}
+            placeholder="無料"
+            className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+
+        {/* ライブ中継URL */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">ライブ中継URL
+            <span className="text-xs text-gray-500 ml-1">（任意）</span>
+          </label>
+          <input
+            type="url"
+            value={liveUrl}
+            onChange={e => setLiveUrl(e.target.value)}
+            placeholder="https://youtube.com/..."
+            className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
         </div>
 
         {/* その他注意事項 */}
