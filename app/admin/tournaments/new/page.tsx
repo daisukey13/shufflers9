@@ -110,7 +110,7 @@ export default function NewTournamentPage() {
             type="text"
             value={venue}
             onChange={e => setVenue(e.target.value)}
-            placeholder="とわにー（北海道豊浦町）"
+            placeholder="とわにー交流スペース（北海道豊浦町）"
             className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
         </div>
