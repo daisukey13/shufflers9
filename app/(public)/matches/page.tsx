@@ -5,6 +5,18 @@ import MatchesClient from './MatchesClient'
 export default async function MatchesPage() {
   const supabase = await createClient()
 
+  // ログイン中のプレーヤーIDを取得（コメント表示用）
+  const { data: { user } } = await supabase.auth.getUser()
+  let currentPlayerId: string | null = null
+  if (user) {
+    const { data: currentPlayer } = await supabase
+      .from('players')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+    currentPlayerId = currentPlayer?.id ?? null
+  }
+
   const [singles, doublesResult, qualifyingResult, finalsResult] = await Promise.all([
     getRecentSinglesMatches(50),
     supabase.from('doubles_matches').select(`
@@ -53,6 +65,8 @@ export default async function MatchesPage() {
     pair1p2Avatar?: string | null
     pair2p1Avatar?: string | null
     pair2p2Avatar?: string | null
+    comment1?: string | null
+    comment2?: string | null
   }
 
   const singlesMatches: MatchItem[] = singles
@@ -78,6 +92,8 @@ export default async function MatchesPage() {
       player2_rp: m.player2?.rating ?? null,
       player1_rank: m.player1_rank,
       player2_rank: m.player2_rank,
+      comment1: (m as any).comment1 ?? null,
+      comment2: (m as any).comment2 ?? null,
     }))
 
   const doublesMatches: MatchItem[] = (doublesResult.data ?? [])
@@ -165,6 +181,7 @@ export default async function MatchesPage() {
       singlesMatches={singlesMatches}
       doublesMatches={doublesMatches}
       tournamentMatches={tournamentMatches}
+      currentPlayerId={currentPlayerId}
     />
   )
 }

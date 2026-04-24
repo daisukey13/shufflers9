@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import Link from 'next/link'
 
 type MatchItem = {
@@ -38,6 +38,8 @@ type MatchItem = {
   pair1p2Avatar?: string | null
   pair2p1Avatar?: string | null
   pair2p2Avatar?: string | null
+  comment1?: string | null
+  comment2?: string | null
 }
 
 type Tab = 'singles' | 'doubles' | 'tournament'
@@ -46,12 +48,54 @@ export default function MatchesClient({
   singlesMatches,
   doublesMatches,
   tournamentMatches,
+  currentPlayerId,
 }: {
   singlesMatches: MatchItem[]
   doublesMatches: MatchItem[]
   tournamentMatches: MatchItem[]
+  currentPlayerId?: string | null
 }) {
   const [tab, setTab] = useState<Tab>('singles')
+  // コメント入力の下書き管理: matchId → 入力中のテキスト
+  const [draftComments, setDraftComments] = useState<Record<string, string>>({})
+  // 保存済みコメントのローカル上書き: matchId → { comment1?, comment2? }
+  const [savedComments, setSavedComments] = useState<Record<string, { comment1?: string; comment2?: string }>>({})
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
+
+  const handleCommentSubmit = useCallback(async (match: MatchItem) => {
+    const draft = draftComments[match.id]?.trim()
+    if (!draft) return
+    setSavingIds(prev => new Set(prev).add(match.id))
+    try {
+      const res = await fetch(`/api/matches/${match.id}/comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: draft }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSavedComments(prev => ({
+          ...prev,
+          [match.id]: {
+            ...prev[match.id],
+            [data.field]: draft,
+          },
+        }))
+        setDraftComments(prev => { const n = { ...prev }; delete n[match.id]; return n })
+      }
+    } finally {
+      setSavingIds(prev => { const n = new Set(prev); n.delete(match.id); return n })
+    }
+  }, [draftComments])
+
+  const handleCommentDelete = useCallback(async (match: MatchItem, field: 'comment1' | 'comment2') => {
+    if (!confirm('コメントを削除しますか？')) return
+    await fetch(`/api/matches/${match.id}/comment`, { method: 'DELETE' })
+    setSavedComments(prev => ({
+      ...prev,
+      [match.id]: { ...prev[match.id], [field]: undefined },
+    }))
+  }, [])
 
   const matches =
     tab === 'singles' ? singlesMatches
@@ -253,6 +297,81 @@ export default function MatchesClient({
                       })()}
                     </div>
                   )}
+
+                  {/* コメントセクション (シングルスのみ) */}
+                  {match.type === 'singles' && (() => {
+                    const c1 = savedComments[match.id]?.comment1 !== undefined
+                      ? savedComments[match.id].comment1
+                      : match.comment1
+                    const c2 = savedComments[match.id]?.comment2 !== undefined
+                      ? savedComments[match.id].comment2
+                      : match.comment2
+
+                    const isPlayer1 = currentPlayerId === match.player1Id
+                    const isPlayer2 = currentPlayerId === match.player2Id
+                    const myField = isPlayer1 ? 'comment1' : isPlayer2 ? 'comment2' : null
+                    const myComment = myField === 'comment1' ? c1 : myField === 'comment2' ? c2 : null
+                    const hasAnyComment = c1 || c2
+                    const canComment = !!myField
+                    const isSaving = savingIds.has(match.id)
+                    const draft = draftComments[match.id] ?? ''
+
+                    if (!hasAnyComment && !canComment) return null
+
+                    return (
+                      <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+                        {/* 既存コメント表示 */}
+                        {c1 && (
+                          <div className="flex items-start gap-2 text-xs">
+                            <span className="text-gray-500 flex-shrink-0">💬</span>
+                            <span className="text-blue-300 font-medium flex-shrink-0">{match.player1Name}:</span>
+                            <span className="text-gray-300 flex-1">"{c1}"</span>
+                            {isPlayer1 && (
+                              <button
+                                onClick={() => handleCommentDelete(match, 'comment1')}
+                                className="text-gray-600 hover:text-red-400 flex-shrink-0 text-xs"
+                              >✕</button>
+                            )}
+                          </div>
+                        )}
+                        {c2 && (
+                          <div className="flex items-start gap-2 text-xs">
+                            <span className="text-gray-500 flex-shrink-0">💬</span>
+                            <span className="text-purple-300 font-medium flex-shrink-0">{match.player2Name}:</span>
+                            <span className="text-gray-300 flex-1">"{c2}"</span>
+                            {isPlayer2 && (
+                              <button
+                                onClick={() => handleCommentDelete(match, 'comment2')}
+                                className="text-gray-600 hover:text-red-400 flex-shrink-0 text-xs"
+                              >✕</button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* コメント入力フォーム（未コメントのログインユーザーのみ） */}
+                        {canComment && !myComment && (
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={draft}
+                              onChange={e => setDraftComments(prev => ({ ...prev, [match.id]: e.target.value }))}
+                              onKeyDown={e => e.key === 'Enter' && handleCommentSubmit(match)}
+                              placeholder="一言コメントを残す..."
+                              maxLength={100}
+                              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+                            />
+                            <button
+                              onClick={() => handleCommentSubmit(match)}
+                              disabled={isSaving || !draft.trim()}
+                              className="px-3 py-1.5 bg-purple-700/50 hover:bg-purple-700/80 disabled:opacity-40 text-white text-xs rounded-lg transition flex-shrink-0"
+                            >
+                              {isSaving ? '...' : '送信'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })}
