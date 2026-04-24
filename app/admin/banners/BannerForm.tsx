@@ -181,17 +181,18 @@ export default function BannerForm({ banner }: { banner?: Banner }) {
       {title && (
         <div className="space-y-2">
           <p className="text-xs text-gray-500">プレビュー</p>
-          <div className="relative w-full bg-gradient-to-r from-[#1a0533] via-[#2d0a6e] to-[#0f1a4a] border border-purple-500/40 rounded-2xl overflow-hidden shadow-lg min-h-[88px] flex items-center px-5 py-4 gap-4">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.04),transparent_60%)] pointer-events-none" />
-            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-white/20 to-transparent rounded-l-2xl" />
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-700/60 text-purple-200 flex items-center justify-center text-xl shadow">
-              📣
+          <div className="relative w-full bg-gradient-to-r from-[#0d0030] via-[#1a0050] to-[#0d0030] border border-yellow-400/40 rounded-2xl overflow-hidden flex flex-col items-center justify-center text-center px-6 py-8 min-h-[180px]">
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 0%, rgba(160,80,255,0.25) 0%, transparent 70%)' }} />
+            <div className="relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/20 border border-yellow-400/60 mb-3">
+              <span className="text-xs font-bold tracking-widest uppercase text-yellow-300">📣 お知らせ</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-white text-sm sm:text-base leading-snug">{title}</p>
-              {body && <p className="text-xs text-gray-300 mt-0.5">{body}</p>}
-            </div>
-            {linkUrl && <span className="flex-shrink-0 text-xs text-gray-400">詳細 →</span>}
+            <h3 className="relative font-extrabold text-xl text-white leading-tight mb-2">{title}</h3>
+            {body && <p className="relative text-sm text-gray-300 max-w-sm mb-4">{body}</p>}
+            {linkUrl && (
+              <div className="relative inline-flex items-center gap-1.5 px-6 py-2 rounded-full bg-gradient-to-r from-yellow-500 to-amber-400 text-gray-900 text-sm font-bold shadow-lg">
+                詳しく見る →
+              </div>
+            )}
           </div>
         </div>
       )}

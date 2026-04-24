@@ -12,44 +12,82 @@ type Banner = {
 
 const THEMES = [
   {
-    bg: 'from-[#1a0533] via-[#2d0a6e] to-[#0f1a4a]',
-    accent: 'border-purple-500/40',
-    dot: 'bg-purple-400',
-    glow: 'shadow-purple-900/60',
-    tag: 'bg-purple-700/60 text-purple-200',
+    // 紫・ゴールド
+    bg: 'from-[#0d0030] via-[#1a0050] to-[#0d0030]',
+    spotlight: 'rgba(160,80,255,0.25)',
+    spotlight2: 'rgba(255,200,50,0.10)',
+    border: 'border-yellow-400/40',
+    tagBg: 'bg-yellow-400/20 border border-yellow-400/60',
+    tagText: 'text-yellow-300',
+    titleColor: 'text-white',
+    btnBg: 'bg-gradient-to-r from-yellow-500 to-amber-400 hover:from-yellow-400 hover:to-amber-300',
+    btnText: 'text-gray-900',
+    glow: '#a050ff',
   },
   {
-    bg: 'from-[#1a0a00] via-[#4a2000] to-[#1a0f00]',
-    accent: 'border-amber-500/40',
-    dot: 'bg-amber-400',
-    glow: 'shadow-amber-900/60',
-    tag: 'bg-amber-700/60 text-amber-200',
+    // 赤・ゴールド（スクリーンショット風）
+    bg: 'from-[#2a0000] via-[#4a0a00] to-[#2a0000]',
+    spotlight: 'rgba(255,80,30,0.30)',
+    spotlight2: 'rgba(255,200,50,0.12)',
+    border: 'border-yellow-400/40',
+    tagBg: 'bg-yellow-400/20 border border-yellow-400/60',
+    tagText: 'text-yellow-300',
+    titleColor: 'text-white',
+    btnBg: 'bg-gradient-to-r from-yellow-500 to-amber-400 hover:from-yellow-400 hover:to-amber-300',
+    btnText: 'text-gray-900',
+    glow: '#ff501e',
   },
   {
-    bg: 'from-[#001a33] via-[#002d6e] to-[#0a0a2d]',
-    accent: 'border-blue-500/40',
-    dot: 'bg-blue-400',
-    glow: 'shadow-blue-900/60',
-    tag: 'bg-blue-700/60 text-blue-200',
+    // 深青・シアン
+    bg: 'from-[#00082a] via-[#001050] to-[#00082a]',
+    spotlight: 'rgba(30,120,255,0.25)',
+    spotlight2: 'rgba(0,220,255,0.10)',
+    border: 'border-cyan-400/40',
+    tagBg: 'bg-cyan-400/20 border border-cyan-400/60',
+    tagText: 'text-cyan-300',
+    titleColor: 'text-white',
+    btnBg: 'bg-gradient-to-r from-cyan-500 to-blue-400 hover:from-cyan-400 hover:to-blue-300',
+    btnText: 'text-gray-900',
+    glow: '#1e78ff',
   },
   {
-    bg: 'from-[#001a0f] via-[#00331a] to-[#0a1a0a]',
-    accent: 'border-green-500/40',
-    dot: 'bg-green-400',
-    glow: 'shadow-green-900/60',
-    tag: 'bg-green-700/60 text-green-200',
+    // 緑・エメラルド
+    bg: 'from-[#001a0a] via-[#003020] to-[#001a0a]',
+    spotlight: 'rgba(0,200,80,0.22)',
+    spotlight2: 'rgba(100,255,150,0.08)',
+    border: 'border-emerald-400/40',
+    tagBg: 'bg-emerald-400/20 border border-emerald-400/60',
+    tagText: 'text-emerald-300',
+    titleColor: 'text-white',
+    btnBg: 'bg-gradient-to-r from-emerald-500 to-green-400 hover:from-emerald-400 hover:to-green-300',
+    btnText: 'text-gray-900',
+    glow: '#00c850',
   },
 ]
 
+const TAG_LABELS = ['📣 お知らせ', '🏆 大会情報', '📅 イベント', '⭐ 注目']
+
 export default function BannerSlider({ banners }: { banners: Banner[] }) {
   const [current, setCurrent] = useState(0)
+  const [animating, setAnimating] = useState(false)
 
-  const next = useCallback(() => setCurrent(i => (i + 1) % banners.length), [banners.length])
-  const prev = () => setCurrent(i => (i - 1 + banners.length) % banners.length)
+  const goTo = useCallback((index: number) => {
+    setAnimating(true)
+    setTimeout(() => {
+      setCurrent(index)
+      setAnimating(false)
+    }, 200)
+  }, [])
+
+  const next = useCallback(() => {
+    goTo((current + 1) % banners.length)
+  }, [current, banners.length, goTo])
+
+  const prev = () => goTo((current - 1 + banners.length) % banners.length)
 
   useEffect(() => {
     if (banners.length <= 1) return
-    const timer = setInterval(next, 5000)
+    const timer = setInterval(next, 6000)
     return () => clearInterval(timer)
   }, [next, banners.length])
 
@@ -57,52 +95,97 @@ export default function BannerSlider({ banners }: { banners: Banner[] }) {
 
   const banner = banners[current]
   const theme = THEMES[current % THEMES.length]
+  const tagLabel = TAG_LABELS[current % TAG_LABELS.length]
 
-  const inner = (
-    <div className={`relative w-full bg-gradient-to-r ${theme.bg} border ${theme.accent} rounded-2xl overflow-hidden shadow-lg ${theme.glow} min-h-[88px] flex items-center px-5 py-4 gap-4 transition-all duration-500`}>
-      {/* 装飾 */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.04),transparent_60%)] pointer-events-none" />
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-white/20 to-transparent rounded-l-2xl" />
+  const content = (
+    <div
+      className={`
+        relative w-full bg-gradient-to-r ${theme.bg}
+        border ${theme.border} rounded-2xl overflow-hidden
+        flex flex-col items-center justify-center text-center
+        px-6 py-8 min-h-[180px] sm:min-h-[200px]
+        transition-opacity duration-200 ${animating ? 'opacity-0' : 'opacity-100'}
+        cursor-${banner.link_url ? 'pointer' : 'default'}
+      `}
+    >
+      {/* ステージライト上部 */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `
+            radial-gradient(ellipse 70% 60% at 50% 0%, ${theme.spotlight} 0%, transparent 70%),
+            radial-gradient(ellipse 40% 40% at 20% 100%, ${theme.spotlight2} 0%, transparent 60%),
+            radial-gradient(ellipse 40% 40% at 80% 100%, ${theme.spotlight2} 0%, transparent 60%)
+          `,
+        }}
+      />
 
-      {/* アイコン */}
-      <div className={`flex-shrink-0 w-10 h-10 rounded-full ${theme.tag} flex items-center justify-center text-xl shadow`}>
-        📣
+      {/* 左右の光柱 */}
+      <div className="absolute left-0 top-0 w-px h-full bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+      <div className="absolute right-0 top-0 w-px h-full bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+
+      {/* 上部タグ */}
+      <div className={`relative inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${theme.tagBg} mb-3`}>
+        <span className={`text-xs font-bold tracking-widest uppercase ${theme.tagText}`}>
+          {tagLabel}
+        </span>
       </div>
 
-      {/* テキスト */}
-      <div className="flex-1 min-w-0">
-        <p className="font-bold text-white text-sm sm:text-base leading-snug truncate">{banner.title}</p>
-        {banner.body && (
-          <p className="text-xs text-gray-300 mt-0.5 leading-relaxed line-clamp-2">{banner.body}</p>
-        )}
-      </div>
+      {/* タイトル */}
+      <h3
+        className={`relative font-extrabold text-xl sm:text-2xl leading-tight mb-2 ${theme.titleColor}`}
+        style={{ textShadow: `0 0 30px ${theme.glow}80` }}
+      >
+        {banner.title}
+      </h3>
 
-      {/* 矢印 */}
-      {banner.link_url && (
-        <span className="flex-shrink-0 text-xs text-gray-400 whitespace-nowrap">詳細 →</span>
+      {/* 本文 */}
+      {banner.body && (
+        <p className="relative text-sm text-gray-300 leading-relaxed max-w-sm mb-4">
+          {banner.body}
+        </p>
       )}
+
+      {/* ボタン */}
+      {banner.link_url && (
+        <div
+          className={`
+            relative inline-flex items-center gap-1.5 px-6 py-2 rounded-full
+            ${theme.btnBg} ${theme.btnText}
+            text-sm font-bold shadow-lg transition
+          `}
+        >
+          詳しく見る →
+        </div>
+      )}
+
+      {/* 下部装飾ライン */}
+      <div
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 h-px w-2/3"
+        style={{ background: `linear-gradient(to right, transparent, ${theme.glow}60, transparent)` }}
+      />
     </div>
   )
 
   return (
-    <section className="px-4 mb-6 max-w-3xl mx-auto">
+    <section className="px-4 mb-8 max-w-3xl mx-auto">
       <div className="relative group">
         {banner.link_url ? (
-          <Link href={banner.link_url} className="block hover:opacity-90 transition">
-            {inner}
+          <Link href={banner.link_url} className="block">
+            {content}
           </Link>
-        ) : inner}
+        ) : content}
 
-        {/* prev / next */}
+        {/* prev / next ボタン */}
         {banners.length > 1 && (
           <>
             <button
-              onClick={prev}
-              className="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/70 rounded-full flex items-center justify-center text-white text-sm transition opacity-0 group-hover:opacity-100"
+              onClick={e => { e.preventDefault(); prev() }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-black/50 hover:bg-black/80 border border-white/10 rounded-full flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100"
             >‹</button>
             <button
-              onClick={next}
-              className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/40 hover:bg-black/70 rounded-full flex items-center justify-center text-white text-sm transition opacity-0 group-hover:opacity-100"
+              onClick={e => { e.preventDefault(); next() }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-black/50 hover:bg-black/80 border border-white/10 rounded-full flex items-center justify-center text-white transition opacity-0 group-hover:opacity-100"
             >›</button>
           </>
         )}
@@ -110,15 +193,15 @@ export default function BannerSlider({ banners }: { banners: Banner[] }) {
 
       {/* ドットインジケーター */}
       {banners.length > 1 && (
-        <div className="flex justify-center gap-1.5 mt-2">
+        <div className="flex justify-center gap-2 mt-3">
           {banners.map((_, i) => (
             <button
               key={i}
-              onClick={() => setCurrent(i)}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
+              onClick={() => goTo(i)}
+              className={`rounded-full transition-all duration-300 ${
                 i === current
-                  ? `w-5 ${theme.dot}`
-                  : 'w-1.5 bg-gray-700 hover:bg-gray-500'
+                  ? 'w-6 h-2 bg-yellow-400'
+                  : 'w-2 h-2 bg-gray-700 hover:bg-gray-500'
               }`}
             />
           ))}
