@@ -13,12 +13,16 @@ export async function POST(req: NextRequest) {
   // 表示名からplayerを検索
   const { data: player, error } = await adminClient
     .from('players')
-    .select('user_id')
+    .select('user_id, is_active')
     .eq('name', name.trim())
     .single()
 
   if (error || !player) {
     return NextResponse.json({ error: '該当するメンバーが見つかりません' }, { status: 404 })
+  }
+
+  if (!player.is_active) {
+    return NextResponse.json({ error: 'このアカウントは無効化されています' }, { status: 403 })
   }
 
   // user_idからメールアドレスを取得

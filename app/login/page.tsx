@@ -63,12 +63,28 @@ export default function LoginPage() {
       email = data.email
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError('パスワードが正しくありません')
       setLoading(false)
       return
+    }
+
+    // is_active チェック（削除済みプレーヤーはログイン不可）
+    if (authData.user) {
+      const { data: player } = await supabase
+        .from('players')
+        .select('is_active')
+        .eq('user_id', authData.user.id)
+        .single()
+
+      if (player && !player.is_active) {
+        await supabase.auth.signOut()
+        setError('このアカウントは無効化されています')
+        setLoading(false)
+        return
+      }
     }
 
     router.push('/')
