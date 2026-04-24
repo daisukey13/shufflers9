@@ -5,19 +5,19 @@ import { useState } from 'react'
 const TEMPLATES = [
   {
     label: '📋 組み合わせ発表',
-    text: '【組み合わせ発表】予選の組み合わせが発表されました。サイトでご確認ください。\nhttps://shufflers.jp/notices',
+    text: '【組み合わせ発表】予選の組み合わせが発表されました。サイトでご確認ください。\nhttps://toyoura.online/notices',
   },
   {
     label: '🏆 大会結果',
-    text: '【大会結果】試合結果が更新されました。ランキングサイトでご確認ください。\nhttps://shufflers.jp',
+    text: '【大会結果】試合結果が更新されました。ランキングサイトでご確認ください。\nhttps://toyoura.online',
   },
   {
     label: '📢 お知らせ',
-    text: '【お知らせ】新着お知らせが投稿されました。サイトをご確認ください。\nhttps://shufflers.jp/notices',
+    text: '【お知らせ】新着お知らせが投稿されました。サイトをご確認ください。\nhttps://toyoura.online/notices',
   },
   {
     label: '🗓️ 大会エントリー受付中',
-    text: '【エントリー受付中】大会のエントリーを受け付けています。サイトからお申し込みください。\nhttps://shufflers.jp/tournaments',
+    text: '【エントリー受付中】大会のエントリーを受け付けています。サイトからお申し込みください。\nhttps://toyoura.online/tournaments',
   },
 ]
 
