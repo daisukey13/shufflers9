@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const TEMPLATES = [
   {
@@ -29,6 +29,13 @@ export default function LineNotificationPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // URLの ?msg= パラメータで本文を自動セット
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const msg = params.get('msg')
+    if (msg) setMessage(msg)
+  }, [])
 
   const handleSend = async () => {
     if (!message.trim()) return

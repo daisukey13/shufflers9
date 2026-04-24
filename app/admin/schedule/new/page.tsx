@@ -16,6 +16,7 @@ export default function NewEventPage() {
   const [isPublished, setIsPublished] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lineMsg, setLineMsg] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -41,7 +42,34 @@ export default function NewEventPage() {
       return
     }
 
-    router.push('/admin/schedule')
+    const typeLabel = eventType === 'practice' ? '練習' : eventType === 'unofficial' ? '非公式イベント' : '大会'
+    setLineMsg(`【スケジュール更新】${typeLabel}「${title.trim()}」が追加されました。詳細はスケジュールページでご確認ください。\nhttps://toyoura.online/schedule`)
+    setLoading(false)
+  }
+
+  if (lineMsg) {
+    return (
+      <div className="space-y-6 max-w-lg">
+        <div className="bg-green-900/20 border border-green-700/30 rounded-2xl p-6 space-y-4">
+          <p className="text-green-400 font-semibold text-lg">✅ イベントを作成しました</p>
+          <p className="text-sm text-gray-400">LINEフォロワーへの通知を送りますか？</p>
+          <div className="flex gap-3 flex-wrap">
+            <button
+              onClick={() => router.push(`/admin/line?msg=${encodeURIComponent(lineMsg)}`)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition"
+            >
+              💬 LINEで通知する
+            </button>
+            <button
+              onClick={() => { router.push('/admin/schedule'); router.refresh() }}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition"
+            >
+              スケジュール一覧へ →
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

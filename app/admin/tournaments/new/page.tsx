@@ -28,6 +28,7 @@ export default function NewTournamentPage() {
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [created, setCreated] = useState<{ id: string; lineMsg: string } | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -62,7 +63,40 @@ export default function NewTournamentPage() {
       return
     }
 
-    router.push(`/admin/tournaments/${data.id}/entries`)
+    const msg = `【大会エントリー受付中】${name.trim()} のエントリーを受け付けています。サイトからお申し込みください。\nhttps://toyoura.online/tournaments`
+    setCreated({ id: data.id, lineMsg: msg })
+    setLoading(false)
+  }
+
+  if (created) {
+    return (
+      <div className="space-y-6 max-w-lg">
+        <div className="bg-green-900/20 border border-green-700/30 rounded-2xl p-6 space-y-4">
+          <p className="text-green-400 font-semibold text-lg">✅ 大会を作成しました</p>
+          <p className="text-sm text-gray-400">次のアクションを選択してください</p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => router.push(`/admin/line?msg=${encodeURIComponent(created.lineMsg)}`)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition"
+            >
+              💬 LINEで通知する
+            </button>
+            <button
+              onClick={() => router.push(`/admin/tournaments/${created.id}/entries`)}
+              className="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition"
+            >
+              エントリー管理へ →
+            </button>
+            <button
+              onClick={() => router.push('/admin/tournaments')}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition"
+            >
+              大会一覧へ
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
