@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Turnstile from '@/components/ui/Turnstile'
@@ -16,7 +15,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const supabase = createClient()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,71 +27,22 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    // Turnstile検証
-    const verifyRes = await fetch('/api/turnstile', {
+    const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: turnstileToken }),
+      body: JSON.stringify({ turnstileToken, nameOrEmail, password, mode }),
     })
     setTurnstileToken(null)
 
-    if (!verifyRes.ok) {
-      setError('人間認証に失敗しました。もう一度お試しください')
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(data.error ?? 'ログインに失敗しました')
       setLoading(false)
       return
     }
 
-    let email = nameOrEmail.trim()
-
-    if (mode === 'name') {
-      const res = await fetch('/api/auth/resolve-name', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: nameOrEmail }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error ?? 'ログインに失敗しました')
-        setLoading(false)
-        return
-      }
-
-      email = data.email
-    }
-
-    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (error) {
-      setError('パスワードが正しくありません')
-      setLoading(false)
-      return
-    }
-
-    // is_active チェック・管理者判定
-    if (authData.user) {
-      const { data: player } = await supabase
-        .from('players')
-        .select('is_active, is_admin')
-        .eq('user_id', authData.user.id)
-        .single()
-
-      if (player && !player.is_active) {
-        await supabase.auth.signOut()
-        setError('このアカウントは無効化されています')
-        setLoading(false)
-        return
-      }
-
-      if (player?.is_admin) {
-        router.push('/admin')
-        router.refresh()
-        return
-      }
-    }
-
-    router.push('/mypage')
+    router.push(data.redirectTo)
     router.refresh()
   }
 

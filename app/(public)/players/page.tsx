@@ -106,11 +106,14 @@ export default async function PlayersPage({
                     href={`/players/${player.id}`}
                     className="flex items-center gap-4 p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl hover:bg-purple-900/40 transition"
                   >
-                    <span className={`text-sm font-bold w-6 text-center flex-shrink-0 ${
-                      rankNum === 1 ? 'text-yellow-400' :
-                      rankNum === 2 ? 'text-gray-400' :
-                      rankNum === 3 ? 'text-orange-400' : 'text-gray-500'
-                    }`}>{rank}</span>
+                    <div className="flex-shrink-0 w-10 text-center">
+                      <div className={`text-base font-black leading-none ${
+                        rankNum === 1 ? 'text-yellow-400' :
+                        rankNum === 2 ? 'text-gray-300' :
+                        rankNum === 3 ? 'text-orange-400' : 'text-gray-500'
+                      }`}>{rank}<span className="text-xs font-bold">位</span></div>
+                      <div className="text-[9px] text-gray-600 leading-tight mt-0.5">現在</div>
+                    </div>
                     <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex items-center justify-center flex-shrink-0">
                       {player.avatar_url
                         ? <img src={player.avatar_url} className="w-full h-full object-cover" />

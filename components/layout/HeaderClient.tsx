@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const navItems = [
-  { href: '/rankings', label: 'ランキング' },
-  { href: '/players', label: 'メンバー' },
-  { href: '/matches', label: '試合結果' },
-  { href: '/tournaments', label: '大会' },
-  { href: '/schedule', label: 'スケジュール' },
+  { href: '/rankings',   label: 'ランキング',   icon: '🏆' },
+  { href: '/players',    label: 'メンバー',     icon: '👥' },
+  { href: '/matches',    label: '試合結果',     icon: '📋' },
+  { href: '/tournaments',label: '大会',         icon: '🥇' },
+  { href: '/schedule',   label: 'スケジュール', icon: '📅' },
 ]
 
 export default function HeaderClient({
@@ -30,18 +30,21 @@ export default function HeaderClient({
             className="w-10 h-10 object-contain hover:opacity-80 transition"
           />
         </Link>
-        <nav className="flex gap-4 sm:gap-6">
+        <nav className="flex gap-1 sm:gap-5">
           {navItems.map(item => (
             <Link
               key={item.href}
               href={item.href}
-              className={`text-sm transition ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition ${
                 pathname.startsWith(item.href)
-                  ? 'text-amber-400 font-semibold'
+                  ? 'text-amber-400'
                   : 'text-gray-400 hover:text-amber-300'
               }`}
             >
-              {item.label}
+              <span className="text-xl sm:text-base leading-none">{item.icon}</span>
+              <span className={`hidden sm:block text-xs font-medium ${pathname.startsWith(item.href) ? 'font-semibold' : ''}`}>
+                {item.label}
+              </span>
             </Link>
           ))}
         </nav>
