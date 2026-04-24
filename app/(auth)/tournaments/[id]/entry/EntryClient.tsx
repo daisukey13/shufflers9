@@ -1,12 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type Player = { id: string; name: string; hc: number; rating: number }
-type Tournament = { id: string; name: string; status: string; description: string | null }
+type Tournament = {
+  id: string; name: string; status: string; description: string | null
+  started_at: string | null; qualifying_start_time: string | null; finals_start_time: string | null
+  bonus_points: number; notes: string | null; venue: string | null
+}
 type Entry = {
   id: string
   status: string
@@ -94,11 +98,55 @@ export default function EntryClient({
           <p className="text-gray-300 mt-1">{tournament.name}</p>
         </div>
 
-        {tournament.description && (
-          <p className="text-sm text-gray-400 bg-purple-900/20 border border-purple-800/30 rounded-xl p-4">
-            {tournament.description}
-          </p>
-        )}
+        {/* 大会詳細 */}
+        {(() => {
+          const weekdays = ['日', '月', '火', '水', '木', '金', '土']
+          const dateObj = tournament.started_at ? new Date(tournament.started_at) : null
+          const dateStr = dateObj
+            ? `${dateObj.getFullYear()}年${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${weekdays[dateObj.getDay()]}曜日）`
+            : null
+          const hasTime = tournament.qualifying_start_time || tournament.finals_start_time
+          const timeStr = [
+            tournament.qualifying_start_time ? `予選リーグ ${tournament.qualifying_start_time}から` : null,
+            tournament.finals_start_time ? `決勝トーナメント ${tournament.finals_start_time}から予定` : null,
+          ].filter(Boolean).join(' / ')
+
+          const rows: { label: string; value: React.ReactNode }[] = []
+          if (dateStr) rows.push({ label: '開催日', value: dateStr })
+          if (tournament.venue) rows.push({ label: '会場', value: tournament.venue })
+          if (hasTime) rows.push({
+            label: '時間',
+            value: (
+              <>
+                <span>{timeStr}</span>
+                <span className="block text-xs text-gray-400 mt-0.5">（組み合わせ後、自分の試合時間までに集合）</span>
+              </>
+            ),
+          })
+          rows.push({ label: '試合形式', value: '予選リーグ・決勝トーナメント　15ポイント先取' })
+          rows.push({
+            label: 'ボーナス',
+            value: (tournament.bonus_points ?? 0) > 0
+              ? `${tournament.bonus_points}%（勝利RPに対して）`
+              : 'なし',
+          })
+          rows.push({ label: '参加料', value: '無料' })
+          if (tournament.notes) rows.push({ label: 'その他', value: tournament.notes })
+          if (tournament.description) rows.push({ label: '説明', value: tournament.description })
+
+          return (
+            <div className="bg-purple-900/20 border border-purple-800/30 rounded-xl p-4">
+              <dl className="space-y-1.5 text-sm">
+                {rows.map(({ label, value }) => (
+                  <div key={label} className="flex gap-2">
+                    <dt className="text-gray-500 flex-shrink-0 w-20 text-right">{label}：</dt>
+                    <dd className="text-gray-200 flex-1">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )
+        })()}
 
         {/* ステータス表示 */}
         {!canEntry && !existingEntry && (
