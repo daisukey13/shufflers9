@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import TournamentBadges from '@/components/ui/TournamentBadges'
+import { useInView } from '@/hooks/useInView'
 
 type Player = {
   id: string
@@ -122,12 +123,12 @@ function FlipCard({ player, rank, flipped, delay }: {
 
 export default function TopPlayersFlip({ players }: { players: Player[] }) {
   const top5 = players.slice(0, 5)
-  // PC表示順: 3位,1位,0位(1st),2位,4位
-  const desktopOrder = [2, 0, 1, 3, 4] // インデックス(0-based)
+  const desktopOrder = [2, 0, 1, 3, 4]
   const [flipped, setFlipped] = useState<boolean[]>(Array(5).fill(false))
+  const { ref: containerRef, inView } = useInView(0.2)
 
   useEffect(() => {
-    // 左から順にパラパラめくる（250ms間隔）
+    if (!inView) return
     desktopOrder.forEach((_, pos) => {
       setTimeout(() => {
         setFlipped(prev => {
@@ -135,9 +136,9 @@ export default function TopPlayersFlip({ players }: { players: Player[] }) {
           next[pos] = true
           return next
         })
-      }, 400 + pos * 250)
+      }, 200 + pos * 250)
     })
-  }, [])
+  }, [inView])
 
   if (top5.length === 0) {
     return <p className="text-gray-500 text-sm text-center">まだデータがありません</p>
@@ -146,7 +147,10 @@ export default function TopPlayersFlip({ players }: { players: Player[] }) {
   return (
     <>
       {/* PC: カードフリップ */}
-      <div className="hidden sm:grid grid-cols-5 gap-4 items-end">
+      <div
+        ref={containerRef as React.RefObject<HTMLDivElement>}
+        className="hidden sm:grid grid-cols-5 gap-4 items-end"
+      >
         {desktopOrder.map((rankIndex, pos) => {
           const player = top5[rankIndex]
           const rank = rankIndex + 1

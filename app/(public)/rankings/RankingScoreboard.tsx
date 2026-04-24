@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useInView } from '@/hooks/useInView'
 
 type Row = {
   id: string
@@ -19,8 +20,10 @@ type Row = {
 
 export default function RankingScoreboard({ rows }: { rows: Row[] }) {
   const [visible, setVisible] = useState<boolean[]>(Array(rows.length).fill(false))
+  const { ref: containerRef, inView } = useInView(0.1)
 
   useEffect(() => {
+    if (!inView) return
     rows.forEach((_, i) => {
       setTimeout(() => {
         setVisible(prev => {
@@ -30,10 +33,11 @@ export default function RankingScoreboard({ rows }: { rows: Row[] }) {
         })
       }, i * 55)
     })
-  }, [rows.length])
+  }, [inView, rows.length])
 
   return (
     <div
+      ref={containerRef as React.RefObject<HTMLDivElement>}
       className="rounded-2xl overflow-hidden border border-purple-900/40"
       style={{ background: 'linear-gradient(180deg, #07090f 0%, #090c16 100%)' }}
     >

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import TournamentBadges from '@/components/ui/TournamentBadges'
+import { useInView } from '@/hooks/useInView'
 
 type PodiumPlayer = {
   id: string
@@ -69,8 +70,10 @@ export default function RankingPodium({ players }: { players: PodiumPlayer[] }) 
   // 表示順: [2位, 1位, 3位]
   const ordered = [top3[1], top3[0], top3[2]].filter(Boolean) as PodiumPlayer[]
   const [visible, setVisible] = useState<boolean[]>(Array(ordered.length).fill(false))
+  const { ref: containerRef, inView } = useInView(0.2)
 
   useEffect(() => {
+    if (!inView) return
     ANIM_ORDER.slice(0, ordered.length).forEach((displayIdx, step) => {
       setTimeout(() => {
         setVisible(prev => {
@@ -80,12 +83,13 @@ export default function RankingPodium({ players }: { players: PodiumPlayer[] }) 
         })
       }, 150 + step * 200)
     })
-  }, [ordered.length])
+  }, [inView, ordered.length])
 
   const posConfigs = [podiumConfig[2], podiumConfig[1], podiumConfig[3]] as const
 
   return (
     <div
+      ref={containerRef as React.RefObject<HTMLDivElement>}
       className="grid gap-2 items-end"
       style={{ gridTemplateColumns: `repeat(${ordered.length}, 1fr)` }}
     >
