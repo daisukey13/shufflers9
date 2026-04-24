@@ -6,7 +6,7 @@ export type EventItem = {
   id: string
   title: string
   description: string | null
-  event_type: 'practice' | 'unofficial' | 'tournament'
+  event_type: 'practice' | 'monthly' | 'tournament' | 'other'
   starts_at: string
   ends_at: string | null
   venue: string | null
@@ -14,10 +14,11 @@ export type EventItem = {
   participants: { id: string; name: string; avatar_url: string | null }[]
 }
 
-const TYPE_CONFIG = {
-  practice:    { label: '練習',   color: 'bg-blue-900/60 text-blue-300',     border: 'border-l-blue-500',   dot: 'bg-blue-400' },
-  unofficial:  { label: '非公式', color: 'bg-purple-900/60 text-purple-300', border: 'border-l-purple-500', dot: 'bg-purple-400' },
-  tournament:  { label: '大会',   color: 'bg-yellow-900/60 text-yellow-300', border: 'border-l-yellow-500', dot: 'bg-yellow-400' },
+const TYPE_CONFIG: Record<string, { label: string; color: string; border: string; dot: string }> = {
+  practice:   { label: '練習会', color: 'bg-blue-900/60 text-blue-300',     border: 'border-l-blue-500',   dot: 'bg-blue-400' },
+  monthly:    { label: '月例会', color: 'bg-purple-900/60 text-purple-300', border: 'border-l-purple-500', dot: 'bg-purple-400' },
+  tournament: { label: '大会',   color: 'bg-yellow-900/60 text-yellow-300', border: 'border-l-yellow-500', dot: 'bg-yellow-400' },
+  other:      { label: 'その他', color: 'bg-gray-800/60 text-gray-300',     border: 'border-l-gray-500',   dot: 'bg-gray-400' },
 }
 
 function toLocalDate(iso: string) {

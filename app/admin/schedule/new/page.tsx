@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 export default function NewEventPage() {
   const [title, setTitle] = useState('')
-  const [eventType, setEventType] = useState<'practice' | 'unofficial' | 'tournament'>('practice')
+  const [eventType, setEventType] = useState<'practice' | 'monthly' | 'tournament' | 'other'>('practice')
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
   const [venue, setVenue] = useState('とわにー交流ホール（北海道豊浦町）')
@@ -42,7 +42,7 @@ export default function NewEventPage() {
       return
     }
 
-    const typeLabel = eventType === 'practice' ? '練習' : eventType === 'unofficial' ? '非公式イベント' : '大会'
+    const typeLabel = eventType === 'practice' ? '練習会' : eventType === 'monthly' ? '月例会' : eventType === 'tournament' ? '大会' : 'その他イベント'
     setLineMsg(`【スケジュール更新】${typeLabel}「${title.trim()}」が追加されました。詳細はスケジュールページでご確認ください。\nhttps://toyoura.online/schedule`)
     setLoading(false)
   }
@@ -89,9 +89,10 @@ export default function NewEventPage() {
           <label className="block text-sm font-medium text-gray-300 mb-2">イベント種別</label>
           <div className="flex gap-2 bg-black/20 rounded-lg p-1">
             {([
-              { v: 'practice', label: '練習' },
-              { v: 'unofficial', label: '非公式' },
+              { v: 'practice', label: '練習会' },
+              { v: 'monthly', label: '月例会' },
               { v: 'tournament', label: '大会' },
+              { v: 'other', label: 'その他' },
             ] as const).map(({ v, label }) => (
               <button
                 key={v}

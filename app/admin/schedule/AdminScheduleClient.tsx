@@ -16,9 +16,10 @@ type EventRow = {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  practice: '練習',
-  unofficial: '非公式',
+  practice: '練習会',
+  monthly: '月例会',
   tournament: '大会',
+  other: 'その他',
 }
 
 export default function AdminScheduleClient({ events }: { events: EventRow[] }) {

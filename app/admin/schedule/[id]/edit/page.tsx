@@ -16,7 +16,7 @@ export default function EditEventPage() {
   const params = useParams()
   const id = params.id as string
   const [title, setTitle] = useState('')
-  const [eventType, setEventType] = useState<'practice' | 'unofficial' | 'tournament'>('practice')
+  const [eventType, setEventType] = useState<'practice' | 'monthly' | 'tournament' | 'other'>('practice')
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
   const [venue, setVenue] = useState('')
@@ -156,9 +156,10 @@ export default function EditEventPage() {
           <label className="block text-sm font-medium text-gray-300 mb-2">イベント種別</label>
           <div className="flex gap-2 bg-black/20 rounded-lg p-1">
             {([
-              { v: 'practice', label: '練習' },
-              { v: 'unofficial', label: '非公式' },
+              { v: 'practice', label: '練習会' },
+              { v: 'monthly', label: '月例会' },
               { v: 'tournament', label: '大会' },
+              { v: 'other', label: 'その他' },
             ] as const).map(({ v, label }) => (
               <button key={v} type="button" onClick={() => setEventType(v)}
                 className={`flex-1 py-1.5 rounded-md text-sm font-medium transition ${eventType === v ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}>
