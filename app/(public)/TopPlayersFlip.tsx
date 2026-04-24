@@ -145,12 +145,10 @@ export default function TopPlayersFlip({ players }: { players: Player[] }) {
   }
 
   return (
-    <>
+    // ref はPC/モバイル両方を包むラッパーに付ける（display:noneの要素はObserverが検知しないため）
+    <div ref={containerRef as React.RefObject<HTMLDivElement>}>
       {/* PC: カードフリップ */}
-      <div
-        ref={containerRef as React.RefObject<HTMLDivElement>}
-        className="hidden sm:grid grid-cols-5 gap-4 items-end"
-      >
+      <div className="hidden sm:grid grid-cols-5 gap-4 items-end">
         {desktopOrder.map((rankIndex, pos) => {
           const player = top5[rankIndex]
           const rank = rankIndex + 1
@@ -204,6 +202,6 @@ export default function TopPlayersFlip({ players }: { players: Player[] }) {
           )
         })}
       </div>
-    </>
+    </div>
   )
 }

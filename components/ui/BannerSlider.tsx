@@ -170,15 +170,19 @@ export default function BannerSlider({ banners }: { banners: Banner[] }) {
   )
 
   return (
+    // センチネル：transformなしで常に正しい位置にある → IntersectionObserverが確実に検知
     <section
       ref={sectionRef as React.RefObject<HTMLElement>}
-      className="px-4 mb-8 max-w-3xl mx-auto overflow-hidden"
-      style={{
-        transform: entered ? 'translateX(0)' : 'translateX(110%)',
-        opacity: entered ? 1 : 0,
-        transition: 'transform 0.65s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease-out',
-      }}
+      className="px-4 mb-8 max-w-3xl mx-auto"
     >
+      <div
+        style={{
+          transform: entered ? 'translateX(0)' : 'translateX(110%)',
+          opacity: entered ? 1 : 0,
+          transition: 'transform 0.65s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease-out',
+          overflow: 'hidden',
+        }}
+      >
       <div className="relative group">
         {banner.link_url ? (
           <Link href={banner.link_url} className="block">
@@ -217,6 +221,7 @@ export default function BannerSlider({ banners }: { banners: Banner[] }) {
           ))}
         </div>
       )}
+      </div>{/* transform wrapper end */}
     </section>
   )
 }
