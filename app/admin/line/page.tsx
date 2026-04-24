@@ -19,6 +19,10 @@ const TEMPLATES = [
     label: '🗓️ 大会エントリー受付中',
     text: '【エントリー受付中】大会のエントリーを受け付けています。サイトからお申し込みください。\nhttps://toyoura.online/tournaments',
   },
+  {
+    label: '📅 スケジュール更新',
+    text: '【スケジュール更新】練習・イベントの日程が更新されました。スケジュールページでご確認ください。\nhttps://toyoura.online/schedule',
+  },
 ]
 
 export default function LineNotificationPage() {
