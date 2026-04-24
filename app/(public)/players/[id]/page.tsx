@@ -4,6 +4,7 @@ import { getPlayerRankings, calcRanks, singlesTie } from '@/lib/queries/rankings
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import TournamentBadges from '@/components/ui/TournamentBadges'
+import ShareCardButton from '@/components/ui/ShareCardButton'
 import Link from 'next/link'
 
 const PER_PAGE = 10
@@ -156,7 +157,10 @@ export default async function PlayerPage({
                 {player.address && (
                   <p className="text-xs text-gray-500 mb-0.5 truncate">📍 {player.address}</p>
                 )}
-                <h1 className="text-xl font-bold text-white truncate">{player.name}</h1>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-xl font-bold text-white truncate">{player.name}</h1>
+                  <ShareCardButton playerId={player.id} playerName={player.name} />
+                </div>
                 <TournamentBadges
                   wins={player.tournament_wins ?? 0}
                   runnerUps={player.tournament_runner_ups ?? 0}
