@@ -10,9 +10,11 @@ import { getLastMonthWinRanking } from '@/lib/queries/monthly-ranking'
 import RecentMatchesTabs from './RecentMatchesTabs'
 import MonthlyRankingModal from '@/components/ui/MonthlyRankingModal'
 import QuickLinkSwiper from '@/components/ui/QuickLinkSwiper'
+import BannerSlider from '@/components/ui/BannerSlider'
+import { getActiveBanners } from '@/lib/queries/banners'
 
 export default async function HomePage() {
-  const [players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount, monthlyRanking] = await Promise.all([
+  const [players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount, monthlyRanking, banners] = await Promise.all([
   getPlayerRankings(),
   getRecentAllMatches(5),
   getRecentNotices(5),
@@ -20,6 +22,7 @@ export default async function HomePage() {
   getRecentDoublesMatches(5),
   getTotalMatchesCount(),
   getLastMonthWinRanking(),
+  getActiveBanners(),
 ])
   const top5 = players.slice(0, 5)
   const avgRating = players.length > 0
@@ -129,6 +132,9 @@ export default async function HomePage() {
           </div>
         ))}
       </section>
+
+      {/* バナー */}
+      <BannerSlider banners={banners} />
 
       {/* お知らせ */}
       {notices.length > 0 && (
