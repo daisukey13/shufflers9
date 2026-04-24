@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 
 type Banner = {
@@ -70,6 +70,13 @@ const TAG_LABELS = ['📣 お知らせ', '🏆 大会情報', '📅 イベント
 export default function BannerSlider({ banners }: { banners: Banner[] }) {
   const [current, setCurrent] = useState(0)
   const [animating, setAnimating] = useState(false)
+  const [entered, setEntered] = useState(false)
+
+  // 初回マウント時に右からスライドイン
+  useEffect(() => {
+    const t = setTimeout(() => setEntered(true), 80)
+    return () => clearTimeout(t)
+  }, [])
 
   const goTo = useCallback((index: number) => {
     setAnimating(true)
@@ -168,7 +175,14 @@ export default function BannerSlider({ banners }: { banners: Banner[] }) {
   )
 
   return (
-    <section className="px-4 mb-8 max-w-3xl mx-auto">
+    <section
+      className="px-4 mb-8 max-w-3xl mx-auto overflow-hidden"
+      style={{
+        transform: entered ? 'translateX(0)' : 'translateX(110%)',
+        opacity: entered ? 1 : 0,
+        transition: 'transform 0.65s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease-out',
+      }}
+    >
       <div className="relative group">
         {banner.link_url ? (
           <Link href={banner.link_url} className="block">
