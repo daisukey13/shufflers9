@@ -1,12 +1,13 @@
 export const dynamic = 'force-dynamic'
 
-import TournamentBadges from '@/components/ui/TournamentBadges'
 import { getPlayerRankings, calcRanks, singlesTie, doublesTie } from '@/lib/queries/rankings'
 import { getLastRatingChangePerPlayer } from '@/lib/queries/matches'
 import { getThisMonthWinRate, getRecentRatingGrowth } from '@/lib/queries/monthly-ranking'
 import { createClient } from '@/lib/supabase/server'
 import { Player } from '@/types'
 import Link from 'next/link'
+import RankingScoreboard from './RankingScoreboard'
+import RankingPodium from './RankingPodium'
 
 export default async function RankingsPage({
   searchParams,
@@ -47,6 +48,37 @@ export default async function RankingsPage({
     return g > 0 ? Math.round((w / g) * 100) : 0
   }
 
+  const toPodiumPlayers = (players: (Player & { rank: number })[], ratingKey: string) =>
+    players.slice(0, 3).map(p => {
+      const rating = ratingKey === 'doubles_rating' ? p.doubles_rating : p.rating
+      const wins = ratingKey === 'doubles_rating' ? p.doubles_wins : p.wins
+      const losses = ratingKey === 'doubles_rating' ? p.doubles_losses : p.losses
+      const last = lastRpChanges.get(p.id)
+      return {
+        id: p.id, rank: p.rank, name: p.name, avatar_url: p.avatar_url, hc: p.hc,
+        rating, wins, losses, winRate: winRate(wins, losses),
+        rpChange: last ? last.change : null,
+        hasBonus: last ? (last.change > 0 && last.hasBonus) : false,
+        tournament_wins: p.tournament_wins ?? 0,
+        tournament_runner_ups: p.tournament_runner_ups ?? 0,
+        tournament_qualifications: p.tournament_qualifications ?? 0,
+      }
+    })
+
+  const toScoreboardRows = (players: (Player & { rank: number })[], ratingKey: string) =>
+    players.slice(3).map(p => {
+      const rating = ratingKey === 'doubles_rating' ? p.doubles_rating : p.rating
+      const wins = ratingKey === 'doubles_rating' ? p.doubles_wins : p.wins
+      const losses = ratingKey === 'doubles_rating' ? p.doubles_losses : p.losses
+      const last = lastRpChanges.get(p.id)
+      return {
+        id: p.id, rank: p.rank, name: p.name, avatar_url: p.avatar_url, hc: p.hc,
+        rating, wins, losses, winRate: winRate(wins, losses),
+        rpChange: last ? last.change : null,
+        hasBonus: last ? (last.change > 0 && last.hasBonus) : false,
+      }
+    })
+
   const particles = Array.from({ length: 20 }, (_, i) => ({
     left: `${(i * 19 + 5) % 95}%`,
     bottom: `${(i * 11) % 50}%`,
@@ -59,188 +91,6 @@ export default async function RankingsPage({
       'rgba(244,114,182,0.4)',
     ][i % 7],
   }))
-
-  const podiumConfig = {
-    1: {
-      height: 'min-h-[270px]',
-      avatarSize: 'w-24 h-24',
-      border: 'border-2 border-yellow-400/80',
-      bg: 'bg-gradient-to-b from-yellow-900/50 via-yellow-950/30 to-black/40',
-      glow: '0 0 30px 8px rgba(250,204,21,0.4), 0 0 70px 20px rgba(250,204,21,0.15)',
-      rankClass: 'text-yellow-300 neon-gold text-4xl',
-      ptClass: 'text-yellow-300 text-2xl',
-      base: 'bg-yellow-400',
-    },
-    2: {
-      height: 'min-h-[215px]',
-      avatarSize: 'w-20 h-20',
-      border: 'border-2 border-gray-400/80',
-      bg: 'bg-gradient-to-b from-gray-700/40 via-gray-800/30 to-black/40',
-      glow: '0 0 20px 6px rgba(209,213,219,0.3), 0 0 50px 12px rgba(209,213,219,0.1)',
-      rankClass: 'text-gray-200 neon-silver text-3xl',
-      ptClass: 'text-gray-200 text-xl',
-      base: 'bg-gray-400',
-    },
-    3: {
-      height: 'min-h-[185px]',
-      avatarSize: 'w-16 h-16',
-      border: 'border-2 border-orange-500/80',
-      bg: 'bg-gradient-to-b from-orange-900/40 via-orange-950/20 to-black/40',
-      glow: '0 0 20px 6px rgba(249,115,22,0.3), 0 0 50px 12px rgba(249,115,22,0.1)',
-      rankClass: 'text-orange-300 neon-bronze text-3xl',
-      ptClass: 'text-orange-200 text-xl',
-      base: 'bg-orange-500',
-    },
-  }
-
-  const rpBadge = (playerId: string) => {
-    const last = lastRpChanges.get(playerId)
-    if (!last) return null
-    const c = last.change
-    const isBonus = c > 0 && last.hasBonus
-    const color = isBonus ? 'neon-bonus' : c > 0 ? 'text-green-400' : c < 0 ? 'text-red-400' : 'text-gray-500'
-    return (
-      <span className={`text-xs font-mono font-bold ${color}`}>
-        {c > 0 ? '+' : ''}{c}pt{isBonus ? '★' : ''}
-      </span>
-    )
-  }
-
-  const renderPodium = (players: (Player & { rank: number })[], ratingKey: string) => {
-    const top3 = players.slice(0, 3)
-    if (top3.length === 0) return null
-
-    // 表示順: 2位(左) → 1位(中央) → 3位(右)
-    const ordered = [top3[1], top3[0], top3[2]].filter(Boolean) as (Player & { rank: number })[]
-    // 表示位置(0=1位,1=2位,2=3位)→podiumConfig番号
-    const posConfigs = [podiumConfig[1], podiumConfig[2], podiumConfig[3]] as const
-
-    return (
-      <div className="grid gap-2 items-end" style={{ gridTemplateColumns: `repeat(${ordered.length}, 1fr)` }}>
-        {ordered.map((player, idx) => {
-          // orderedの並び: [2位,1位,3位] → posConfigs index [1,0,2]
-          const posIdx = idx === 0 ? 1 : idx === 1 ? 0 : 2
-          const cfg = posConfigs[posIdx]
-          const rating = ratingKey === 'doubles_rating' ? player.doubles_rating : player.rating
-          const wins = ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins
-          const losses = ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses
-          const wr = winRate(wins, losses)
-
-          return (
-            <Link
-              key={player.id}
-              href={`/players/${player.id}`}
-              style={{ boxShadow: cfg.glow }}
-              className={`relative flex flex-col items-center text-center px-2 pt-3 pb-2 ${cfg.height} ${cfg.border} ${cfg.bg} rounded-2xl hover:scale-[1.03] transition-transform overflow-hidden`}
-            >
-              {/* Rank */}
-              <div className={`font-extrabold ${cfg.rankClass} leading-none mb-1`}>{player.rank}</div>
-
-              {/* Crown */}
-              {player.rank === 1 && (
-                <div className="text-xl mb-1" style={{ animation: 'bounce 1s infinite' }}>👑</div>
-              )}
-
-              {/* Avatar */}
-              <div className={`${cfg.avatarSize} rounded-full overflow-hidden border-2 border-white/20 flex-shrink-0 mb-2`}>
-                {player.avatar_url
-                  ? <img src={player.avatar_url} className="w-full h-full object-cover" />
-                  : <span className="text-2xl flex items-center justify-center h-full bg-gray-800">👤</span>
-                }
-              </div>
-
-              {/* Name */}
-              <p className="font-bold text-white text-xs truncate w-full px-1 mb-1 leading-tight">{player.name}</p>
-
-              {/* Points */}
-              <div className={`font-extrabold font-mono ${cfg.ptClass} leading-none`}>{rating}</div>
-              <div className="text-xs text-gray-500 mb-1">pt</div>
-
-              {/* Last RP change */}
-              <div className="mb-1">{rpBadge(player.id) ?? <span className="text-xs text-gray-700">-</span>}</div>
-
-              {/* Win/Loss */}
-              <div className="text-xs text-gray-400">
-                {wins}勝{losses}敗
-                <span className="text-green-400 ml-1">{wr}%</span>
-              </div>
-
-              {/* Tournament badges */}
-              <div className="mt-1 flex justify-center">
-                <TournamentBadges
-                  wins={player.tournament_wins ?? 0}
-                  runnerUps={player.tournament_runner_ups ?? 0}
-                  qualifications={player.tournament_qualifications ?? 0}
-                  size="sm"
-                />
-              </div>
-
-              {/* Base bar */}
-              <div className={`absolute bottom-0 left-0 right-0 h-1 ${cfg.base} opacity-70`} />
-            </Link>
-          )
-        })}
-      </div>
-    )
-  }
-
-  const renderScoreboard = (players: (Player & { rank: number })[], ratingKey: string) => {
-    const rest = players.slice(3)
-    if (rest.length === 0) return null
-
-    return (
-      <div className="rounded-2xl overflow-hidden border border-purple-900/40" style={{ background: 'linear-gradient(180deg, #07090f 0%, #090c16 100%)' }}>
-        <div className="grid grid-cols-[2.5rem_1fr_auto] gap-3 px-4 py-2 border-b border-purple-900/30">
-          <span className="text-xs font-mono text-gray-600 uppercase tracking-widest">#</span>
-          <span className="text-xs font-mono text-gray-600 uppercase tracking-widest">Player</span>
-          <span className="text-xs font-mono text-gray-600 uppercase tracking-widest">PT</span>
-        </div>
-        {rest.map((player) => {
-          const rating = ratingKey === 'doubles_rating' ? player.doubles_rating : player.rating
-          const wins = ratingKey === 'doubles_rating' ? player.doubles_wins : player.wins
-          const losses = ratingKey === 'doubles_rating' ? player.doubles_losses : player.losses
-          const wr = winRate(wins, losses)
-
-          return (
-            <Link
-              key={player.id}
-              href={`/players/${player.id}`}
-              className="grid grid-cols-[2.5rem_1fr_auto] gap-3 items-center px-4 py-3 border-b border-purple-950/50 last:border-0 hover:bg-purple-900/20 hover:shadow-[inset_0_0_40px_rgba(139,92,246,0.12)] transition-all group"
-            >
-              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-black/70 border border-purple-900/50 font-mono text-sm font-bold text-purple-400 group-hover:text-purple-200 group-hover:border-purple-600/60 group-hover:shadow-[0_0_8px_rgba(139,92,246,0.6)] transition-all">
-                {player.rank}
-              </div>
-
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-9 h-9 rounded-full overflow-hidden border border-purple-800/40 flex-shrink-0">
-                  {player.avatar_url
-                    ? <img src={player.avatar_url} className="w-full h-full object-cover" />
-                    : <span className="text-base flex items-center justify-center h-full bg-gray-800">👤</span>
-                  }
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-white truncate text-sm group-hover:text-purple-100 transition-colors">{player.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>HC {player.hc ?? 36}</span>
-                    <span>{wins}勝{losses}敗</span>
-                    <span className="text-green-500">{wr}%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-right flex-shrink-0">
-                <div>
-                  <span className="font-mono font-bold text-lg text-purple-300 group-hover:text-purple-100 transition-colors">{rating}</span>
-                  <span className="text-xs text-gray-600 ml-0.5">pt</span>
-                </div>
-                <div>{rpBadge(player.id) ?? <span className="text-xs text-gray-700">-</span>}</div>
-              </div>
-            </Link>
-          )
-        })}
-      </div>
-    )
-  }
 
   return (
     <div className="relative min-h-screen text-white overflow-x-hidden">
@@ -366,12 +216,12 @@ export default async function RankingsPage({
               <>
                 <div>
                   <div className="text-center text-xs font-mono tracking-[0.4em] text-yellow-500/60 uppercase mb-4">── TOP 3 ──</div>
-                  {renderPodium(singlesPlayers, 'rating')}
+                  <RankingPodium players={toPodiumPlayers(singlesPlayers, 'rating')} />
                 </div>
                 {singlesPlayers.length > 3 && (
                   <div>
                     <div className="text-center text-xs font-mono tracking-[0.4em] text-gray-600 uppercase mb-3">── SCOREBOARD ──</div>
-                    {renderScoreboard(singlesPlayers, 'rating')}
+                    <RankingScoreboard rows={toScoreboardRows(singlesPlayers, 'rating')} />
                   </div>
                 )}
               </>
@@ -388,12 +238,12 @@ export default async function RankingsPage({
               <>
                 <div>
                   <div className="text-center text-xs font-mono tracking-[0.4em] text-yellow-500/60 uppercase mb-4">── TOP 3 ──</div>
-                  {renderPodium(doublesPlayers, 'doubles_rating')}
+                  <RankingPodium players={toPodiumPlayers(doublesPlayers, 'doubles_rating')} />
                 </div>
                 {doublesPlayers.length > 3 && (
                   <div>
                     <div className="text-center text-xs font-mono tracking-[0.4em] text-gray-600 uppercase mb-3">── SCOREBOARD ──</div>
-                    {renderScoreboard(doublesPlayers, 'doubles_rating')}
+                    <RankingScoreboard rows={toScoreboardRows(doublesPlayers, 'doubles_rating')} />
                   </div>
                 )}
               </>
