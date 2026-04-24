@@ -1,0 +1,20 @@
+{
+  "date": "2026-04-24",
+  "tables": {
+    "players": 17,
+    "singles_matches": 19,
+    "doubles_matches": 4,
+    "teams": 0,
+    "team_members": 0,
+    "teams_matches": 0,
+    "notices": 2,
+    "ranking_config": 1,
+    "tournaments": 1,
+    "tournament_entries": 0,
+    "tournament_blocks": 0,
+    "tournament_block_players": 0,
+    "tournament_qualifying_matches": 0,
+    "tournament_finals_matches": 0,
+    "tournament_finals_sets": 0
+  }
+}
