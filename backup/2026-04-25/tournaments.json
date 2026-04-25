@@ -1,0 +1,21 @@
+[
+  {
+    "id": "41a72dc1-17fc-4877-b030-b851a6a8ea5b",
+    "name": "第1回ホタテ杯",
+    "type": "singles",
+    "status": "qualifying",
+    "description": null,
+    "started_at": "2026-04-25T00:00:00+00:00",
+    "finished_at": null,
+    "created_by": null,
+    "created_at": "2026-04-24T11:18:25.256069+00:00",
+    "format": "singles",
+    "qualifying_start_time": "09:10",
+    "finals_start_time": "13:00",
+    "bonus_points": 10,
+    "notes": "時間厳守！",
+    "entry_fee": "無料",
+    "live_url": "https://toyoura.online/players",
+    "venue": "とわにー交流ホール（北海道豊浦町）"
+  }
+]
