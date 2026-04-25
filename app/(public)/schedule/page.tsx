@@ -21,7 +21,7 @@ export default async function SchedulePage() {
     `)
     .eq('is_published', true)
     .gte('starts_at', from.toISOString())
-    .order('starts_at', { ascending: true })
+    .order('starts_at', { ascending: false })
 
   // ログイン中のプレーヤーIDと参加イベントIDを取得
   const { data: { user } } = await supabase.auth.getUser()

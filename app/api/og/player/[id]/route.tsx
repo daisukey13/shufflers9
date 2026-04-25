@@ -30,15 +30,16 @@ export async function GET(
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: player }, allPlayers] = await Promise.all([
+  const [{ data: player }, allPlayersResult] = await Promise.all([
     supabase
       .from('players')
       .select('id,name,avatar_url,rating,hc,wins,losses,address,tournament_wins,tournament_runner_ups')
       .eq('id', id)
       .eq('is_active', true)
       .single(),
-    getPlayerRankings(),
+    getPlayerRankings().catch(() => [] as Awaited<ReturnType<typeof getPlayerRankings>>),
   ])
+  const allPlayers = allPlayersResult ?? []
 
   if (!player) {
     return new Response('Not found', { status: 404 })
@@ -88,6 +89,17 @@ export async function GET(
 
   const totalGames = (player.wins ?? 0) + (player.losses ?? 0)
   const winRate = totalGames > 0 ? Math.round(((player.wins ?? 0) / totalGames) * 100) : 0
+
+  // アバターURLが実際にアクセスできるか確認（Satorがリモート画像を取得できない場合に備えて）
+  let avatarUrl: string | null = player.avatar_url ?? null
+  if (avatarUrl) {
+    try {
+      const check = await fetch(avatarUrl, { method: 'HEAD' })
+      if (!check.ok) avatarUrl = null
+    } catch {
+      avatarUrl = null
+    }
+  }
 
   const fontData = await loadFont()
   const fonts = fontData
@@ -159,9 +171,9 @@ export async function GET(
             </div>
 
             {/* アバター */}
-            {player.avatar_url ? (
+            {avatarUrl ? (
               <img
-                src={player.avatar_url}
+                src={avatarUrl}
                 width={120}
                 height={120}
                 style={{ borderRadius: '60px', border: `3px solid ${rankColor}`, objectFit: 'cover' }}

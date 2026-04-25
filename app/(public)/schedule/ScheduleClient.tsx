@@ -21,6 +21,12 @@ const TYPE_CONFIG: Record<string, { label: string; color: string; border: string
   other:      { label: 'その他', color: 'bg-gray-800/60 text-gray-300',     border: 'border-l-gray-500',   dot: 'bg-gray-400' },
 }
 
+function isEnded(ev: EventItem): boolean {
+  const now = new Date()
+  if (ev.ends_at) return new Date(ev.ends_at) < now
+  return new Date(ev.starts_at) < now
+}
+
 function toLocalDate(iso: string) {
   const d = new Date(iso)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -57,9 +63,10 @@ function EventCard({
   const cfg = TYPE_CONFIG[ev.event_type] ?? TYPE_CONFIG.practice
   const count = participants.length
   const preview = participants.slice(0, 6)
+  const ended = isEnded(ev)
 
   return (
-    <div className={`bg-purple-900/10 border border-purple-800/20 border-l-4 ${cfg.border} rounded-2xl p-5 space-y-4`}>
+    <div className={`bg-purple-900/10 border border-purple-800/20 border-l-4 ${cfg.border} rounded-2xl p-5 space-y-4 ${ended ? 'opacity-40 grayscale' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -104,7 +111,7 @@ function EventCard({
         )}
       </div>
 
-      {currentPlayerId ? (
+      {currentPlayerId && !ended ? (
         <button
           onClick={() => {
             const me = participants.find(p => p.id === currentPlayerId)
@@ -120,7 +127,7 @@ function EventCard({
         >
           {isLoading ? '...' : isJoined ? '✅ 参加予定（タップでキャンセル）' : '＋ 参加予定に追加'}
         </button>
-      ) : (
+      ) : currentPlayerId && ended ? null : (
         <p className="text-xs text-gray-600 text-center">
           参加予定を登録するには<a href="/login" className="text-purple-400 hover:underline ml-1">ログイン</a>が必要です
         </p>
@@ -220,7 +227,7 @@ export default function ScheduleClient({
     if (!groups.has(month)) groups.set(month, { sortKey, events: [] })
     groups.get(month)!.events.push(ev)
   }
-  const sortedGroups = [...groups.entries()].sort((a, b) => a[1].sortKey - b[1].sortKey)
+  const sortedGroups = [...groups.entries()].sort((a, b) => b[1].sortKey - a[1].sortKey)
 
   const selectedEvents = selectedDate ? (eventsByDate.get(selectedDate) ?? []) : []
 
@@ -326,7 +333,7 @@ export default function ScheduleClient({
                         {dayEvents.slice(0, 3).map(ev => (
                           <span
                             key={ev.id}
-                            className={`w-2 h-2 rounded-full ${TYPE_CONFIG[ev.event_type]?.dot ?? 'bg-gray-400'}`}
+                            className={`w-2 h-2 rounded-full ${isEnded(ev) ? 'bg-gray-600' : (TYPE_CONFIG[ev.event_type]?.dot ?? 'bg-gray-400')}`}
                           />
                         ))}
                       </div>

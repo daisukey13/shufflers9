@@ -10,15 +10,22 @@ export default function ShareCardButton({
   playerName: string
 }) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
 
   const imageUrl = `/api/og/player/${playerId}`
 
   const handleShare = async () => {
     setLoading(true)
+    setError(false)
     try {
       const res = await fetch(imageUrl)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const contentType = res.headers.get('content-type') ?? ''
+      if (!contentType.includes('image')) throw new Error('Not an image')
+
       const blob = await res.blob()
-      const file = new File([blob], `${playerName}_card.png`, { type: 'image/png' })
+      const pngBlob = new Blob([blob], { type: 'image/png' })
+      const file = new File([pngBlob], `${playerName}_card.png`, { type: 'image/png' })
 
       if (
         typeof navigator !== 'undefined' &&
@@ -30,16 +37,19 @@ export default function ShareCardButton({
           title: `${playerName} - Toyoura Shufflers Club`,
         })
       } else {
-        // フォールバック: ダウンロード
-        const url = URL.createObjectURL(blob)
+        // フォールバック: 新タブで開く（モバイルは長押しで保存可能）
+        const url = URL.createObjectURL(pngBlob)
         const a = document.createElement('a')
         a.href = url
         a.download = `${playerName}_card.png`
         a.click()
-        URL.revokeObjectURL(url)
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
       }
-    } catch (e) {
-      // キャンセルされた場合など は無視
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') {
+        // ダウンロードできない場合は新タブで開く
+        window.open(imageUrl, '_blank')
+      }
     } finally {
       setLoading(false)
     }

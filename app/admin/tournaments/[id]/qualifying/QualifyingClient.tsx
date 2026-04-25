@@ -122,20 +122,31 @@ export default function QualifyingClient({
 
     const bp = block.tournament_block_players
     if (bp.length < 2) {
+      alert(`ブロック${block.block_name}にプレーヤーが${bp.length}名しか登録されていません。\n先にブロックを削除して再作成してください。`)
       setAutoMatchLoading(null)
       return
     }
 
-    const pairs: [BlockPlayer, BlockPlayer][] = [
-      [bp[0], bp[1]],
-      [bp[1], bp[2]],
-      [bp[0], bp[2]],
-    ]
+    // 全有効ペアを動的生成（同一player_idの組み合わせを除外）
+    const pairs: [BlockPlayer, BlockPlayer][] = []
+    for (let i = 0; i < bp.length; i++) {
+      for (let j = i + 1; j < bp.length; j++) {
+        if (bp[i].player_id !== bp[j].player_id) {
+          pairs.push([bp[i], bp[j]])
+        }
+      }
+    }
+
+    if (pairs.length === 0) {
+      alert(`ブロック${block.block_name}に有効なペアが見つかりません。`)
+      setAutoMatchLoading(null)
+      return
+    }
 
     const times = getBlockTimes(block.id)
+    let timeIdx = 0
 
-    for (let i = 0; i < pairs.length; i++) {
-      const [p1, p2] = pairs[i]
+    for (const [p1, p2] of pairs) {
       const hasDefault = p1.is_default || p2.is_default
 
       const alreadyExists = matches.some(m =>
@@ -143,9 +154,9 @@ export default function QualifyingClient({
         ((m.player1_id === p1.player_id && m.player2_id === p2.player_id) ||
          (m.player1_id === p2.player_id && m.player2_id === p1.player_id))
       )
-      if (alreadyExists) continue
+      if (alreadyExists) { timeIdx++; continue }
 
-      const scheduledTime = hasDefault ? null : (times[i] || null)
+      const scheduledTime = hasDefault ? null : (times[timeIdx] || null)
 
       await supabase.from('tournament_qualifying_matches').insert({
         block_id: block.id,
@@ -158,6 +169,7 @@ export default function QualifyingClient({
         affects_ranking: true,
         scheduled_time: scheduledTime,
       })
+      timeIdx++
     }
 
     setAutoMatchLoading(null)
@@ -278,17 +290,21 @@ export default function QualifyingClient({
       if (blockErr || !block) continue
 
       const blockPlayers = [...group]
-      while (blockPlayers.length < 3) {
+      // DEFAULTは最大1人まで補充（同一player_idの重複INSERT=UNIQUE制約違反を防ぐ）
+      if (blockPlayers.length < 3) {
         blockPlayers.push({ id: defaultPlayerId } as Player)
       }
 
-      await supabase.from('tournament_block_players').insert(
+      const { error: bpErr } = await supabase.from('tournament_block_players').insert(
         blockPlayers.map(p => ({
           block_id: block.id,
           player_id: p.id,
           is_default: p.id === defaultPlayerId,
         }))
       )
+      if (bpErr) {
+        console.error(`ブロック${blockName} プレーヤー登録エラー:`, bpErr.message)
+      }
     }
 
     setAutoLoading(false)
@@ -811,28 +827,71 @@ export default function QualifyingClient({
                 <p className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded-lg">{blockError}</p>
               )}
               <p className="text-xs text-gray-400">3人未満の場合はDEFAULTプレーヤーで自動補充されます</p>
-              {[0, 1, 2].map(i => (
-                <div key={i}>
-                  <label className="block text-sm text-gray-300 mb-1">プレーヤー {i + 1}</label>
-                  <select
-                    value={selectedPlayers[i]}
-                    onChange={e => {
-                      const updated = [...selectedPlayers]
-                      updated[i] = e.target.value
-                      setSelectedPlayers(updated)
-                    }}
-                    className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">選択してください（空欄=DEFAULT）</option>
-                    {players
-                      .filter(p => !selectedPlayers.includes(p.id) || selectedPlayers[i] === p.id)
-                      .map(p => (
-                        <option key={p.id} value={p.id}>{p.name} (HC:{p.hc} RP:{p.rating})</option>
-                      ))
-                    }
-                  </select>
-                </div>
-              ))}
+
+              {/* エントリー済みで未配置のプレーヤーを一覧表示 */}
+              {(() => {
+                const assignedIds = new Set(blocks.flatMap(b => b.tournament_block_players.map(bp => bp.player_id)))
+                const unassigned = enteredPlayers.filter(p => !assignedIds.has(p.id) && !selectedPlayers.includes(p.id))
+                if (unassigned.length === 0) return null
+                return (
+                  <div className="p-3 bg-green-900/20 border border-green-700/30 rounded-xl">
+                    <p className="text-xs font-semibold text-green-400 mb-2">📋 エントリー済み・未配置 ({unassigned.length}名)</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {unassigned.map(p => (
+                        <span key={p.id} className="text-xs px-2 py-0.5 bg-green-900/40 border border-green-600/40 text-green-300 rounded-full">
+                          {p.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {[0, 1, 2].map(i => {
+                const assignedIds = new Set(blocks.flatMap(b => b.tournament_block_players.map(bp => bp.player_id)))
+                const enteredIds = new Set(enteredPlayers.map(p => p.id))
+                const availablePlayers = players.filter(p => !selectedPlayers.includes(p.id) || selectedPlayers[i] === p.id)
+                const enteredUnassigned = availablePlayers.filter(p => enteredIds.has(p.id) && !assignedIds.has(p.id))
+                const enteredAssigned = availablePlayers.filter(p => enteredIds.has(p.id) && assignedIds.has(p.id))
+                const others = availablePlayers.filter(p => !enteredIds.has(p.id))
+                return (
+                  <div key={i}>
+                    <label className="block text-sm text-gray-300 mb-1">プレーヤー {i + 1}</label>
+                    <select
+                      value={selectedPlayers[i]}
+                      onChange={e => {
+                        const updated = [...selectedPlayers]
+                        updated[i] = e.target.value
+                        setSelectedPlayers(updated)
+                      }}
+                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="">── 空欄（DEFAULT補充）──</option>
+                      {enteredUnassigned.length > 0 && (
+                        <optgroup label="✅ エントリー済み・未配置">
+                          {enteredUnassigned.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}（HC:{p.hc} RP:{p.rating}）</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {enteredAssigned.length > 0 && (
+                        <optgroup label="⚠️ エントリー済み・配置済み">
+                          {enteredAssigned.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}（HC:{p.hc} RP:{p.rating}）※配置済み</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {others.length > 0 && (
+                        <optgroup label="── エントリー外のプレーヤー ──">
+                          {others.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}（HC:{p.hc} RP:{p.rating}）</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                  </div>
+                )
+              })}
               <button
                 onClick={handleCreateBlock}
                 disabled={blockLoading}
@@ -874,7 +933,11 @@ export default function QualifyingClient({
               }
             }
 
-            const allMatchesCreated = blockMatches.length >= 3
+            // N人ブロックの試合数 = N*(N-1)/2（重複player_idは除く）
+            const uniquePlayerIds = new Set(block.tournament_block_players.map(bp => bp.player_id))
+            const uniqueCount = uniquePlayerIds.size
+            const expectedMatches = (uniqueCount * (uniqueCount - 1)) / 2
+            const allMatchesCreated = expectedMatches > 0 && blockMatches.length >= expectedMatches
             const blockWinnerConfirmed = pendingPairs.length === 0 && blockMatches.some(m => m.winner_id)
 
             return (
