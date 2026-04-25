@@ -497,10 +497,15 @@ export default function QualifyingClient({
       return
     }
 
-    const finalPlayers = [...selectedPlayers]
-    while (finalPlayers.filter(p => p !== '').length < 3) {
-      const emptyIdx = finalPlayers.findIndex(p => p === '')
-      if (emptyIdx !== -1) finalPlayers[emptyIdx] = defaultPlayerId
+    // 空欄をDEFAULTで補充（defaultPlayerIdが無効なら空欄はスキップ）
+    const finalPlayers = selectedPlayers.map(pid =>
+      pid === '' && defaultPlayerId ? defaultPlayerId : pid
+    ).filter(pid => pid !== '')
+
+    if (finalPlayers.length < 1) {
+      setBlockError('プレーヤーを選択してください')
+      setBlockLoading(false)
+      return
     }
 
     const blockName = blockNames[blocks.length]
