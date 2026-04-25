@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 import { getPlayers } from '@/lib/queries/players'
 import { getPlayerRankings } from '@/lib/queries/rankings'

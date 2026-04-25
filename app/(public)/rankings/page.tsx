@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 
+import { unstable_cache } from 'next/cache'
 import { getPlayerRankings, calcRanks, singlesTie, doublesTie } from '@/lib/queries/rankings'
 import { getLastRatingChangePerPlayer } from '@/lib/queries/matches'
 import { getThisMonthWinRate, getRecentRatingGrowth } from '@/lib/queries/monthly-ranking'
@@ -9,6 +10,31 @@ import Link from 'next/link'
 import RankingScoreboard from './RankingScoreboard'
 import RankingPodium from './RankingPodium'
 
+const getRankingsData = unstable_cache(
+  async () => {
+    const supabase = await createClient()
+    const [singlesRaw, { data: doublesRaw }, lastRpChangesMap, thisMonthWinRate, recentGrowth] = await Promise.all([
+      getPlayerRankings(),
+      supabase
+        .from('players')
+        .select('*')
+        .eq('is_active', true)
+        .eq('is_admin', false)
+        .or('doubles_wins.gt.0,doubles_losses.gt.0')
+        .order('doubles_rating', { ascending: false })
+        .order('hc', { ascending: false }),
+      getLastRatingChangePerPlayer(),
+      getThisMonthWinRate(),
+      getRecentRatingGrowth(),
+    ])
+    // Map is not JSON-serializable, convert to array of entries
+    const lastRpChanges = Array.from(lastRpChangesMap.entries())
+    return { singlesRaw, doublesRaw: doublesRaw ?? [], lastRpChanges, thisMonthWinRate, recentGrowth }
+  },
+  ['rankings-data'],
+  { revalidate: 60 }
+)
+
 export default async function RankingsPage({
   searchParams,
 }: {
@@ -17,22 +43,8 @@ export default async function RankingsPage({
   const { tab } = await searchParams
   const activeTab = tab === 'doubles' ? 'doubles' : 'singles'
 
-  const supabase = await createClient()
-
-  const [singlesRaw, { data: doublesRaw }, lastRpChanges, thisMonthWinRate, recentGrowth] = await Promise.all([
-    getPlayerRankings(),
-    supabase
-      .from('players')
-      .select('*')
-      .eq('is_active', true)
-      .eq('is_admin', false)
-      .or('doubles_wins.gt.0,doubles_losses.gt.0')
-      .order('doubles_rating', { ascending: false })
-      .order('hc', { ascending: false }),
-    getLastRatingChangePerPlayer(),
-    getThisMonthWinRate(),
-    getRecentRatingGrowth(),
-  ])
+  const { singlesRaw, doublesRaw, lastRpChanges: lastRpChangesArr, thisMonthWinRate, recentGrowth } = await getRankingsData()
+  const lastRpChanges = new Map(lastRpChangesArr)
 
   const doublesSorted = [...(doublesRaw ?? [])].sort((a: Player, b: Player) => {
     if (b.doubles_rating !== a.doubles_rating) return b.doubles_rating - a.doubles_rating

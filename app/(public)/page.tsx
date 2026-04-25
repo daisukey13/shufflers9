@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
+import { unstable_cache } from 'next/cache'
 import { getPlayerRankings } from '@/lib/queries/rankings'
 import { getRecentAllMatches, getTotalMatchesCount } from '@/lib/queries/matches'
 import { getRecentNotices } from '@/lib/queries/notices'
@@ -14,17 +15,26 @@ import BannerSlider from '@/components/ui/BannerSlider'
 import { getActiveBanners } from '@/lib/queries/banners'
 import TopPlayersFlip from './TopPlayersFlip'
 
+const getHomeData = unstable_cache(
+  async () => {
+    const [players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount, monthlyRanking, banners] = await Promise.all([
+      getPlayerRankings(),
+      getRecentAllMatches(5),
+      getRecentNotices(5),
+      getRecentTournamentWinners(5),
+      getRecentDoublesMatches(5),
+      getTotalMatchesCount(),
+      getLastMonthWinRanking(),
+      getActiveBanners(),
+    ])
+    return { players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount, monthlyRanking, banners }
+  },
+  ['home-data'],
+  { revalidate: 60 }
+)
+
 export default async function HomePage() {
-  const [players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount, monthlyRanking, banners] = await Promise.all([
-  getPlayerRankings(),
-  getRecentAllMatches(5),
-  getRecentNotices(5),
-  getRecentTournamentWinners(5),
-  getRecentDoublesMatches(5),
-  getTotalMatchesCount(),
-  getLastMonthWinRanking(),
-  getActiveBanners(),
-])
+  const { players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount, monthlyRanking, banners } = await getHomeData()
   const top5 = players.slice(0, 5)
   const avgRating = players.length > 0
     ? Math.round(players.reduce((a, p) => a + p.rating, 0) / players.length)
