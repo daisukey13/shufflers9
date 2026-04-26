@@ -1,40 +1,73 @@
 export const dynamic = 'force-dynamic'
 
+import { Suspense } from 'react'
 import Link from 'next/link'
-import { getPlayerRankings } from '@/lib/queries/rankings'
-import { getRecentAllMatches, getTotalMatchesCount } from '@/lib/queries/matches'
-import { getRecentNotices } from '@/lib/queries/notices'
-import { getRecentTournamentWinners } from '@/lib/queries/tournaments'
-import { getRecentDoublesMatches } from '@/lib/queries/matches'
-import { getLastMonthWinRanking } from '@/lib/queries/monthly-ranking'
-import RecentMatchesTabs from './RecentMatchesTabs'
-import MonthlyRankingModal from '@/components/ui/MonthlyRankingModal'
 import QuickLinkSwiper from '@/components/ui/QuickLinkSwiper'
-import BannerSlider from '@/components/ui/BannerSlider'
-import { getActiveBanners } from '@/lib/queries/banners'
-import TopPlayersFlip from './TopPlayersFlip'
+import {
+  MonthlyModalSection,
+  StatsAndTopPlayersSection,
+  BannersSection,
+  NoticesSection,
+  TournamentWinnersSection,
+  RecentMatchesSection,
+} from './HomeDataSections'
 
-export default async function HomePage() {
-  const [players, recentMatches, notices, tournamentWinners, recentDoubles, totalMatchesCount, monthlyRanking, banners] = await Promise.all([
-    getPlayerRankings(),
-    getRecentAllMatches(5),
-    getRecentNotices(5),
-    getRecentTournamentWinners(5),
-    getRecentDoublesMatches(5),
-    getTotalMatchesCount(),
-    getLastMonthWinRanking(),
-    getActiveBanners(),
-  ])
-  const top5 = players.slice(0, 5)
-  const avgRating = players.length > 0
-    ? Math.round(players.reduce((a, p) => a + p.rating, 0) / players.length)
-    : 1000
+// スケルトンUI
+function StatsSkeleton() {
+  return (
+    <section className="grid grid-cols-3 gap-4 px-4 mb-10 max-w-xl mx-auto">
+      {[0, 1, 2].map(i => (
+        <div key={i} className="flex flex-col items-center p-5 bg-blue-900/20 border border-yellow-600/20 rounded-2xl animate-pulse">
+          <div className="h-9 w-14 bg-gray-700 rounded mb-2" />
+          <div className="h-3 w-12 bg-gray-800 rounded" />
+        </div>
+      ))}
+    </section>
+  )
+}
 
+function TopPlayersSkeleton() {
+  return (
+    <section className="px-4 mb-14 max-w-6xl mx-auto">
+      <h2 className="text-xl font-bold mb-8 flex items-center gap-2 text-amber-100 neon-gold">
+        🏆 トッププレーヤー
+      </h2>
+      <div className="hidden sm:grid grid-cols-5 gap-4 items-end">
+        {[0, 1, 2, 3, 4].map(i => (
+          <div key={i} className="min-h-[10rem] rounded-2xl bg-blue-900/20 border border-yellow-600/10 animate-pulse" />
+        ))}
+      </div>
+      <div className="sm:hidden space-y-2">
+        {[0, 1, 2, 3, 4].map(i => (
+          <div key={i} className="h-16 rounded-2xl bg-blue-900/20 border border-yellow-600/10 animate-pulse" />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function MatchesSkeleton() {
+  return (
+    <section className="px-4 pb-20 max-w-3xl mx-auto">
+      <div className="space-y-3">
+        {[0, 1, 2].map(i => (
+          <div key={i} className="h-20 rounded-2xl bg-purple-900/20 border border-purple-800/30 animate-pulse" />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// HomePage はsync関数 → app/loading.tsx が即座に消える
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-transparent text-amber-50">
-      <MonthlyRankingModal entries={monthlyRanking.entries} month={monthlyRanking.month} />
+      {/* 月間ランキングモーダル（遅延ストリーム） */}
+      <Suspense fallback={null}>
+        <MonthlyModalSection />
+      </Suspense>
 
-      {/* ヒーロー */}
+      {/* ヒーロー（データ不要・即座に表示） */}
       <section className="relative text-center py-6 sm:py-20 px-4 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(30,60,120,0.35)_0%,_transparent_70%)] pointer-events-none" />
         <div className="relative flex justify-center mb-2 sm:mb-4">
@@ -105,92 +138,30 @@ export default async function HomePage() {
         </span>
       </section>
 
-      {/* 統計 */}
-      <section className="grid grid-cols-3 gap-4 px-4 mb-10 max-w-xl mx-auto">
-        {[
-          { label: 'メンバー', value: players.length },
-          { label: '試合数', value: totalMatchesCount },
-          { label: '平均pts', value: avgRating },
-        ].map(stat => (
-          <div key={stat.label} className="flex flex-col items-center p-5 bg-blue-900/20 border border-yellow-600/20 rounded-2xl">
-            <span className="text-3xl font-bold text-amber-300">{stat.value}</span>
-            <span className="text-xs text-gray-500 mt-1">{stat.label}</span>
-          </div>
-        ))}
-      </section>
+      {/* 統計 + トッププレーヤー（スケルトン表示後にストリーム） */}
+      <Suspense fallback={<><StatsSkeleton /><TopPlayersSkeleton /></>}>
+        <StatsAndTopPlayersSection />
+      </Suspense>
 
       {/* バナー */}
-      <BannerSlider banners={banners} />
+      <Suspense fallback={null}>
+        <BannersSection />
+      </Suspense>
 
       {/* お知らせ */}
-      {notices.length > 0 && (
-        <section className="px-4 mb-10 max-w-3xl mx-auto">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-amber-100 neon-gold">
-            📢 お知らせ
-          </h2>
-          <div className="space-y-2">
-            {notices.map(notice => {
-              const publishedAt = new Date(notice.published_at)
-              const isNew = (Date.now() - publishedAt.getTime()) < 7 * 24 * 60 * 60 * 1000
-              const dateStr = `${publishedAt.getFullYear()}/${publishedAt.getMonth() + 1}/${publishedAt.getDate()}`
-              return (
-                <Link
-                  key={notice.id}
-                  href={`/notices/${notice.id}`}
-                  className="flex items-center gap-3 p-4 bg-blue-900/20 border border-yellow-600/20 rounded-2xl hover:bg-green-900/20 transition"
-                >
-                  {isNew && (
-                    <span className="flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full bg-red-500 text-white">
-                      NEW
-                    </span>
-                  )}
-                  <span className="flex-1 text-sm text-amber-50 truncate">{notice.title}</span>
-                  <span className="flex-shrink-0 text-xs text-gray-500">{dateStr}</span>
-                </Link>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* トッププレーヤー */}
-      <section className="px-4 mb-14 max-w-6xl mx-auto">
-        <h2 className="text-xl font-bold mb-8 flex items-center gap-2 text-amber-100 neon-gold">
-          🏆 トッププレーヤー
-        </h2>
-        <TopPlayersFlip players={top5} />
-      </section>
+      <Suspense fallback={null}>
+        <NoticesSection />
+      </Suspense>
 
       {/* 大会優勝者 */}
-      {tournamentWinners.length > 0 && (
-        <section className="px-4 mb-10 max-w-3xl mx-auto">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-amber-100 neon-gold">
-            🥇 大会優勝者
-          </h2>
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {tournamentWinners.map(tw => (
-              <div key={tw.tournamentId} className="flex flex-col items-center gap-2 min-w-[90px]">
-                <Link href={`/tournaments/${tw.tournamentId}`} className="flex flex-col items-center gap-2">
-                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yellow-400 shadow shadow-yellow-400/30">
-                    {tw.winner.avatar_url
-                      ? <img src={tw.winner.avatar_url} className="w-full h-full object-cover" />
-                      : <span className="text-2xl flex items-center justify-center h-full bg-gray-800">👤</span>
-                    }
-                  </div>
-                  <span className="text-xs font-semibold text-amber-100 text-center leading-tight">{tw.winner.name}</span>
-                </Link>
-                <span className="text-xs text-gray-500 text-center leading-tight">{tw.tournamentName}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <Suspense fallback={null}>
+        <TournamentWinnersSection />
+      </Suspense>
 
       {/* 最近の試合 */}
-      <RecentMatchesTabs
-        singlesMatches={recentMatches}
-        doublesMatches={recentDoubles}
-      />
+      <Suspense fallback={<MatchesSkeleton />}>
+        <RecentMatchesSection />
+      </Suspense>
     </div>
   )
 }
