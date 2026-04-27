@@ -66,6 +66,8 @@ export default function QualifyingClient({
   const [editMatch, setEditMatch] = useState<Match | null>(null)
   const [editScore1, setEditScore1] = useState('')
   const [editScore2, setEditScore2] = useState('')
+  const [editMode, setEditMode] = useState<'normal' | 'walkover' | 'forfeit'>('normal')
+  const [editWalkoverWinner, setEditWalkoverWinner] = useState<'player1' | 'player2'>('player1')
   const [editLoading, setEditLoading] = useState(false)
   const [rpPreview, setRpPreview] = useState<{
     s1: number; s2: number; newWinnerId: string | null
@@ -364,6 +366,23 @@ export default function QualifyingClient({
   // Step1: スコア変更内容とRP差分をプレビュー表示
   const handleEditMatch = async () => {
     if (!editMatch) return
+
+    // 不戦勝・途中棄権モード（RP計算なし）
+    if (editMode === 'walkover' || editMode === 'forfeit') {
+      const winnerId = editWalkoverWinner === 'player1' ? editMatch.player1_id : editMatch.player2_id
+      const finalScore1 = editMode === 'walkover' ? (editWalkoverWinner === 'player1' ? 15 : 0) : (parseInt(editScore1) || null)
+      const finalScore2 = editMode === 'walkover' ? (editWalkoverWinner === 'player1' ? 0 : 15) : (parseInt(editScore2) || null)
+      setEditLoading(true)
+      await supabase.from('tournament_qualifying_matches')
+        .update({ score1: finalScore1, score2: finalScore2, winner_id: winnerId, mode: editMode, affects_ranking: false })
+        .eq('id', editMatch.id)
+      setEditMatch(null)
+      setRpPreview(null)
+      setEditLoading(false)
+      router.refresh()
+      return
+    }
+
     const s1 = parseInt(editScore1)
     const s2 = parseInt(editScore2)
     if (isNaN(s1) || isNaN(s2)) return
@@ -374,7 +393,7 @@ export default function QualifyingClient({
     if (!editMatch.affects_ranking || editMatch.winner_id == null) {
       setEditLoading(true)
       await supabase.from('tournament_qualifying_matches')
-        .update({ score1: s1, score2: s2, winner_id: newWinnerId })
+        .update({ score1: s1, score2: s2, winner_id: newWinnerId, mode: 'normal', affects_ranking: true })
         .eq('id', editMatch.id)
       setEditMatch(null)
       setRpPreview(null)
@@ -1118,6 +1137,8 @@ export default function QualifyingClient({
                                 setEditMatch(m)
                                 setEditScore1(m.score1?.toString() ?? '')
                                 setEditScore2(m.score2?.toString() ?? '')
+                                setEditMode((m.mode as 'normal' | 'walkover' | 'forfeit') ?? 'normal')
+                                setEditWalkoverWinner('player1')
                                 setRpPreview(null)
                               }}
                               className="text-xs px-2 py-0.5 bg-purple-700/50 hover:bg-purple-600/50 rounded text-purple-300 transition"
@@ -1272,28 +1293,87 @@ export default function QualifyingClient({
 
             {!rpPreview ? (
               <>
-                <div className="flex gap-4 items-center">
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-400 mb-1">{editMatch.player1.name}</label>
-                    <input type="number" min="0" max="15" value={editScore1}
-                      onChange={e => { setEditScore1(e.target.value) }}
-                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
+                {/* モード選択（未入力試合のみ） */}
+                {!editMatch.winner_id && (
+                  <div className="flex gap-2 bg-black/20 rounded-lg p-1">
+                    {(['normal', 'walkover', 'forfeit'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setEditMode(mode)}
+                        className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${editMode === mode ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                      >
+                        {mode === 'normal' ? '通常' : mode === 'walkover' ? '不戦勝' : '途中棄権'}
+                      </button>
+                    ))}
                   </div>
-                  <span className="text-gray-400 mt-4">-</span>
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-400 mb-1">{editMatch.player2.name}</label>
-                    <input type="number" min="0" max="15" value={editScore2}
-                      onChange={e => { setEditScore2(e.target.value) }}
-                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
+                )}
+
+                {/* 不戦勝：勝者選択 */}
+                {editMode === 'walkover' && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-400">勝者（相手が不在）を選択</p>
+                    <div className="flex gap-2">
+                      {(['player1', 'player2'] as const).map(side => (
+                        <button
+                          key={side}
+                          type="button"
+                          onClick={() => setEditWalkoverWinner(side)}
+                          className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${editWalkoverWinner === side ? 'bg-yellow-600 text-white' : 'bg-black/30 text-gray-400 hover:text-white'}`}
+                        >
+                          {side === 'player1' ? editMatch.player1.name : editMatch.player2.name}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 text-center">スコア: {editWalkoverWinner === 'player1' ? '15 - 0' : '0 - 15'} 自動設定（RP反映なし）</p>
                   </div>
-                </div>
+                )}
+
+                {/* 途中棄権：続行者選択＋スコア */}
+                {editMode === 'forfeit' && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-400">続行者（棄権していない方）を選択</p>
+                    <div className="flex gap-2">
+                      {(['player1', 'player2'] as const).map(side => (
+                        <button
+                          key={side}
+                          type="button"
+                          onClick={() => setEditWalkoverWinner(side)}
+                          className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${editWalkoverWinner === side ? 'bg-orange-600 text-white' : 'bg-black/30 text-gray-400 hover:text-white'}`}
+                        >
+                          {side === 'player1' ? editMatch.player1.name : editMatch.player2.name}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500">棄権時点のスコアを入力（RP反映なし）</p>
+                  </div>
+                )}
+
+                {/* スコア入力（通常 or 途中棄権） */}
+                {(editMode === 'normal' || editMode === 'forfeit') && (
+                  <div className="flex gap-4 items-center">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-400 mb-1">{editMatch.player1.name}</label>
+                      <input type="number" min="0" max="15" value={editScore1}
+                        onChange={e => { setEditScore1(e.target.value) }}
+                        className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    <span className="text-gray-400 mt-4">-</span>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-400 mb-1">{editMatch.player2.name}</label>
+                      <input type="number" min="0" max="15" value={editScore2}
+                        onChange={e => { setEditScore2(e.target.value) }}
+                        className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-3">
                   <button onClick={handleEditMatch} disabled={editLoading}
                     className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition">
-                    {editLoading ? '計算中...' : editMatch.winner_id ? 'RP変化を確認 →' : '登録する'}
+                    {editLoading ? '処理中...' : editMode !== 'normal' ? '登録する' : editMatch.winner_id ? 'RP変化を確認 →' : '登録する'}
                   </button>
                   <button onClick={() => { setEditMatch(null); setRpPreview(null) }}
                     className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition">
