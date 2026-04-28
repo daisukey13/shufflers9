@@ -338,9 +338,15 @@ export default function TournamentDetailClient({
           </button>
           <button
             onClick={() => setTab('finals')}
-            className={`flex-1 py-2 rounded-md text-sm font-medium transition ${tab === 'finals' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+            className={`flex-1 py-2 rounded-md text-sm font-medium transition ${
+              tab === 'finals'
+                ? 'bg-purple-600 text-white'
+                : tab === 'qualifying' && isQualifyingDone
+                  ? 'neon-finals-tab'
+                  : 'text-gray-400 hover:text-white'
+            }`}
           >
-            本戦
+            {tab === 'qualifying' && isQualifyingDone ? '✨ 本戦' : '本戦'}
           </button>
         </div>
 
