@@ -366,6 +366,32 @@ export default function TournamentDetailClient({
     ) : null)}
   </div>
 )}
+                    {/* 決勝トーナメント進出バナー */}
+                    {block.scores_finalized && (() => {
+                      const winner = standings.find(s => !s.is_default)
+                      if (!winner) return null
+                      return (
+                        <div className="relative overflow-hidden rounded-2xl border border-yellow-400/40 bg-gradient-to-br from-[#1a0a00] via-[#2a1000] to-[#0d0521] p-5 text-center">
+                          {/* 背景グロー */}
+                          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 70% at 50% 0%, rgba(251,191,36,0.18) 0%, transparent 70%)' }} />
+                          <p className="text-xs font-bold tracking-[0.25em] text-yellow-400/70 uppercase mb-3">Block {block.block_name} Winner</p>
+                          {/* アバター */}
+                          <div className="flex justify-center mb-3">
+                            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-yellow-400 avatar-glow flex-shrink-0">
+                              {winner.player.avatar_url
+                                ? <img src={winner.player.avatar_url} className="w-full h-full object-cover" alt={winner.player.name} />
+                                : <span className="flex items-center justify-center h-full text-3xl bg-gray-800">👤</span>
+                              }
+                            </div>
+                          </div>
+                          {/* プレーヤー名 */}
+                          <p className="text-2xl font-extrabold text-amber-100 neon-gold mb-2">{winner.player.name}</p>
+                          {/* 進出テキスト */}
+                          <p className="text-lg font-extrabold tracking-widest neon-gold">🏆 決勝トーナメント進出！</p>
+                        </div>
+                      )
+                    })()}
+
                     {/* 順位表 */}
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -398,9 +424,15 @@ export default function TournamentDetailClient({
                                   onClick={() => setPopupPlayer(s.player)}
                                   className="flex items-center gap-2 hover:opacity-80 transition text-left"
                                 >
-                                  {s.player.avatar_url && (
-                                    <img src={s.player.avatar_url} className="w-7 h-7 rounded-full object-cover" />
-                                  )}
+                                  {s.player.avatar_url ? (
+                                    idx === 0 && block.scores_finalized && !s.is_default ? (
+                                      <div className="w-7 h-7 rounded-full overflow-hidden avatar-glow flex-shrink-0">
+                                        <img src={s.player.avatar_url} className="w-full h-full object-cover" />
+                                      </div>
+                                    ) : (
+                                      <img src={s.player.avatar_url} className="w-7 h-7 rounded-full object-cover" />
+                                    )
+                                  ) : null}
                                   <span className={`underline decoration-dotted ${s.is_default ? 'text-gray-500' : 'text-white'}`}>
                                     {s.player.name}
                                   </span>
