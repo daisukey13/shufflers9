@@ -63,40 +63,45 @@ export default async function MyPage() {
     .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
     .order('created_at', { ascending: false })
 
+  // 参加大会の真の最大ラウンドを全参加者から取得（自分の試合だけでは決勝かどうか判定できないため）
+  const participatedTournamentIds = [...new Set(
+    finalsParticipation?.map((m: any) => m.tournament?.id).filter(Boolean) ?? []
+  )]
+  const trueMaxRoundMap = new Map<string, number>()
+  if (participatedTournamentIds.length > 0) {
+    const { data: allRounds } = await supabase
+      .from('tournament_finals_matches')
+      .select('tournament_id, round')
+      .in('tournament_id', participatedTournamentIds)
+    allRounds?.forEach((m: any) => {
+      const cur = trueMaxRoundMap.get(m.tournament_id) ?? 0
+      trueMaxRoundMap.set(m.tournament_id, Math.max(cur, m.round))
+    })
+  }
+
   const tournamentMap = new Map<string, {
     id: string; name: string; status: string
     maxRound: number; isWinner: boolean; isRunnerUp: boolean
   }>()
-
-  // 各大会の最大ラウンドを先に計算
-  const tournamentMaxRoundMap = new Map<string, number>()
-  finalsParticipation?.forEach((m: any) => {
-    const tid = m.tournament?.id
-    if (!tid) return
-    const current = tournamentMaxRoundMap.get(tid) ?? 0
-    tournamentMaxRoundMap.set(tid, Math.max(current, m.round))
-  })
 
   finalsParticipation?.forEach((m: any) => {
     const tid = m.tournament?.id
     if (!tid) return
     const existing = tournamentMap.get(tid)
     const maxRound = existing ? Math.max(existing.maxRound, m.round) : m.round
-    const tournamentMaxRound = tournamentMaxRoundMap.get(tid) ?? 0
+    const trueMaxRound = trueMaxRoundMap.get(tid) ?? 0
     const isWinner = m.winner_id === player.id
-    // 優勝は決勝（最大ラウンド）を勝った場合のみ、準優勝は決勝で負けた場合のみ
-    const isRunnerUp = !isWinner && m.winner_id !== null && m.round === tournamentMaxRound
+    // 優勝・準優勝は大会全体の最終ラウンド（決勝）のみ判定
+    const isRunnerUp = !isWinner && m.winner_id !== null && m.round === trueMaxRound
     tournamentMap.set(tid, {
       id: tid, name: m.tournament?.name ?? '不明',
       status: m.tournament?.status ?? '', maxRound,
-      isWinner: (existing?.isWinner ?? false) || (isWinner && m.round === tournamentMaxRound),
+      isWinner: (existing?.isWinner ?? false) || (isWinner && m.round === trueMaxRound),
       isRunnerUp: (existing?.isRunnerUp ?? false) || isRunnerUp,
     })
   })
 
   const tournamentResults = Array.from(tournamentMap.values())
-  const roundNames = ['1回戦', '2回戦', '3回戦', '準決勝', '決勝']
-  const getRoundName = (r: number) => roundNames[r - 1] ?? `第${r}回戦`
 
   // Rank history: rating_change から過去レーティングを逆算して近似順位を計算
   const otherRatings = (allPlayers ?? [])
@@ -299,7 +304,7 @@ export default async function MyPage() {
                       ) : t.isRunnerUp ? (
                         <span className="text-gray-400">🥈 準優勝</span>
                       ) : (
-                        <span className="text-orange-400">🎖️ 本戦{getRoundName(t.maxRound)}進出</span>
+                        <span className="text-orange-400">🎖️ 予選通過</span>
                       )}
                     </p>
                   </div>
