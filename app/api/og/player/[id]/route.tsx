@@ -1,26 +1,25 @@
 import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
 import { getPlayerRankings, calcRanks, singlesTie } from '@/lib/queries/rankings'
+import fs from 'fs'
+import path from 'path'
 
 export const dynamic = 'force-dynamic'
 
-async function loadFont(): Promise<ArrayBuffer | null> {
-  try {
-    const css = await fetch(
-      'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900',
-      {
-        headers: {
-          'User-Agent':
-            'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)',
-        },
-      }
-    ).then((r) => r.text())
-    const match = css.match(/src: url\((.+?)\) format\('truetype'\)/)
-    if (!match?.[1]) return null
-    return await fetch(match[1]).then((r) => r.arrayBuffer())
-  } catch {
-    return null
+async function loadFont(): Promise<ArrayBuffer> {
+  // ローカルにバンドルしたフォントを使用（ネットワーク不要・確実）
+  const localPath = path.join(process.cwd(), 'public/fonts/NotoSansJP-Bold.ttf')
+  if (fs.existsSync(localPath)) {
+    return fs.readFileSync(localPath).buffer as ArrayBuffer
   }
+  // フォールバック: Google Fonts から取得
+  const css = await fetch(
+    'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700',
+    { headers: { 'User-Agent': 'Mozilla/5.0' } }
+  ).then((r) => r.text())
+  const match = css.match(/src: url\((.+?)\) format\('truetype'\)/)
+  if (!match?.[1]) throw new Error('Font URL not found')
+  return await fetch(match[1]).then((r) => r.arrayBuffer())
 }
 
 export async function GET(
@@ -51,24 +50,30 @@ export async function GET(
     .select('player1_id,player2_id,winner_id,round,tournament:tournaments(id,name)')
     .or(`player1_id.eq.${id},player2_id.eq.${id}`)
 
-  // トーナメントごとの最大ラウンドを計算して優勝/準優勝を判定
-  const tMaxRound = new Map<string, number>()
-  finalsRaw?.forEach((m: any) => {
-    const tid = m.tournament?.id
-    if (!tid) return
-    tMaxRound.set(tid, Math.max(tMaxRound.get(tid) ?? 0, m.round))
-  })
+  // 参加大会の真の最大ラウンドを全参加者から取得
+  const participatedTids = [...new Set(finalsRaw?.map((m: any) => m.tournament?.id).filter(Boolean) ?? [])]
+  const trueMaxRoundMap = new Map<string, number>()
+  if (participatedTids.length > 0) {
+    const { data: allRounds } = await supabase
+      .from('tournament_finals_matches')
+      .select('tournament_id, round')
+      .in('tournament_id', participatedTids)
+    allRounds?.forEach((m: any) => {
+      trueMaxRoundMap.set(m.tournament_id, Math.max(trueMaxRoundMap.get(m.tournament_id) ?? 0, m.round))
+    })
+  }
 
   const tResults = new Map<string, { name: string; isWin: boolean; isRunnerUp: boolean }>()
   finalsRaw?.forEach((m: any) => {
     const tid = m.tournament?.id
     if (!tid) return
     const existing = tResults.get(tid)
+    const trueMax = trueMaxRoundMap.get(tid) ?? 0
     const isWin = m.winner_id === id
-    const isRunnerUp = !isWin && m.winner_id !== null && m.round === tMaxRound.get(tid)
+    const isRunnerUp = !isWin && m.winner_id !== null && m.round === trueMax
     tResults.set(tid, {
       name: m.tournament?.name ?? '',
-      isWin: (existing?.isWin ?? false) || isWin,
+      isWin: (existing?.isWin ?? false) || (isWin && m.round === trueMax),
       isRunnerUp: (existing?.isRunnerUp ?? false) || isRunnerUp,
     })
   })
@@ -102,9 +107,7 @@ export async function GET(
   }
 
   const fontData = await loadFont()
-  const fonts = fontData
-    ? [{ name: 'NotoSansJP', data: fontData, weight: 700 as const, style: 'normal' as const }]
-    : []
+  const fonts = [{ name: 'NotoSansJP', data: fontData, weight: 700 as const, style: 'normal' as const }]
 
   return new ImageResponse(
     (
@@ -115,7 +118,7 @@ export async function GET(
           display: 'flex',
           flexDirection: 'column',
           background: 'linear-gradient(135deg, #1a0533 0%, #0d0721 50%, #0a1128 100%)',
-          fontFamily: fontData ? 'NotoSansJP, sans-serif' : 'sans-serif',
+          fontFamily: 'NotoSansJP, sans-serif',
           color: '#ffffff',
           padding: '0',
           position: 'relative',
