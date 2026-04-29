@@ -68,7 +68,7 @@ export default async function PlayerPage({
     tournamentMap.set(tid, {
       id: tid, name: m.tournament?.name ?? '不明',
       status: m.tournament?.status ?? '', maxRound,
-      isWinner: (existing?.isWinner ?? false) || isWinner,
+      isWinner: (existing?.isWinner ?? false) || (isWinner && m.round === tournamentMaxRound),
       isRunnerUp: (existing?.isRunnerUp ?? false) || isRunnerUp,
     })
   })

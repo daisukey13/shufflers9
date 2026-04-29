@@ -68,17 +68,28 @@ export default async function MyPage() {
     maxRound: number; isWinner: boolean; isRunnerUp: boolean
   }>()
 
+  // 各大会の最大ラウンドを先に計算
+  const tournamentMaxRoundMap = new Map<string, number>()
+  finalsParticipation?.forEach((m: any) => {
+    const tid = m.tournament?.id
+    if (!tid) return
+    const current = tournamentMaxRoundMap.get(tid) ?? 0
+    tournamentMaxRoundMap.set(tid, Math.max(current, m.round))
+  })
+
   finalsParticipation?.forEach((m: any) => {
     const tid = m.tournament?.id
     if (!tid) return
     const existing = tournamentMap.get(tid)
     const maxRound = existing ? Math.max(existing.maxRound, m.round) : m.round
+    const tournamentMaxRound = tournamentMaxRoundMap.get(tid) ?? 0
     const isWinner = m.winner_id === player.id
-    const isRunnerUp = !isWinner && m.winner_id !== null && (existing?.maxRound ?? 0) <= m.round
+    // 優勝は決勝（最大ラウンド）を勝った場合のみ、準優勝は決勝で負けた場合のみ
+    const isRunnerUp = !isWinner && m.winner_id !== null && m.round === tournamentMaxRound
     tournamentMap.set(tid, {
       id: tid, name: m.tournament?.name ?? '不明',
       status: m.tournament?.status ?? '', maxRound,
-      isWinner: (existing?.isWinner ?? false) || isWinner,
+      isWinner: (existing?.isWinner ?? false) || (isWinner && m.round === tournamentMaxRound),
       isRunnerUp: (existing?.isRunnerUp ?? false) || isRunnerUp,
     })
   })
