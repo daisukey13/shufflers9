@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getPlayerByUserId } from '@/lib/queries/players'
-import { getPlayerMatches, getPlayerDoublesMatches } from '@/lib/queries/matches'
+import { getPlayerAllSinglesMatches, getPlayerDoublesMatches } from '@/lib/queries/matches'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import LogoutButton from '@/components/ui/LogoutButton'
@@ -17,7 +17,7 @@ export default async function MyPage() {
   if (!player) redirect('/register')
 
   const [matches, doublesMatches] = await Promise.all([
-    getPlayerMatches(player.id),
+    getPlayerAllSinglesMatches(player.id),
     getPlayerDoublesMatches(player.id),
   ])
 
@@ -405,19 +405,19 @@ export default async function MyPage() {
           <div className="space-y-3">
             <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
               <img src="/shuffleboard-puck-blue.png" className="w-5 h-5 object-contain" />
-              シングルス直近の試合
+              シングルス直近の試合（大会含む）
             </h2>
             {matches.length === 0 ? (
               <p className="text-gray-500 text-sm">試合がありません</p>
             ) : (
               <div className="space-y-2">
-                {matches.slice(0, 5).map(match => {
+                {matches.slice(0, 5).map((match: any) => {
                   const isPlayer1 = match.player1_id === player.id
                   const opponent = isPlayer1 ? match.player2 : match.player1
                   const myScore = isPlayer1 ? match.score1 : match.score2
                   const oppScore = isPlayer1 ? match.score2 : match.score1
                   const isWin = match.winner_id === player.id
-                  const ratingChange = isPlayer1 ? match.rating_change1 : match.rating_change2
+                  const ratingChange: number | null = isPlayer1 ? match.rating_change1 : match.rating_change2
                   const date = new Date(match.played_at)
                   const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
 
@@ -430,7 +430,10 @@ export default async function MyPage() {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-gray-400">{dateStr}</p>
+                          <p className="text-xs text-gray-400">
+                            {dateStr}
+                            {match.tournament_name && <span className="ml-1 text-purple-400">【{match.tournament_name}】</span>}
+                          </p>
                           <p className="text-sm font-medium text-white mt-0.5">
                             <span className={isWin ? 'text-green-400' : 'text-red-400'}>
                               {isWin ? '勝利' : '敗北'}
@@ -440,9 +443,11 @@ export default async function MyPage() {
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-white">{myScore} - {oppScore}</p>
-                          <p className={`text-sm font-medium ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {ratingChange >= 0 ? '+' : ''}{ratingChange}pt
-                          </p>
+                          {ratingChange != null && (
+                            <p className={`text-sm font-medium ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {ratingChange >= 0 ? '+' : ''}{ratingChange}pt
+                            </p>
+                          )}
                         </div>
                       </div>
                       {opponent?.is_active !== false && (

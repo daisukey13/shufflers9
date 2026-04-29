@@ -389,8 +389,8 @@ export default function QualifyingClient({
 
     const newWinnerId = s1 > s2 ? editMatch.player1_id : s2 > s1 ? editMatch.player2_id : null
 
-    // RP記録がない試合（未登録 or affects_ranking=false）はそのまま保存
-    if (!editMatch.affects_ranking || editMatch.winner_id == null) {
+    // affects_ranking=false の試合はそのまま保存（RP計算なし）
+    if (!editMatch.affects_ranking) {
       setEditLoading(true)
       await supabase.from('tournament_qualifying_matches')
         .update({ score1: s1, score2: s2, winner_id: newWinnerId, mode: 'normal', affects_ranking: true })

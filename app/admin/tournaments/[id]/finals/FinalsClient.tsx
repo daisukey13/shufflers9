@@ -72,6 +72,7 @@ export default function FinalsClient({
     { score1: '', score2: '' },
   ])
   const [editMode, setEditMode] = useState<'normal' | 'walkover' | 'forfeit'>('normal')
+  const [editDisadvantagePlayerId, setEditDisadvantagePlayerId] = useState<string | null>(null)
   const [editLoading, setEditLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [matchTimes, setMatchTimes] = useState<Record<string, string>>(() =>
@@ -140,6 +141,7 @@ export default function FinalsClient({
       await supabase.from('tournament_finals_matches').update({
         winner_id: winnerId,
         mode: editMode,
+        disadvantage_player_id: editDisadvantagePlayerId,
         rating_before1: p1Rating, rating_before2: p2Rating,
         rating_change1: 0, rating_change2: 0,
         wins_before1: p1Wins, wins_before2: p2Wins,
@@ -195,6 +197,7 @@ export default function FinalsClient({
       await supabase.from('tournament_finals_matches').update({
         winner_id: winnerId,
         mode: 'normal',
+        disadvantage_player_id: editDisadvantagePlayerId,
         rating_before1: p1Rating, rating_before2: p2Rating,
         rating_change1: rc1, rating_change2: rc2,
         wins_before1: p1Wins, wins_before2: p2Wins,
@@ -481,9 +484,15 @@ export default function FinalsClient({
       if (!q2) continue
       const p1id = q1.winner.player_id
       const p2id = q2.winner.player_id
-      const hasDefault = p1id === defaultPlayerId || p2id === defaultPlayerId
-      const winnerId = hasDefault ? (p1id === defaultPlayerId ? p2id : p1id) : null
-      const disadvantagePlayerId = hasDefault ? (p1id === defaultPlayerId ? p2id : p1id) : null
+      const hasDefaultInMatch = p1id === defaultPlayerId || p2id === defaultPlayerId
+      const winnerId = hasDefaultInMatch ? (p1id === defaultPlayerId ? p2id : p1id) : null
+      // DEFAULTが直接試合相手の場合 → 相手がディスアドバン
+      // 予選ブロックにDEFAULTがいた場合 → そのブロック勝者がディスアドバン
+      const disadvantagePlayerId = hasDefaultInMatch
+        ? (p1id === defaultPlayerId ? p2id : p1id)
+        : q1.hasDefault ? p1id
+        : q2.hasDefault ? p2id
+        : null
 
       await supabase.from('tournament_finals_matches').insert({
         tournament_id: tournament.id,
@@ -492,7 +501,7 @@ export default function FinalsClient({
         player1_id: p1id,
         player2_id: p2id,
         winner_id: winnerId,
-        mode: hasDefault ? 'walkover' : 'normal',
+        mode: hasDefaultInMatch ? 'walkover' : 'normal',
         disadvantage_player_id: disadvantagePlayerId,
       })
     }
@@ -768,6 +777,7 @@ export default function FinalsClient({
                       onClick={() => {
                         setEditMatch(match)
                         setEditMode(match.mode === 'walkover' ? 'walkover' : match.mode === 'forfeit' ? 'forfeit' : 'normal')
+                        setEditDisadvantagePlayerId(match.disadvantage_player_id)
                         const currentSets = match.tournament_finals_sets.sort((a, b) => a.set_number - b.set_number)
                         setEditSets([0, 1, 2].map(i => ({
                           score1: currentSets[i]?.score1?.toString() ?? '',
@@ -893,6 +903,29 @@ export default function FinalsClient({
                 </button>
               ))}
             </div>
+
+            {/* ディスアドバンテージ設定 */}
+            {editMatch.player1_id && editMatch.player2_id && (
+              <div className="space-y-1">
+                <label className="block text-xs text-gray-400">1試合ディスアドバンテージ</label>
+                <div className="flex gap-2">
+                  {([
+                    { label: 'なし', value: null },
+                    { label: editMatch.player1?.name ?? 'P1', value: editMatch.player1_id },
+                    { label: editMatch.player2?.name ?? 'P2', value: editMatch.player2_id },
+                  ] as { label: string; value: string | null }[]).map(opt => (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => setEditDisadvantagePlayerId(opt.value)}
+                      className={`flex-1 py-1.5 rounded-md text-xs font-medium transition ${editDisadvantagePlayerId === opt.value ? 'bg-amber-700 text-white' : 'bg-black/20 text-gray-400 hover:text-white'}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 通常モードのみセットスコア */}
             {editMode === 'normal' && (
