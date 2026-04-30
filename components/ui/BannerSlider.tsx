@@ -100,25 +100,27 @@ export default function BannerSlider({ banners }: { banners: Banner[] }) {
   const content = (
     <div
       className={`
-        relative w-full bg-gradient-to-r ${theme.bg}
-        border ${theme.border} rounded-2xl overflow-hidden
+        relative w-full rounded-2xl overflow-hidden
         flex flex-col items-center justify-center text-center
         px-6 py-8 min-h-[180px] sm:min-h-[200px]
         transition-opacity duration-200 ${animating ? 'opacity-0' : 'opacity-100'}
         cursor-${banner.link_url ? 'pointer' : 'default'}
-        neon-banner
+        neon-banner border ${theme.border}
       `}
-      style={{ '--neon-glow': theme.glow } as React.CSSProperties}
+      style={{
+        '--neon-glow': theme.glow,
+        backgroundImage: 'url(/images/banner-bg.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      } as React.CSSProperties}
     >
-      {/* ステージライト上部 */}
+      {/* ダークベースオーバーレイ */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'rgba(0,0,0,0.58)' }} />
+      {/* テーマカラーオーバーレイ */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `
-            radial-gradient(ellipse 70% 60% at 50% 0%, ${theme.spotlight} 0%, transparent 70%),
-            radial-gradient(ellipse 40% 40% at 20% 100%, ${theme.spotlight2} 0%, transparent 60%),
-            radial-gradient(ellipse 40% 40% at 80% 100%, ${theme.spotlight2} 0%, transparent 60%)
-          `,
+          background: `linear-gradient(135deg, ${theme.spotlight.replace(/[\d.]+\)$/, '0.55)')} 0%, ${theme.spotlight2.replace(/[\d.]+\)$/, '0.35)')} 100%)`,
         }}
       />
 
