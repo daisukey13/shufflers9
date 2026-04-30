@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useInView } from '@/hooks/useInView'
 
 type Banner = {
   id: string
@@ -71,7 +70,6 @@ const TAG_LABELS = ['📣 お知らせ', '🏆 大会情報', '📅 イベント
 export default function BannerSlider({ banners }: { banners: Banner[] }) {
   const [current, setCurrent] = useState(0)
   const [animating, setAnimating] = useState(false)
-  const { ref: sectionRef, inView: entered } = useInView(0.2)
 
   const goTo = useCallback((index: number) => {
     setAnimating(true)
@@ -108,7 +106,9 @@ export default function BannerSlider({ banners }: { banners: Banner[] }) {
         px-6 py-8 min-h-[180px] sm:min-h-[200px]
         transition-opacity duration-200 ${animating ? 'opacity-0' : 'opacity-100'}
         cursor-${banner.link_url ? 'pointer' : 'default'}
+        neon-banner
       `}
+      style={{ '--neon-glow': theme.glow } as React.CSSProperties}
     >
       {/* ステージライト上部 */}
       <div
@@ -170,19 +170,10 @@ export default function BannerSlider({ banners }: { banners: Banner[] }) {
   )
 
   return (
-    // センチネル：transformなしで常に正しい位置にある → IntersectionObserverが確実に検知
     <section
-      ref={sectionRef as React.RefObject<HTMLElement>}
       className="px-4 mb-8 max-w-3xl mx-auto"
     >
-      <div
-        style={{
-          transform: entered ? 'translateX(0)' : 'translateX(110%)',
-          opacity: entered ? 1 : 0,
-          transition: 'transform 0.65s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease-out',
-          overflow: 'hidden',
-        }}
-      >
+      <div>
       <div className="relative group">
         {banner.link_url ? (
           <Link href={banner.link_url} className="block">
@@ -221,7 +212,7 @@ export default function BannerSlider({ banners }: { banners: Banner[] }) {
           ))}
         </div>
       )}
-      </div>{/* transform wrapper end */}
+      </div>
     </section>
   )
 }

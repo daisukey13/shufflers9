@@ -218,6 +218,26 @@ body {
 }
 .neon-flicker { animation: neon-flicker 5s ease-in-out infinite; }
 
+/* ── バナー ネオン点滅（テーマカラー可変） ── */
+@keyframes neon-banner-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 8px 2px var(--neon-glow, rgba(160,80,255,0.5)),
+      0 0 20px 4px var(--neon-glow, rgba(160,80,255,0.3)),
+      inset 0 0 12px 0 var(--neon-glow, rgba(160,80,255,0.1));
+  }
+  50% {
+    box-shadow:
+      0 0 16px 4px var(--neon-glow, rgba(160,80,255,0.8)),
+      0 0 40px 10px var(--neon-glow, rgba(160,80,255,0.45)),
+      0 0 60px 16px var(--neon-glow, rgba(160,80,255,0.2)),
+      inset 0 0 20px 0 var(--neon-glow, rgba(160,80,255,0.15));
+  }
+}
+.neon-banner {
+  animation: neon-banner-pulse 2s ease-in-out infinite;
+}
+
 /* ── ボーナスRP ネオン（大会ボーナスポイント適用時） ── */
 @keyframes neon-bonus-pulse {
   0%, 100% {
