@@ -27,7 +27,7 @@ export default function AboutPage() {
               アメリカにはプロの大会もあります。当クラブはいつか世界を相手に試合できるプレーヤーが出ることを夢見ています。
             </p>
             <p className="text-gray-400 text-xs leading-relaxed p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-lg">
-              ※ 小中学生については親の同伴や承認が必要です。
+              ※ 小中学生の登録は保護者の承認が必要です。保護者がご連絡先を併記してお申し込みください。また小中学生の大会参加は保護者の同伴が必要となります。
             </p>
           </div>
 
