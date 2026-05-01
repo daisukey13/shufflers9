@@ -11,9 +11,20 @@ export default function AuthCallbackHandler() {
   const supabase = createClient()
 
   useEffect(() => {
+    const error = searchParams.get('error')
+    const errorCode = searchParams.get('error_code')
     const code = searchParams.get('code')
     const token_hash = searchParams.get('token_hash')
     const type = searchParams.get('type') as EmailOtpType | null
+
+    if (error) {
+      if (errorCode === 'otp_expired') {
+        router.replace('/register?error=link_expired')
+      } else {
+        router.replace('/login?error=auth_error')
+      }
+      return
+    }
 
     if (!code && !token_hash) return
 

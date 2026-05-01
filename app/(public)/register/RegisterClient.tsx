@@ -17,6 +17,12 @@ export default function RegisterClient() {
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
 
+  // URLのエラーパラメータを検出
+  const searchParams = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search)
+    : null
+  const urlError = searchParams?.get('error')
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!agreedToTerms) {
@@ -81,6 +87,13 @@ export default function RegisterClient() {
               <span className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold">3</span>
               プロフィール設定
             </div>
+          </div>
+        )}
+
+        {urlError === 'link_expired' && (
+          <div className="p-4 bg-red-900/30 border border-red-600/50 rounded-xl text-sm text-red-300 text-center">
+            ⚠️ 確認メールのリンクが期限切れです。<br />
+            再度メールアドレスを入力して登録してください。
           </div>
         )}
 
