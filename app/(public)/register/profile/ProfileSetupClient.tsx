@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import AvatarPicker from '@/components/ui/AvatarPicker'
 import Link from 'next/link'
 
-const LINE_URL = 'https://lin.ee/p4xLX22'
+const LINE_URL = 'https://line.me/R/ti/p/@123foiue'
 
 type Avatar = { id: string; url: string }
 

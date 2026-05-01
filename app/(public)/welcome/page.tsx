@@ -2,6 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+
+const LINE_URL = 'https://line.me/R/ti/p/@123foiue'
 
 const PUCKS = ['🔵', '🔴', '🟡', '🟢', '🟠', '🟣']
 
@@ -110,6 +113,20 @@ export default function WelcomePage() {
             </div>
           ))}
         </div>
+
+        {/* LINE友だち追加 */}
+        <Link
+          href={LINE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl font-bold text-base text-white transition-all neon-btn-green"
+          style={{ background: '#06C755', boxShadow: '0 0 20px rgba(6,199,85,0.4)' }}
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+            <path d="M12 2C6.48 2 2 6.03 2 11c0 3.07 1.6 5.8 4.1 7.56-.18.64-.65 2.33-.74 2.69-.12.44.16.44.34.32.14-.09 2.22-1.47 3.12-2.07.37.05.74.08 1.18.08 5.52 0 10-4.03 10-9S17.52 2 12 2z"/>
+          </svg>
+          LINE公式アカウントを友だち追加
+        </Link>
 
         {/* CTAボタン */}
         <button
