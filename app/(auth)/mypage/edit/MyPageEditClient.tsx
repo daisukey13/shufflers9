@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation'
 import AvatarPicker from '@/components/ui/AvatarPicker'
 import { ADDRESS_OPTIONS } from '@/lib/constants'
 import { Player } from '@/types'
+import Link from 'next/link'
+
+const LINE_URL = 'https://lin.ee/p4xLX22'
 
 type Avatar = { id: string; url: string }
 
@@ -13,10 +16,12 @@ export default function MyPageEditClient({
   player,
   avatars,
   email,
+  isWelcome = false,
 }: {
   player: Player
   avatars: Avatar[]
   email: string
+  isWelcome?: boolean
 }) {
   const [name, setName] = useState(player.name)
   const [fullName, setFullName] = useState(player.full_name ?? '')
@@ -27,6 +32,7 @@ export default function MyPageEditClient({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [showLineBanner, setShowLineBanner] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -129,22 +135,76 @@ export default function MyPageEditClient({
       return
     }
 
-    setSuccess(true)
     setLoading(false)
-    setTimeout(() => router.push('/mypage'), 1000)
+    if (isWelcome) {
+      setShowLineBanner(true)
+    } else {
+      setSuccess(true)
+      setTimeout(() => router.push('/mypage'), 1000)
+    }
+  }
+
+  if (showLineBanner) {
+    return (
+      <div className="min-h-screen bg-transparent text-white px-4 py-10">
+        <div className="max-w-md mx-auto space-y-6">
+          <div className="text-center space-y-2">
+            <div className="text-5xl mb-2">🎉</div>
+            <h1 className="text-2xl font-bold text-yellow-100">登録完了！</h1>
+            <p className="text-sm text-gray-400">ようこそ、豊浦シャッフラーズクラブへ！</p>
+          </div>
+
+          <div className="p-5 bg-green-900/30 border border-green-600/50 rounded-2xl space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">📢</span>
+              <h2 className="text-base font-bold text-green-300">LINE公式アカウントへの登録をお願いします</h2>
+            </div>
+            <p className="text-sm text-gray-300 leading-relaxed">
+              ここに登録することで、練習日程・大会日程・各種イベントのご案内が事務局からLINEで届きます。ぜひご登録ください。
+            </p>
+            <Link
+              href={LINE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-sm transition shadow-lg"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path d="M12 2C6.48 2 2 6.03 2 11c0 3.07 1.6 5.8 4.1 7.56-.18.64-.65 2.33-.74 2.69-.12.44.16.44.34.32.14-.09 2.22-1.47 3.12-2.07.37.05.74.08 1.18.08 5.52 0 10-4.03 10-9S17.52 2 12 2z"/>
+              </svg>
+              友だち追加はこちら
+            </Link>
+            <p className="text-xs text-gray-500 text-center">※ 登録は任意ですが、案内が届かなくなる場合があります</p>
+          </div>
+
+          <button
+            onClick={() => router.push('/mypage')}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl text-sm font-medium transition"
+          >
+            マイページへ進む →
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-transparent text-white px-4 py-8">
       <div className="max-w-lg mx-auto space-y-6">
+        {isWelcome && (
+          <div className="p-4 bg-yellow-900/30 border border-yellow-600/40 rounded-2xl text-sm text-yellow-200 text-center">
+            🎉 メール確認が完了しました！プロフィールを入力して登録を完了してください。
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">✏️ プロフィール編集</h1>
-          <button
-            onClick={() => router.back()}
-            className="text-sm text-gray-400 hover:text-white transition"
-          >
-            ← 戻る
-          </button>
+          {!isWelcome && (
+            <button
+              onClick={() => router.back()}
+              className="text-sm text-gray-400 hover:text-white transition"
+            >
+              ← 戻る
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-purple-900/20 border border-purple-800/30 rounded-2xl p-6">

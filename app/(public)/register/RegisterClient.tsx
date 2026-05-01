@@ -195,8 +195,8 @@ export default function RegisterClient() {
                 <p className="text-xs text-gray-300 font-medium">📌 次のステップ：</p>
                 <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
                   <li>メールボックスを確認する</li>
-                  <li>「登録を確認しました」リンクをクリック</li>
-                  <li>ログインしてマイページからプロフィールを編集する</li>
+                  <li>メール内のリンクをクリック（自動でログインされます）</li>
+                  <li>プロフィールを入力して登録完了</li>
                 </ol>
               </div>
               <p className="text-xs text-gray-500">

@@ -6,7 +6,11 @@ import { redirect } from 'next/navigation'
 import { getPresetAvatars } from '@/lib/avatars'
 import MyPageEditClient from './MyPageEditClient'
 
-export default async function MyPageEditPage() {
+export default async function MyPageEditPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -16,6 +20,7 @@ export default async function MyPageEditPage() {
   if (!player) redirect('/login')
 
   const avatars = await getPresetAvatars()
+  const { welcome } = await searchParams
 
-  return <MyPageEditClient player={player} avatars={avatars} email={user.email ?? ''} />
+  return <MyPageEditClient player={player} avatars={avatars} email={user.email ?? ''} isWelcome={welcome === '1'} />
 }
