@@ -43,21 +43,20 @@ export default function AuthCallbackHandler() {
       // implicitフロー: SDKが自動でハッシュを処理するのでセッションを確認
       if (hasHashToken) {
         const { data: { session } } = await supabase.auth.getSession()
-        if (session) { router.replace('/mypage/edit?welcome=1'); return }
-        // 少し待ってから再確認
+        if (session) { router.replace('/welcome'); return }
         await new Promise(r => setTimeout(r, 1000))
         const { data: { session: session2 } } = await supabase.auth.getSession()
-        if (session2) { router.replace('/mypage/edit?welcome=1'); return }
+        if (session2) { router.replace('/welcome'); return }
       }
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (!error) { router.replace('/mypage/edit?welcome=1'); return }
+        if (!error) { router.replace('/welcome'); return }
       }
 
       if (token_hash && type) {
         const { error } = await supabase.auth.verifyOtp({ token_hash, type })
-        if (!error) { router.replace('/mypage/edit?welcome=1'); return }
+        if (!error) { router.replace('/welcome'); return }
       }
     }
 
