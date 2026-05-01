@@ -1,0 +1,33 @@
+name: Deactivate Inactive Players
+
+on:
+  schedule:
+    # 毎日 16:00 UTC = 日本時間 翌 01:00
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+jobs:
+  deactivate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run deactivation check
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "${APP_URL}/api/admin/deactivate-inactive")
+
+          echo "HTTP Status: $response"
+          cat /tmp/response.json
+
+          if [ "$response" != "200" ]; then
+            echo "❌ 非アクティブ化処理に失敗しました (HTTP $response)"
+            exit 1
+          fi
+
+          echo "✅ 処理完了"
