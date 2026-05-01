@@ -110,6 +110,11 @@ export default function TermsPage() {
                   </ul>
                   <p>2. 当クラブは、本条に基づく措置によって利用者に生じた損害について、一切の責任を負いません。</p>
                   <p>3. なお、当クラブはできる限り事前に利用者と話し合いの場を設けるよう努めます。</p>
+                  <div className="mt-3 p-3 bg-orange-900/20 border border-orange-700/30 rounded-xl space-y-1">
+                    <p className="font-medium text-orange-300">【会員資格の維持について】</p>
+                    <p>4. 直近1年間（365日）に1試合もシングルス・ダブルス・大会のいずれかに出場していない会員は、自動的に「非アクティブ」状態となります。非アクティブ状態になると、プレーヤー一覧およびランキングから非表示となります。</p>
+                    <p>5. 再度試合に出場した場合は、管理者の判断によりアクティブ状態に戻すことができます。再アクティブ化を希望される場合は<Link href="/contact" className="text-purple-400 hover:text-purple-300 underline underline-offset-2">お問い合わせ</Link>ください。</p>
+                  </div>
                 </div>
               ),
             },
@@ -170,7 +175,7 @@ export default function TermsPage() {
 
         <div className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl text-sm text-gray-400">
           <p>制定日：2026年4月9日</p>
-          <p>最終更新日：2026年4月16日</p>
+          <p>最終更新日：2026年5月2日</p>
         </div>
 
         <p className="text-center text-sm text-gray-500">
