@@ -32,7 +32,7 @@ async function getInactivePlayers() {
 
   const { data: activePlayers, error: playersError } = await adminClient
     .from('players')
-    .select('id, name')
+    .select('id, name, created_at')
     .eq('is_active', true)
 
   if (playersError || !activePlayers) {
@@ -40,6 +40,11 @@ async function getInactivePlayers() {
   }
 
   const activeIds = new Set<string>()
+
+  // 登録日が365日以内のプレーヤーは対象外
+  for (const p of activePlayers) {
+    if (p.created_at >= cutoff) activeIds.add(p.id)
+  }
 
   // シングルス
   const { data: singles } = await adminClient
