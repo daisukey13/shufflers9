@@ -146,41 +146,80 @@ export default function MyPageEditClient({
 
   if (showLineBanner) {
     return (
-      <div className="min-h-screen bg-transparent text-white px-4 py-10">
-        <div className="max-w-md mx-auto space-y-6">
-          <div className="text-center space-y-2">
-            <div className="text-5xl mb-2">🎉</div>
-            <h1 className="text-2xl font-bold text-yellow-100">登録完了！</h1>
-            <p className="text-sm text-gray-400">ようこそ、豊浦シャッフラーズクラブへ！</p>
+      <div className="min-h-screen text-white flex flex-col items-center justify-center px-4 py-10 relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #001a08 0%, #003015 40%, #001a08 100%)' }}
+      >
+        {/* 背景グロー */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(6,199,85,0.18) 0%, transparent 70%)',
+        }} />
+
+        <div className="relative max-w-md w-full space-y-8 text-center">
+          {/* 登録完了 */}
+          <div className="space-y-3">
+            <div className="text-7xl animate-bounce">🎉</div>
+            <h1 className="text-4xl font-extrabold text-yellow-300 neon-gold">登録完了！</h1>
+            <p className="text-gray-300">ようこそ、豊浦シャッフラーズクラブへ！</p>
           </div>
 
-          <div className="p-5 bg-green-900/30 border border-green-600/50 rounded-2xl space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">📢</span>
-              <h2 className="text-base font-bold text-green-300">LINE公式アカウントへの登録をお願いします</h2>
+          {/* LINE案内カード */}
+          <div
+            className="rounded-3xl p-6 space-y-5 border-2 border-[#06C755] neon-banner"
+            style={{
+              background: 'linear-gradient(135deg, rgba(6,199,85,0.15) 0%, rgba(0,60,20,0.6) 100%)',
+              '--neon-glow': '#06C755',
+            } as React.CSSProperties}
+          >
+            {/* LINEロゴ風ヘッダー */}
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-14 h-14 rounded-2xl bg-[#06C755] flex items-center justify-center shadow-lg" style={{ boxShadow: '0 0 20px rgba(6,199,85,0.6)' }}>
+                <svg viewBox="0 0 24 24" fill="white" className="w-9 h-9">
+                  <path d="M12 2C6.48 2 2 6.03 2 11c0 3.07 1.6 5.8 4.1 7.56-.18.64-.65 2.33-.74 2.69-.12.44.16.44.34.32.14-.09 2.22-1.47 3.12-2.07.37.05.74.08 1.18.08 5.52 0 10-4.03 10-9S17.52 2 12 2z"/>
+                </svg>
+              </div>
+              <div className="text-left">
+                <p className="text-xs text-green-400 font-bold tracking-widest uppercase">公式アカウント</p>
+                <p className="text-xl font-extrabold text-white">LINE 登録のお願い</p>
+              </div>
             </div>
-            <p className="text-sm text-gray-300 leading-relaxed">
-              ここに登録することで、練習日程・大会日程・各種イベントのご案内が事務局からLINEで届きます。ぜひご登録ください。
+
+            <div className="h-px bg-gradient-to-r from-transparent via-green-500/50 to-transparent" />
+
+            <p className="text-sm text-gray-200 leading-relaxed">
+              LINE公式アカウントに登録すると、事務局から以下のご案内が届きます。
             </p>
+            <ul className="text-sm space-y-2 text-left">
+              {[
+                '🗓️ 練習日程のお知らせ',
+                '🏆 大会日程・組み合わせの発表',
+                '📣 各種イベント・お知らせ',
+              ].map((item, i) => (
+                <li key={i} className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2 text-green-100">
+                  {item}
+                </li>
+              ))}
+            </ul>
+
             <Link
               href={LINE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-sm transition shadow-lg"
+              className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-white font-extrabold text-lg transition-all shadow-xl neon-btn-green"
+              style={{ background: '#06C755' }}
             >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
                 <path d="M12 2C6.48 2 2 6.03 2 11c0 3.07 1.6 5.8 4.1 7.56-.18.64-.65 2.33-.74 2.69-.12.44.16.44.34.32.14-.09 2.22-1.47 3.12-2.07.37.05.74.08 1.18.08 5.52 0 10-4.03 10-9S17.52 2 12 2z"/>
               </svg>
               友だち追加はこちら
             </Link>
-            <p className="text-xs text-gray-500 text-center">※ 登録は任意ですが、案内が届かなくなる場合があります</p>
+            <p className="text-xs text-gray-500">※ 登録は任意ですが、案内が届かなくなる場合があります</p>
           </div>
 
           <button
             onClick={() => router.push('/mypage')}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl text-sm font-medium transition"
+            className="w-full py-3 rounded-2xl text-gray-400 border border-gray-700 hover:border-gray-500 hover:text-gray-200 text-sm transition"
           >
-            マイページへ進む →
+            スキップしてマイページへ →
           </button>
         </div>
       </div>
