@@ -114,6 +114,8 @@ export default function MyPageEditClient({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!fullName.trim()) { setError('氏名は必須です'); return }
+    if (!phone.trim()) { setError('電話番号は必須です'); return }
     setLoading(true)
     setError(null)
     setSuccess(false)
@@ -337,16 +339,22 @@ export default function MyPageEditClient({
             </select>
           </div>
 
+          {/* 注意事項 */}
+          <div className="p-3 bg-yellow-900/20 border border-yellow-600/40 rounded-xl text-xs text-yellow-200 leading-relaxed">
+            ⭐️ 小中学生については保護者連絡先が必要です。また、大会参加には保護者帯同が必要となります。
+          </div>
+
           {/* 氏名（非公開） */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              氏名 <span className="text-red-400 text-xs">（非公開・管理者のみ閲覧）</span>
+              氏名 <span className="text-red-400 text-xs">（必須・非公開・管理者のみ閲覧）</span>
             </label>
             <input
               type="text"
               value={fullName}
               onChange={e => setFullName(e.target.value)}
               placeholder="山田 太郎"
+              required
               className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
@@ -354,13 +362,14 @@ export default function MyPageEditClient({
           {/* 電話番号（非公開） */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              電話番号 <span className="text-red-400 text-xs">（非公開・管理者のみ閲覧）</span>
+              電話番号 <span className="text-red-400 text-xs">（必須・非公開・管理者のみ閲覧）</span>
             </label>
             <input
               type="tel"
               value={phone}
               onChange={e => setPhone(e.target.value)}
               placeholder="090-0000-0000"
+              required
               className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
