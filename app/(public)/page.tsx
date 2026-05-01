@@ -11,6 +11,7 @@ import {
   TournamentWinnersSection,
   RecentMatchesSection,
 } from './HomeDataSections'
+import AuthCallbackHandler from './AuthCallbackHandler'
 
 // スケルトンUI
 function StatsSkeleton() {
@@ -62,6 +63,8 @@ function MatchesSkeleton() {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-transparent text-amber-50">
+      {/* メール確認リンクからのコールバック処理 */}
+      <Suspense><AuthCallbackHandler /></Suspense>
       {/* 月間ランキングモーダル（遅延ストリーム） */}
       <Suspense fallback={null}>
         <MonthlyModalSection />
