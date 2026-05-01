@@ -27,7 +27,7 @@ const sizeByRank = (rank: number) => {
   switch (rank) {
     case 1: return { cardH: 'min-h-[18rem]', avatar: 'w-28 h-28', badge: 'w-10 h-10 text-base', border: 'border-4 border-yellow-400/70', glow: 'shadow-xl shadow-yellow-400/25', pill: 'text-base', frame: 'from-yellow-400/20 to-amber-600/20', badgeColor: 'bg-yellow-400 text-gray-900' }
     case 2: return { cardH: 'min-h-[15rem]', avatar: 'w-24 h-24', badge: 'w-9 h-9 text-sm', border: 'border-2 border-gray-300/80', glow: 'shadow-lg shadow-gray-300/10', pill: 'text-sm', frame: 'from-gray-300/15 to-gray-500/15', badgeColor: 'bg-gray-300 text-gray-900' }
-    case 3: return { cardH: 'min-h-[13rem]', avatar: 'w-20 h-20', badge: 'w-9 h-9 text-sm', border: 'border-2 border-orange-500/80', glow: 'shadow-lg shadow-orange-400/15', pill: 'text-sm', frame: 'from-orange-400/15 to-orange-600/15', badgeColor: 'bg-orange-500 text-white' }
+    case 3: return { cardH: 'min-h-[15rem]', avatar: 'w-20 h-20', badge: 'w-9 h-9 text-sm', border: 'border-2 border-orange-500/80', glow: 'shadow-lg shadow-orange-400/15', pill: 'text-sm', frame: 'from-orange-400/15 to-orange-600/15', badgeColor: 'bg-orange-500 text-white' }
     case 4: return { cardH: 'min-h-[14rem]', avatar: 'w-16 h-16', badge: 'w-8 h-8 text-xs', border: 'border border-green-600/40', glow: 'shadow', pill: 'text-xs', frame: 'from-green-900/20 to-blue-900/20', badgeColor: 'bg-green-700 text-white' }
     default: return { cardH: 'min-h-[14rem]', avatar: 'w-16 h-16', badge: 'w-8 h-8 text-xs', border: 'border border-green-600/40', glow: 'shadow', pill: 'text-xs', frame: 'from-green-900/20 to-blue-900/20', badgeColor: 'bg-green-700 text-white' }
   }
