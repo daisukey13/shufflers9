@@ -131,12 +131,16 @@ export default async function MyPage() {
     ? [...rankPoints, { label: '現在', rank }]
     : []
 
-  const singlesWinRate = player.wins + player.losses > 0
-    ? Math.round((player.wins / (player.wins + player.losses)) * 100) : 0
+  // 全試合（通常シングルス＋大会予選・本戦）から勝敗を再計算
+  const singlesWins = matches.filter((m: any) => m.winner_id === player.id).length
+  const singlesLosses = matches.filter((m: any) => m.winner_id && m.winner_id !== player.id).length
+
+  const singlesWinRate = singlesWins + singlesLosses > 0
+    ? Math.round((singlesWins / (singlesWins + singlesLosses)) * 100) : 0
   const doublesWinRate = (player.doubles_wins ?? 0) + (player.doubles_losses ?? 0) > 0
     ? Math.round(((player.doubles_wins ?? 0) / ((player.doubles_wins ?? 0) + (player.doubles_losses ?? 0))) * 100) : 0
 
-  const totalMatches = player.wins + player.losses
+  const totalMatches = singlesWins + singlesLosses
 
   return (
     <div className="min-h-screen bg-transparent text-white px-4 py-8">
@@ -221,11 +225,11 @@ export default async function MyPage() {
               </div>
               <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
                 <p className="text-xs text-gray-400 mb-1">勝利</p>
-                <p className="text-2xl font-bold text-green-400">{player.wins}</p>
+                <p className="text-2xl font-bold text-green-400">{singlesWins}</p>
               </div>
               <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
                 <p className="text-xs text-gray-400 mb-1">敗北</p>
-                <p className="text-2xl font-bold text-red-400">{player.losses}</p>
+                <p className="text-2xl font-bold text-red-400">{singlesLosses}</p>
               </div>
             </div>
             <div className="mt-2 space-y-1">
