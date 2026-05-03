@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 
 export async function POST(
   req: NextRequest,
@@ -47,6 +48,7 @@ export async function POST(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  revalidatePath('/matches')
   return NextResponse.json({ success: true, field })
 }
 
@@ -83,5 +85,6 @@ export async function DELETE(
 
   await supabase.from('singles_matches').update({ [field]: null }).eq('id', id)
 
+  revalidatePath('/matches')
   return NextResponse.json({ success: true })
 }

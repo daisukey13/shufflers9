@@ -13,22 +13,28 @@ export default function MyPageMatchList({
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState<Record<string, { comment1?: string | null; comment2?: string | null }>>({})
   const [saving, setSaving] = useState<Set<string>>(new Set())
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const submit = async (matchId: string) => {
     const text = drafts[matchId]?.trim()
     if (!text) return
     setSaving(prev => new Set(prev).add(matchId))
+    setErrors(prev => { const n = { ...prev }; delete n[matchId]; return n })
     try {
       const res = await fetch(`/api/matches/${matchId}/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comment: text }),
       })
+      const data = await res.json()
       if (res.ok) {
-        const data = await res.json()
         setSaved(prev => ({ ...prev, [matchId]: { ...prev[matchId], [data.field]: text } }))
         setDrafts(prev => { const n = { ...prev }; delete n[matchId]; return n })
+      } else {
+        setErrors(prev => ({ ...prev, [matchId]: data.error ?? '送信に失敗しました' }))
       }
+    } catch {
+      setErrors(prev => ({ ...prev, [matchId]: '通信エラーが発生しました' }))
     } finally {
       setSaving(prev => { const n = new Set(prev); n.delete(matchId); return n })
     }
@@ -115,6 +121,10 @@ export default function MyPageMatchList({
                     >✕</button>
                   </div>
                 ) : (
+                  <div className="space-y-1">
+                  {errors[match.id] && (
+                    <p className="text-xs text-red-400">{errors[match.id]}</p>
+                  )}
                   <div className="flex gap-2 items-center">
                     <input
                       type="text"
@@ -133,6 +143,7 @@ export default function MyPageMatchList({
                     >
                       {isSav ? '...' : '送信'}
                     </button>
+                  </div>
                   </div>
                 )}
                 {/* 相手のコメント */}
