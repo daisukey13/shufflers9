@@ -7,7 +7,7 @@
     "match_time_1": "09:10",
     "match_time_2": "09:40",
     "match_time_3": "10:10",
-    "scores_finalized": false
+    "scores_finalized": true
   },
   {
     "id": "77764d3f-fe6e-414b-9d6c-a4b88eb32d53",
@@ -17,7 +17,7 @@
     "match_time_1": "10:40",
     "match_time_2": "11:10",
     "match_time_3": "11:40",
-    "scores_finalized": false
+    "scores_finalized": true
   },
   {
     "id": "7e1a61f7-daa5-476b-811c-2150677313ba",
@@ -27,7 +27,7 @@
     "match_time_1": "13:00",
     "match_time_2": "13:30",
     "match_time_3": "14:00",
-    "scores_finalized": false
+    "scores_finalized": true
   },
   {
     "id": "012d1083-c320-4964-b73e-598c6f7b3b88",
@@ -37,6 +37,6 @@
     "match_time_1": "14:30",
     "match_time_2": "15:00",
     "match_time_3": "15:30",
-    "scores_finalized": false
+    "scores_finalized": true
   }
 ]
