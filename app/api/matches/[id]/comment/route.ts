@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export async function POST(
@@ -28,7 +29,8 @@ export async function POST(
     return NextResponse.json({ error: 'コメントは30文字以内で入力してください' }, { status: 400 })
   }
 
-  const { data: match } = await supabase
+  const adminClient = createAdminClient()
+  const { data: match } = await adminClient
     .from('singles_matches')
     .select('player1_id, player2_id, comment1, comment2')
     .eq('id', id)
@@ -41,7 +43,7 @@ export async function POST(
   else if (match.player2_id === player.id) field = 'comment2'
   else return NextResponse.json({ error: 'この試合へのコメント権限がありません' }, { status: 403 })
 
-  const { error } = await supabase
+  const { error } = await adminClient
     .from('singles_matches')
     .update({ [field]: comment.trim() })
     .eq('id', id)
@@ -70,7 +72,8 @@ export async function DELETE(
 
   if (!player) return NextResponse.json({ error: '選手情報が見つかりません' }, { status: 403 })
 
-  const { data: match } = await supabase
+  const adminClient = createAdminClient()
+  const { data: match } = await adminClient
     .from('singles_matches')
     .select('player1_id, player2_id')
     .eq('id', id)
@@ -83,7 +86,7 @@ export async function DELETE(
   else if (match.player2_id === player.id) field = 'comment2'
   else return NextResponse.json({ error: 'この試合へのコメント権限がありません' }, { status: 403 })
 
-  await supabase.from('singles_matches').update({ [field]: null }).eq('id', id)
+  await adminClient.from('singles_matches').update({ [field]: null }).eq('id', id)
 
   revalidatePath('/matches')
   return NextResponse.json({ success: true })
