@@ -6,6 +6,7 @@ import Link from 'next/link'
 import LogoutButton from '@/components/ui/LogoutButton'
 import TournamentBadges from '@/components/ui/TournamentBadges'
 import RankChart from '@/components/ui/RankChart'
+import MyPageMatchList from './MyPageMatchList'
 
 export default async function MyPage() {
   const supabase = await createClient()
@@ -430,59 +431,9 @@ export default async function MyPage() {
             {matches.length === 0 ? (
               <p className="text-gray-500 text-sm">試合がありません</p>
             ) : (
-              <div className="space-y-2">
-                {matches.slice(0, 5).map((match: any) => {
-                  const isPlayer1 = match.player1_id === player.id
-                  const opponent = isPlayer1 ? match.player2 : match.player1
-                  const myScore = isPlayer1 ? match.score1 : match.score2
-                  const oppScore = isPlayer1 ? match.score2 : match.score1
-                  const isWin = match.winner_id === player.id
-                  const ratingChange: number | null = isPlayer1 ? match.rating_change1 : match.rating_change2
-                  const date = new Date(match.played_at)
-                  const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
-
-                  return (
-                    <div
-                      key={match.id}
-                      className={`p-4 rounded-xl border-l-4 ${
-                        isWin ? 'border-green-500 bg-green-900/10' : 'border-red-500 bg-red-900/10'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-gray-400">
-                            {dateStr}
-                            {match.tournament_name && <span className="ml-1 text-purple-400">【{match.tournament_name}】</span>}
-                          </p>
-                          <p className="text-sm font-medium text-white mt-0.5">
-                            <span className={isWin ? 'text-green-400' : 'text-red-400'}>
-                              {isWin ? '勝利' : '敗北'}
-                            </span>
-                            ：{opponent?.name ?? '不明'}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-white">{myScore} - {oppScore}</p>
-                          {ratingChange != null && (
-                            <p className={`text-sm font-medium ${ratingChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {ratingChange >= 0 ? '+' : ''}{ratingChange}pt
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      {opponent?.is_active !== false && (
-                        <div className="mt-2 text-right">
-                          <Link href={`/players/${opponent?.id}`} className="text-xs text-purple-400 hover:text-purple-300">
-                            相手プロフィール →
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+              <MyPageMatchList matches={matches} playerId={player.id} />
             )}
-            {matches.length > 5 && (
+            {matches.length > 0 && (
               <Link href="/matches" className="block text-center text-sm text-purple-400 hover:text-purple-300 pt-2">
                 試合結果一覧へ →
               </Link>

@@ -23,8 +23,8 @@ export async function POST(
   if (typeof comment !== 'string' || comment.trim().length === 0) {
     return NextResponse.json({ error: 'コメントを入力してください' }, { status: 400 })
   }
-  if (comment.trim().length > 100) {
-    return NextResponse.json({ error: 'コメントは100文字以内で入力してください' }, { status: 400 })
+  if (comment.trim().length > 30) {
+    return NextResponse.json({ error: 'コメントは30文字以内で入力してください' }, { status: 400 })
   }
 
   const { data: match } = await supabase

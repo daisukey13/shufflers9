@@ -206,107 +206,85 @@ export default function MatchesClient({
                         <div className="flex gap-1 justify-center">
                           {[match.pair1p1Avatar, match.pair1p2Avatar].map((av, i) => (
                             <div key={i} className={`w-10 h-10 rounded-full overflow-hidden bg-gray-800 border-2 ${isPair1Winner && hasWinner ? 'border-amber-400 avatar-glow-win' : 'border-yellow-600/30'}`}>
-                              {av
-                                ? <img src={av} className="w-full h-full object-cover" />
-                                : <span className="text-lg flex items-center justify-center h-full">👤</span>
-                              }
+                              {av ? <img src={av} className="w-full h-full object-cover" /> : <span className="text-lg flex items-center justify-center h-full">👤</span>}
                             </div>
                           ))}
                         </div>
-                        <p className="text-xs text-center text-white font-medium">
-                          {match.pair1p1Name}<br />{match.pair1p2Name}
-                        </p>
-                        {isPair1Winner && hasWinner && (
-                          <span className="text-xs font-bold text-green-400">勝利</span>
-                        )}
+                        <p className="text-xs text-center text-white font-medium">{match.pair1p1Name}<br />{match.pair1p2Name}</p>
+                        {isPair1Winner && hasWinner && <span className="text-xs font-bold text-green-400">勝利</span>}
                       </div>
-
                       <div className="text-center flex-shrink-0">
                         <div className="w-12 h-12 rounded-full bg-red-700 flex items-center justify-center text-sm font-bold mx-auto">VS</div>
                         <p className="text-xl font-bold text-white mt-1">{match.score1} - {match.score2}</p>
                       </div>
-
                       <div className={`flex-1 flex flex-col items-center gap-2 p-2 rounded-xl ${!isPair1Winner && hasWinner ? 'bg-green-900/20' : ''}`}>
                         <div className="flex gap-1 justify-center">
                           {[match.pair2p1Avatar, match.pair2p2Avatar].map((av, i) => (
                             <div key={i} className={`w-10 h-10 rounded-full overflow-hidden bg-gray-800 border-2 ${!isPair1Winner && hasWinner ? 'border-amber-400 avatar-glow-win' : 'border-yellow-600/30'}`}>
-                              {av
-                                ? <img src={av} className="w-full h-full object-cover" />
-                                : <span className="text-lg flex items-center justify-center h-full">👤</span>
-                              }
+                              {av ? <img src={av} className="w-full h-full object-cover" /> : <span className="text-lg flex items-center justify-center h-full">👤</span>}
                             </div>
                           ))}
                         </div>
-                        <p className="text-xs text-center text-white font-medium">
-                          {match.pair2p1Name}<br />{match.pair2p2Name}
-                        </p>
-                        {!isPair1Winner && hasWinner && (
-                          <span className="text-xs font-bold text-green-400">勝利</span>
-                        )}
+                        <p className="text-xs text-center text-white font-medium">{match.pair2p1Name}<br />{match.pair2p2Name}</p>
+                        {!isPair1Winner && hasWinner && <span className="text-xs font-bold text-green-400">勝利</span>}
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-4">
-                      {(() => {
-                        const p1Inner = <>
-                          <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${upset && isPair1Winner ? 'border-yellow-400 avatar-glow' : isPair1Winner && hasWinner ? 'border-amber-400 avatar-glow-win' : 'border-yellow-600/30'}`}>
-                            {match.player1Avatar ? <img src={match.player1Avatar} className="w-full h-full object-cover" /> : <span className="text-3xl flex items-center justify-center h-full">👤</span>}
-                          </div>
-                          <span className={`font-bold text-sm text-center ${isPair1Winner ? 'text-white' : 'text-gray-400'}`}>{match.player1Name}</span>
-                          <div className="flex gap-2 text-xs text-gray-400">
-                            {match.player1_hc != null && <span>HC {match.player1_hc}</span>}
-                            {match.player1_rp != null && <span className="text-purple-400">RP {match.player1_rp}</span>}
-                          </div>
-                          {isPair1Winner && <span className={`text-xs font-bold ${upset ? 'text-yellow-400' : 'text-green-400'}`}>{upset ? '⭐ 大金星' : '勝利'}</span>}
-                        </>
-                        return match.player1IsActive !== false
-                          ? <Link href={`/players/${match.player1Id}`} className="flex-1 flex flex-col items-center gap-2">{p1Inner}</Link>
-                          : <div className="flex-1 flex flex-col items-center gap-2">{p1Inner}</div>
-                      })()}
+                  ) : (() => {
+                    // 勝者を上、敗者を下に表示
+                    const p1IsWinner = hasWinner && match.winnerId === match.player1Id
+                    const rows = hasWinner
+                      ? [
+                          { id: p1IsWinner ? match.player1Id : match.player2Id, name: p1IsWinner ? match.player1Name : match.player2Name, avatar: p1IsWinner ? match.player1Avatar : match.player2Avatar, score: p1IsWinner ? match.score1 : match.score2, hc: p1IsWinner ? match.player1_hc : match.player2_hc, rp: p1IsWinner ? match.player1_rp : match.player2_rp, isActive: p1IsWinner ? match.player1IsActive : match.player2IsActive, isWinner: true },
+                          { id: p1IsWinner ? match.player2Id : match.player1Id, name: p1IsWinner ? match.player2Name : match.player1Name, avatar: p1IsWinner ? match.player2Avatar : match.player1Avatar, score: p1IsWinner ? match.score2 : match.score1, hc: p1IsWinner ? match.player2_hc : match.player1_hc, rp: p1IsWinner ? match.player2_rp : match.player1_rp, isActive: p1IsWinner ? match.player2IsActive : match.player1IsActive, isWinner: false },
+                        ]
+                      : [
+                          { id: match.player1Id, name: match.player1Name, avatar: match.player1Avatar, score: match.score1, hc: match.player1_hc, rp: match.player1_rp, isActive: match.player1IsActive, isWinner: false },
+                          { id: match.player2Id, name: match.player2Name, avatar: match.player2Avatar, score: match.score2, hc: match.player2_hc, rp: match.player2_rp, isActive: match.player2IsActive, isWinner: false },
+                        ]
 
-                      <div className="text-center flex-shrink-0 space-y-1">
-                        <div className="w-12 h-12 rounded-full bg-red-700 flex items-center justify-center text-sm font-bold mx-auto">VS</div>
-                        {match.type === 'finals' && match.sets && match.sets.length > 0 ? (
-                          <div className="space-y-0.5">
-                            {match.sets.map(s => (
-                              <p key={s.set_number} className="text-xs text-gray-300">
-                                {s.score1} - {s.score2}
-                              </p>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-2xl font-bold text-white">{match.score1} - {match.score2}</p>
-                        )}
+                    const scoreDisplay = match.type === 'finals' && match.sets && match.sets.length > 0
+                      ? match.sets.map((s: { set_number: number; score1: number; score2: number }) => `${s.score1}-${s.score2}`).join(' / ')
+                      : `${rows[0].score} - ${rows[1].score}`
+
+                    return (
+                      <div className="space-y-1">
+                        {rows.map((p, i) => {
+                          const rowContent = (
+                            <div className={`flex items-center gap-3 px-3 py-2 rounded-xl ${p.isWinner && hasWinner ? 'bg-green-900/20' : i === 1 && hasWinner ? 'bg-red-900/10' : ''}`}>
+                              <div className={`w-10 h-10 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${upset && p.isWinner ? 'border-yellow-400 avatar-glow' : p.isWinner && hasWinner ? 'border-amber-400 avatar-glow-win' : 'border-yellow-600/30'}`}>
+                                {p.avatar ? <img src={p.avatar} className="w-full h-full object-cover" /> : <span className="text-lg flex items-center justify-center h-full">👤</span>}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`font-bold text-sm truncate ${p.isWinner && hasWinner ? 'text-white' : hasWinner ? 'text-gray-400' : 'text-white'}`}>{p.name}</p>
+                                <div className="flex gap-2 text-xs text-gray-500">
+                                  {p.hc != null && <span>HC {p.hc}</span>}
+                                  {p.rp != null && <span className="text-purple-400">RP {p.rp}</span>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {p.isWinner && hasWinner && (
+                                  <span className={`text-xs font-bold ${upset ? 'text-yellow-400' : 'text-green-400'}`}>
+                                    {upset && i === 0 ? '⭐ 大金星' : '勝利'}
+                                  </span>
+                                )}
+                                {i === 0 && (
+                                  <span className="text-lg font-bold text-white">{scoreDisplay}</span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                          return p.isActive !== false
+                            ? <Link key={p.id} href={`/players/${p.id}`}>{rowContent}</Link>
+                            : <div key={p.id}>{rowContent}</div>
+                        })}
                       </div>
+                    )
+                  })()}
 
-                      {(() => {
-                        const p2Inner = <>
-                          <div className={`w-20 h-20 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${upset && !isPair1Winner && hasWinner ? 'border-yellow-400 avatar-glow' : !isPair1Winner && hasWinner ? 'border-amber-400 avatar-glow-win' : 'border-yellow-600/30'}`}>
-                            {match.player2Avatar ? <img src={match.player2Avatar} className="w-full h-full object-cover" /> : <span className="text-3xl flex items-center justify-center h-full">👤</span>}
-                          </div>
-                          <span className={`font-bold text-sm text-center ${!isPair1Winner && hasWinner ? 'text-white' : 'text-gray-400'}`}>{match.player2Name}</span>
-                          <div className="flex gap-2 text-xs text-gray-400">
-                            {match.player2_hc != null && <span>HC {match.player2_hc}</span>}
-                            {match.player2_rp != null && <span className="text-purple-400">RP {match.player2_rp}</span>}
-                          </div>
-                          {!isPair1Winner && hasWinner && <span className={`text-xs font-bold ${upset ? 'text-yellow-400' : 'text-green-400'}`}>{upset ? '⭐ 大金星' : '勝利'}</span>}
-                        </>
-                        return match.player2IsActive !== false
-                          ? <Link href={`/players/${match.player2Id}`} className="flex-1 flex flex-col items-center gap-2">{p2Inner}</Link>
-                          : <div className="flex-1 flex flex-col items-center gap-2">{p2Inner}</div>
-                      })()}
-                    </div>
-                  )}
-
-                  {/* コメントセクション (シングルスのみ) */}
+                  {/* コメントセクション（シングルスのみ・名前付き表示） */}
                   {match.type === 'singles' && (() => {
-                    const c1 = savedComments[match.id]?.comment1 !== undefined
-                      ? savedComments[match.id].comment1
-                      : match.comment1
-                    const c2 = savedComments[match.id]?.comment2 !== undefined
-                      ? savedComments[match.id].comment2
-                      : match.comment2
-
+                    const c1 = savedComments[match.id]?.comment1 !== undefined ? savedComments[match.id].comment1 : match.comment1
+                    const c2 = savedComments[match.id]?.comment2 !== undefined ? savedComments[match.id].comment2 : match.comment2
                     const isPlayer1 = currentPlayerId === match.player1Id
                     const isPlayer2 = currentPlayerId === match.player2Id
                     const myField = isPlayer1 ? 'comment1' : isPlayer2 ? 'comment2' : null
@@ -315,40 +293,25 @@ export default function MatchesClient({
                     const canComment = !!myField
                     const isSaving = savingIds.has(match.id)
                     const draft = draftComments[match.id] ?? ''
-
                     if (!hasAnyComment && !canComment) return null
-
                     return (
-                      <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
-                        {/* 既存コメント表示 */}
+                      <div className="mt-3 pt-3 border-t border-white/5 space-y-1.5">
                         {c1 && (
-                          <div className="flex items-start gap-2 text-xs">
+                          <div className="flex items-center gap-2 text-xs">
                             <span className="text-gray-500 flex-shrink-0">💬</span>
                             <span className="text-blue-300 font-medium flex-shrink-0">{match.player1Name}:</span>
                             <span className="text-gray-300 flex-1">"{c1}"</span>
-                            {isPlayer1 && (
-                              <button
-                                onClick={() => handleCommentDelete(match, 'comment1')}
-                                className="text-gray-600 hover:text-red-400 flex-shrink-0 text-xs"
-                              >✕</button>
-                            )}
+                            {isPlayer1 && <button onClick={() => handleCommentDelete(match, 'comment1')} className="text-gray-600 hover:text-red-400 flex-shrink-0">✕</button>}
                           </div>
                         )}
                         {c2 && (
-                          <div className="flex items-start gap-2 text-xs">
+                          <div className="flex items-center gap-2 text-xs">
                             <span className="text-gray-500 flex-shrink-0">💬</span>
                             <span className="text-purple-300 font-medium flex-shrink-0">{match.player2Name}:</span>
                             <span className="text-gray-300 flex-1">"{c2}"</span>
-                            {isPlayer2 && (
-                              <button
-                                onClick={() => handleCommentDelete(match, 'comment2')}
-                                className="text-gray-600 hover:text-red-400 flex-shrink-0 text-xs"
-                              >✕</button>
-                            )}
+                            {isPlayer2 && <button onClick={() => handleCommentDelete(match, 'comment2')} className="text-gray-600 hover:text-red-400 flex-shrink-0">✕</button>}
                           </div>
                         )}
-
-                        {/* コメント入力フォーム（未コメントのログインユーザーのみ） */}
                         {canComment && !myComment && (
                           <div className="flex gap-2 items-center">
                             <input
@@ -356,10 +319,11 @@ export default function MatchesClient({
                               value={draft}
                               onChange={e => setDraftComments(prev => ({ ...prev, [match.id]: e.target.value }))}
                               onKeyDown={e => e.key === 'Enter' && handleCommentSubmit(match)}
-                              placeholder="一言コメントを残す..."
-                              maxLength={100}
+                              placeholder="一言コメント（30文字以内）"
+                              maxLength={30}
                               className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
                             />
+                            <span className="text-xs text-gray-600 flex-shrink-0">{draft.length}/30</span>
                             <button
                               onClick={() => handleCommentSubmit(match)}
                               disabled={isSaving || !draft.trim()}
