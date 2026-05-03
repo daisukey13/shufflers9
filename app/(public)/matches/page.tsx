@@ -2,6 +2,8 @@ import { getRecentSinglesMatches } from '@/lib/queries/matches'
 import { createClient } from '@/lib/supabase/server'
 import MatchesClient from './MatchesClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function MatchesPage() {
   const supabase = await createClient()
 
