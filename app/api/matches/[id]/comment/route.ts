@@ -30,13 +30,16 @@ export async function POST(
   }
 
   const adminClient = createAdminClient()
-  const { data: match } = await adminClient
+  const { data: match, error: matchError } = await adminClient
     .from('singles_matches')
     .select('player1_id, player2_id, comment1, comment2')
     .eq('id', id)
     .single()
 
-  if (!match) return NextResponse.json({ error: '試合が見つかりません' }, { status: 404 })
+  if (!match) {
+    console.error('[comment POST] match not found. id:', id, 'error:', matchError)
+    return NextResponse.json({ error: `試合が見つかりません (${matchError?.code ?? 'null'})` }, { status: 404 })
+  }
 
   let field: 'comment1' | 'comment2'
   if (match.player1_id === player.id) field = 'comment1'
