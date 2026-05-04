@@ -478,5 +478,25 @@
     "player2_hc": 36,
     "player1_rank": 10,
     "player2_rank": 8
+  },
+  {
+    "id": "4bb2f196-3e89-4af3-adba-48637f75f690",
+    "player1_id": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
+    "player2_id": "803803aa-c146-4822-a901-68493baa41d4",
+    "score1": 15,
+    "score2": 0,
+    "winner_id": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
+    "rating_change1": 20,
+    "rating_change2": -20,
+    "status": "confirmed",
+    "tournament_id": null,
+    "tournament_round": null,
+    "registered_by": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
+    "played_at": "2026-05-03T21:59:34.993484+00:00",
+    "created_at": "2026-05-03T21:59:34.993484+00:00",
+    "player1_hc": 36,
+    "player2_hc": 36,
+    "player1_rank": 4,
+    "player2_rank": 5
   }
 ]
