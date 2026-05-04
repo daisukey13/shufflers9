@@ -21,7 +21,7 @@ export async function POST(
 
   if (!player) return NextResponse.json({ error: '選手情報が見つかりません' }, { status: 403 })
 
-  const { comment } = await req.json()
+  const { comment, field: clientField } = await req.json()
   if (typeof comment !== 'string' || comment.trim().length === 0) {
     return NextResponse.json({ error: 'コメントを入力してください' }, { status: 400 })
   }
@@ -30,9 +30,28 @@ export async function POST(
   }
 
   const adminClient = createAdminClient()
+
+  // クライアントからfieldが渡された場合、直接UPDATE（player_idでスコープを絞る）
+  if (clientField === 'comment1' || clientField === 'comment2') {
+    const playerIdField = clientField === 'comment1' ? 'player1_id' : 'player2_id'
+    const { data: updated, error } = await adminClient
+      .from('singles_matches')
+      .update({ [clientField]: comment.trim() })
+      .eq('id', id)
+      .eq(playerIdField, player.id)
+      .select('id')
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!updated?.length) return NextResponse.json({ error: 'この試合へのコメント権限がありません' }, { status: 403 })
+
+    revalidatePath('/matches')
+    return NextResponse.json({ success: true, field: clientField })
+  }
+
+  // fallback: fieldがない場合は従来通りSELECTで判定
   const { data: match, error: matchError } = await adminClient
     .from('singles_matches')
-    .select('player1_id, player2_id, comment1, comment2')
+    .select('player1_id, player2_id')
     .eq('id', id)
     .single()
 

@@ -15,7 +15,7 @@ export default function MyPageMatchList({
   const [saving, setSaving] = useState<Set<string>>(new Set())
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const submit = async (matchId: string) => {
+  const submit = async (matchId: string, myField: 'comment1' | 'comment2') => {
     const text = drafts[matchId]?.trim()
     if (!text) return
     setSaving(prev => new Set(prev).add(matchId))
@@ -24,7 +24,7 @@ export default function MyPageMatchList({
       const res = await fetch(`/api/matches/${matchId}/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ comment: text }),
+        body: JSON.stringify({ comment: text, field: myField }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -130,14 +130,14 @@ export default function MyPageMatchList({
                       type="text"
                       value={draft}
                       onChange={e => setDrafts(prev => ({ ...prev, [match.id]: e.target.value }))}
-                      onKeyDown={e => e.key === 'Enter' && submit(match.id)}
+                      onKeyDown={e => e.key === 'Enter' && myField && submit(match.id, myField)}
                       placeholder="一言コメント（30文字以内）"
                       maxLength={30}
                       className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
                     />
                     <span className="text-xs text-gray-600 flex-shrink-0">{draft.length}/30</span>
                     <button
-                      onClick={() => submit(match.id)}
+                      onClick={() => myField && submit(match.id, myField)}
                       disabled={isSav || !draft.trim()}
                       className="px-3 py-1.5 bg-purple-700/50 hover:bg-purple-700/80 disabled:opacity-40 text-white text-xs rounded-lg transition flex-shrink-0"
                     >
