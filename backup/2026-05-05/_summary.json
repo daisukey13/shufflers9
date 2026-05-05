@@ -1,8 +1,8 @@
 {
-  "date": "2026-04-27",
+  "date": "2026-05-05",
   "tables": {
     "players": 17,
-    "singles_matches": 24,
+    "singles_matches": 25,
     "doubles_matches": 4,
     "teams": 0,
     "team_members": 0,
@@ -14,7 +14,7 @@
     "tournament_blocks": 4,
     "tournament_block_players": 11,
     "tournament_qualifying_matches": 10,
-    "tournament_finals_matches": 0,
-    "tournament_finals_sets": 0
+    "tournament_finals_matches": 3,
+    "tournament_finals_sets": 9
   }
 }

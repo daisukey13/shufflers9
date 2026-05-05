@@ -17,7 +17,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "d9e91a97-764f-47db-ac4d-0db4511e13cc",
@@ -37,7 +39,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "85361980-02b1-4c13-a3c3-23b79a8864c0",
@@ -57,7 +61,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "50f01dac-4a92-4284-9cee-5dd11b2007d2",
@@ -77,7 +83,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "6fc346e7-e4be-41e3-bf3f-6e9099ebb85c",
@@ -97,7 +105,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "8c32e2c7-b68a-4f09-b3c7-725f94a228e8",
@@ -117,7 +127,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "b662f09d-1df6-49c5-b37b-f943df17baf3",
@@ -137,7 +149,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "241e128d-21b1-4a05-a4f3-3c08d324fb4f",
@@ -157,7 +171,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "edf878cc-dbcc-4a4b-a374-5dcab28e3e94",
@@ -177,7 +193,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": 1
+    "player2_rank": 1,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "6d669a75-838f-4835-94a9-d300b1beed7e",
@@ -197,7 +215,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "4663ee41-0562-4fa3-ba7c-2f25027c0392",
@@ -217,7 +237,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": 1
+    "player2_rank": 1,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "8a8495a6-d694-4587-9ef0-a55a4cedd5b8",
@@ -237,7 +259,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "259a1b0a-e0a0-4d2a-9e5a-035e16be6efd",
@@ -257,7 +281,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "030fa834-6965-4b14-b5e1-fb65bee09d02",
@@ -277,7 +303,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "9d2a2396-ba6e-4210-a6c3-d6fb083f3008",
@@ -297,7 +325,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": 1
+    "player2_rank": 1,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "ab4f5155-5c70-4443-aa8f-8d8db4c8c3f4",
@@ -317,7 +347,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "289a0e5e-ce8a-4d25-a593-43e17b2faa8d",
@@ -337,7 +369,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": null,
-    "player2_rank": null
+    "player2_rank": null,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "e975aebc-16a9-4ff2-b9f0-3bbbe56c9d73",
@@ -357,27 +391,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": 4,
-    "player2_rank": 1
-  },
-  {
-    "id": "761709e0-6db8-41ef-907b-73e6b83db039",
-    "player1_id": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
-    "player2_id": "ab0f29ff-0cfb-4155-bd80-50a726bcd30c",
-    "score1": 15,
-    "score2": 3,
-    "winner_id": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
-    "rating_change1": 22,
-    "rating_change2": -22,
-    "status": "confirmed",
-    "tournament_id": null,
-    "tournament_round": null,
-    "registered_by": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
-    "played_at": "2026-04-24T12:46:13.235591+00:00",
-    "created_at": "2026-04-24T12:46:13.235591+00:00",
-    "player1_hc": 36,
-    "player2_hc": 36,
-    "player1_rank": 8,
-    "player2_rank": 2
+    "player2_rank": 1,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "2c9d0702-b7d5-4c90-9e32-80f6a6b744c8",
@@ -397,7 +413,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": 11,
-    "player2_rank": 2
+    "player2_rank": 2,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "7cf9a55c-4b25-4c8c-b201-3bee3225f0af",
@@ -417,7 +435,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": 9,
-    "player2_rank": 13
+    "player2_rank": 13,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "46ffedee-bc6d-46ed-b6af-08076af21872",
@@ -437,7 +457,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": 5,
-    "player2_rank": 3
+    "player2_rank": 3,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "a8388cfa-f590-40c8-8507-ba6688e2b29a",
@@ -457,7 +479,9 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": 1,
-    "player2_rank": 7
+    "player2_rank": 7,
+    "comment1": null,
+    "comment2": null
   },
   {
     "id": "3c779dca-6de7-47ae-b603-9926b89186d6",
@@ -477,6 +501,52 @@
     "player1_hc": 36,
     "player2_hc": 36,
     "player1_rank": 10,
-    "player2_rank": 8
+    "player2_rank": 8,
+    "comment1": null,
+    "comment2": null
+  },
+  {
+    "id": "4bb2f196-3e89-4af3-adba-48637f75f690",
+    "player1_id": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
+    "player2_id": "803803aa-c146-4822-a901-68493baa41d4",
+    "score1": 15,
+    "score2": 0,
+    "winner_id": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
+    "rating_change1": 20,
+    "rating_change2": -20,
+    "status": "confirmed",
+    "tournament_id": null,
+    "tournament_round": null,
+    "registered_by": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
+    "played_at": "2026-05-03T21:59:34.993484+00:00",
+    "created_at": "2026-05-03T21:59:34.993484+00:00",
+    "player1_hc": 36,
+    "player2_hc": 36,
+    "player1_rank": 4,
+    "player2_rank": 5,
+    "comment1": "完璧な試合でした。",
+    "comment2": null
+  },
+  {
+    "id": "761709e0-6db8-41ef-907b-73e6b83db039",
+    "player1_id": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
+    "player2_id": "ab0f29ff-0cfb-4155-bd80-50a726bcd30c",
+    "score1": 15,
+    "score2": 3,
+    "winner_id": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
+    "rating_change1": 22,
+    "rating_change2": -22,
+    "status": "confirmed",
+    "tournament_id": null,
+    "tournament_round": null,
+    "registered_by": "89de0a8b-336c-4d0d-985c-6382f381b7e5",
+    "played_at": "2026-04-24T12:46:13.235591+00:00",
+    "created_at": "2026-04-24T12:46:13.235591+00:00",
+    "player1_hc": 36,
+    "player2_hc": 36,
+    "player1_rank": 8,
+    "player2_rank": 2,
+    "comment1": "奇跡的にうまくいきました。",
+    "comment2": null
   }
 ]
