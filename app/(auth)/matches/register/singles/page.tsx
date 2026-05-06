@@ -11,6 +11,7 @@ export default function RegisterSinglesPage() {
   const [opponent, setOpponent] = useState('')
   const [myScore, setMyScore] = useState('')
   const [oppScore, setOppScore] = useState('')
+  const [myComment, setMyComment] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -112,6 +113,7 @@ export default function RegisterSinglesPage() {
       player2_hc: player2Hc,
       player1_rank: player1Rank,
       player2_rank: player2Rank,
+      ...(myComment.trim() ? { comment1: myComment.trim() } : {}),
     })
 
     if (matchError) {
@@ -202,6 +204,29 @@ export default function RegisterSinglesPage() {
                 className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              一言コメント <span className="text-gray-500 font-normal">（任意・30文字以内）</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={myComment}
+                onChange={e => setMyComment(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
+                maxLength={30}
+                placeholder="例：いい試合でした！"
+                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 pr-14"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                {myComment.length}/30
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1.5">
+              💡 ログインしていればマイページからも自分の試合のコメントができます
+            </p>
           </div>
 
           <button
