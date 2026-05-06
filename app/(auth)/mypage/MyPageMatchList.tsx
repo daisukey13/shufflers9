@@ -130,7 +130,7 @@ export default function MyPageMatchList({
                       type="text"
                       value={draft}
                       onChange={e => setDrafts(prev => ({ ...prev, [match.id]: e.target.value }))}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.isComposing && myField) submit(match.id, myField) }}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && myField) submit(match.id, myField) }}
                       placeholder="一言コメント（30文字以内）"
                       maxLength={30}
                       className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
