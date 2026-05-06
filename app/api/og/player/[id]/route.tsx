@@ -29,7 +29,7 @@ export async function GET(
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: player }, allPlayersResult] = await Promise.all([
+  const [{ data: player }, allPlayersResult, { data: latestMatchRaw }] = await Promise.all([
     supabase
       .from('players')
       .select('id,name,avatar_url,rating,hc,wins,losses,address,tournament_wins,tournament_runner_ups')
@@ -37,6 +37,14 @@ export async function GET(
       .eq('is_active', true)
       .single(),
     getPlayerRankings().catch(() => [] as Awaited<ReturnType<typeof getPlayerRankings>>),
+    supabase
+      .from('singles_matches')
+      .select('player1_id,player2_id,score1,score2,winner_id,rating_change1,rating_change2,played_at,player1:players!player1_id(name),player2:players!player2_id(name)')
+      .or(`player1_id.eq.${id},player2_id.eq.${id}`)
+      .not('winner_id', 'is', null)
+      .order('played_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
   const allPlayers = allPlayersResult ?? []
 
@@ -94,6 +102,19 @@ export async function GET(
 
   const totalGames = (player.wins ?? 0) + (player.losses ?? 0)
   const winRate = totalGames > 0 ? Math.round(((player.wins ?? 0) / totalGames) * 100) : 0
+
+  // 最新試合
+  const latestMatch = latestMatchRaw ? (() => {
+    const isP1 = (latestMatchRaw as any).player1_id === id
+    const opponent = isP1 ? (latestMatchRaw as any).player2?.name : (latestMatchRaw as any).player1?.name
+    const myScore = isP1 ? (latestMatchRaw as any).score1 : (latestMatchRaw as any).score2
+    const oppScore = isP1 ? (latestMatchRaw as any).score2 : (latestMatchRaw as any).score1
+    const isWin = (latestMatchRaw as any).winner_id === id
+    const ratingChange = isP1 ? (latestMatchRaw as any).rating_change1 : (latestMatchRaw as any).rating_change2
+    const date = new Date((latestMatchRaw as any).played_at)
+    const dateStr = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+    return { opponent, myScore, oppScore, isWin, ratingChange, dateStr }
+  })() : null
 
   // アバターURLが実際にアクセスできるか確認（Satorがリモート画像を取得できない場合に備えて）
   let avatarUrl: string | null = player.avatar_url ?? null
@@ -287,13 +308,7 @@ export async function GET(
             {/* 大会実績 */}
             {achievements.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div
-                  style={{
-                    width: '100%',
-                    height: '1px',
-                    background: 'rgba(139,92,246,0.3)',
-                  }}
-                />
+                <div style={{ width: '100%', height: '1px', background: 'rgba(139,92,246,0.3)' }} />
                 <span style={{ fontSize: '13px', color: 'rgba(167,139,250,0.7)', letterSpacing: '2px' }}>
                   TOURNAMENT
                 </span>
@@ -305,6 +320,42 @@ export async function GET(
                 ))}
               </div>
             )}
+
+            {/* 最新試合 */}
+            {latestMatch && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ width: '100%', height: '1px', background: 'rgba(139,92,246,0.3)' }} />
+                <span style={{ fontSize: '13px', color: 'rgba(167,139,250,0.7)', letterSpacing: '2px' }}>
+                  LATEST MATCH
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div
+                    style={{
+                      background: latestMatch.isWin ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)',
+                      border: `1px solid ${latestMatch.isWin ? 'rgba(74,222,128,0.4)' : 'rgba(248,113,113,0.4)'}`,
+                      borderRadius: '8px',
+                      padding: '4px 12px',
+                      fontSize: '18px',
+                      fontWeight: 700,
+                      color: latestMatch.isWin ? '#4ade80' : '#f87171',
+                    }}
+                  >
+                    {latestMatch.isWin ? '勝' : '負'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '16px', color: '#e5e7eb' }}>
+                      vs {latestMatch.opponent ?? '不明'}　{latestMatch.myScore} - {latestMatch.oppScore}
+                    </span>
+                    <span style={{ fontSize: '12px', color: 'rgba(156,163,175,0.7)' }}>
+                      {latestMatch.dateStr}
+                      {latestMatch.ratingChange != null && (
+                        ` ／ ${latestMatch.ratingChange >= 0 ? '+' : ''}${latestMatch.ratingChange}pt`
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -313,12 +364,34 @@ export async function GET(
           style={{
             display: 'flex',
             justifyContent: 'center',
-            padding: '12px',
-            borderTop: '1px solid rgba(139,92,246,0.2)',
+            alignItems: 'center',
+            gap: '20px',
+            padding: '14px 48px',
+            borderTop: '1px solid rgba(139,92,246,0.3)',
+            background: 'rgba(109,40,217,0.08)',
           }}
         >
-          <span style={{ fontSize: '11px', color: 'rgba(107,114,128,0.8)', letterSpacing: '2px' }}>
-            TOYOURA SHUFFLERS CLUB RANKING SYSTEM
+          <span style={{ fontSize: '12px', color: 'rgba(167,139,250,0.6)', letterSpacing: '3px' }}>
+            TOYOURA SHUFFLERS CLUB
+          </span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(109,40,217,0.4)',
+              border: '1px solid rgba(139,92,246,0.6)',
+              borderRadius: '20px',
+              padding: '6px 20px',
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>🔗</span>
+            <span style={{ fontSize: '16px', fontWeight: 700, color: '#c4b5fd', letterSpacing: '1px' }}>
+              toyoura.online
+            </span>
+          </div>
+          <span style={{ fontSize: '12px', color: 'rgba(167,139,250,0.6)', letterSpacing: '2px' }}>
+            ランキング一覧
           </span>
         </div>
       </div>
