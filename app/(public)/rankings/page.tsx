@@ -6,8 +6,7 @@ import { getThisMonthWinRate, getRecentRatingGrowth } from '@/lib/queries/monthl
 import { createClient } from '@/lib/supabase/server'
 import { Player } from '@/types'
 import Link from 'next/link'
-import RankingScoreboard from './RankingScoreboard'
-import RankingPodium from './RankingPodium'
+import RankingsTabContent from './RankingsTabContent'
 
 export default async function RankingsPage({
   searchParams,
@@ -65,8 +64,8 @@ export default async function RankingsPage({
       }
     })
 
-  const toScoreboardRows = (players: (Player & { rank: number })[], ratingKey: string) =>
-    players.slice(3).map(p => {
+  const toScoreboardRows = (players: (Player & { rank: number })[], ratingKey: string, slice = true) =>
+    (slice ? players.slice(3) : players).map(p => {
       const rating = ratingKey === 'doubles_rating' ? p.doubles_rating : p.rating
       const wins = ratingKey === 'doubles_rating' ? p.doubles_wins : p.wins
       const losses = ratingKey === 'doubles_rating' ? p.doubles_losses : p.losses
@@ -209,46 +208,28 @@ export default async function RankingsPage({
 
         {/* シングルス */}
         {activeTab === 'singles' && (
-          <section className="space-y-6">
-            {singlesPlayers.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-10">データがありません</p>
-            ) : (
-              <>
-                <div>
-                  <div className="text-center text-xs font-mono tracking-[0.4em] text-yellow-500/60 uppercase mb-4">── TOP 3 ──</div>
-                  <RankingPodium players={toPodiumPlayers(singlesPlayers, 'rating')} />
-                </div>
-                {singlesPlayers.length > 3 && (
-                  <div>
-                    <div className="text-center text-xs font-mono tracking-[0.4em] text-gray-600 uppercase mb-3">── SCOREBOARD ──</div>
-                    <RankingScoreboard rows={toScoreboardRows(singlesPlayers, 'rating')} />
-                  </div>
-                )}
-              </>
-            )}
-          </section>
+          singlesPlayers.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-10">データがありません</p>
+          ) : (
+            <RankingsTabContent
+              podiumPlayers={toPodiumPlayers(singlesPlayers, 'rating')}
+              scoreboardRows={toScoreboardRows(singlesPlayers, 'rating')}
+              allRows={toScoreboardRows(singlesPlayers, 'rating', false)}
+            />
+          )
         )}
 
         {/* ダブルス */}
         {activeTab === 'doubles' && (
-          <section className="space-y-6">
-            {!doublesPlayers || doublesPlayers.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-10">データがありません</p>
-            ) : (
-              <>
-                <div>
-                  <div className="text-center text-xs font-mono tracking-[0.4em] text-yellow-500/60 uppercase mb-4">── TOP 3 ──</div>
-                  <RankingPodium players={toPodiumPlayers(doublesPlayers, 'doubles_rating')} />
-                </div>
-                {doublesPlayers.length > 3 && (
-                  <div>
-                    <div className="text-center text-xs font-mono tracking-[0.4em] text-gray-600 uppercase mb-3">── SCOREBOARD ──</div>
-                    <RankingScoreboard rows={toScoreboardRows(doublesPlayers, 'doubles_rating')} />
-                  </div>
-                )}
-              </>
-            )}
-          </section>
+          !doublesPlayers || doublesPlayers.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-10">データがありません</p>
+          ) : (
+            <RankingsTabContent
+              podiumPlayers={toPodiumPlayers(doublesPlayers, 'doubles_rating')}
+              scoreboardRows={toScoreboardRows(doublesPlayers, 'doubles_rating')}
+              allRows={toScoreboardRows(doublesPlayers, 'doubles_rating', false)}
+            />
+          )
         )}
 
       </div>
