@@ -16,7 +16,7 @@ type PlayerRow = {
   tournament_wins: number | null
   tournament_runner_ups: number | null
   tournament_qualifications: number | null
-  rank: number
+  rank: number | null
 }
 
 function PlayerCard({ player }: { player: PlayerRow }) {
@@ -29,12 +29,18 @@ function PlayerCard({ player }: { player: PlayerRow }) {
       className="flex items-center gap-4 p-4 bg-purple-900/20 border border-purple-800/30 rounded-xl hover:bg-purple-900/40 transition"
     >
       <div className="flex-shrink-0 w-10 text-center">
-        <div className={`text-base font-black leading-none ${
-          player.rank === 1 ? 'text-yellow-400' :
-          player.rank === 2 ? 'text-gray-300' :
-          player.rank === 3 ? 'text-orange-400' : 'text-gray-500'
-        }`}>{player.rank}<span className="text-xs font-bold">位</span></div>
-        <div className="text-[9px] text-gray-600 leading-tight mt-0.5">現在</div>
+        {player.rank != null ? (
+          <>
+            <div className={`text-base font-black leading-none ${
+              player.rank === 1 ? 'text-yellow-400' :
+              player.rank === 2 ? 'text-gray-300' :
+              player.rank === 3 ? 'text-orange-400' : 'text-gray-500'
+            }`}>{player.rank}<span className="text-xs font-bold">位</span></div>
+            <div className="text-[9px] text-gray-600 leading-tight mt-0.5">現在</div>
+          </>
+        ) : (
+          <div className="text-base font-black leading-none text-gray-700">—</div>
+        )}
       </div>
       <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex items-center justify-center flex-shrink-0">
         {player.avatar_url

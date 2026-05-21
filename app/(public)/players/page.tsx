@@ -43,7 +43,7 @@ export default async function PlayersPage() {
     tournament_wins: p.tournament_wins ?? null,
     tournament_runner_ups: p.tournament_runner_ups ?? null,
     tournament_qualifications: p.tournament_qualifications ?? null,
-    rank: rankMap.get(p.id) ?? 99,
+    rank: rankMap.get(p.id) ?? null,
   }))
 
   return (

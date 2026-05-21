@@ -24,20 +24,26 @@ export default async function MyPage() {
 
   const { data: allPlayers } = await supabase
     .from('players')
-    .select('id, rating')
+    .select('id, rating, total_matches')
     .eq('is_active', true)
     .eq('is_admin', false)
+    .gt('total_matches', 0)
     .order('rating', { ascending: false })
 
   const { data: allDoublesPlayers } = await supabase
     .from('players')
-    .select('id')
+    .select('id, doubles_wins, doubles_losses')
     .eq('is_active', true)
     .eq('is_admin', false)
     .order('doubles_rating', { ascending: false })
 
-  const rank = (allPlayers?.findIndex(p => p.id === player.id) ?? 0) + 1
-  const doublesRank = (allDoublesPlayers?.findIndex(p => p.id === player.id) ?? 0) + 1
+  const rankedIdx = allPlayers?.findIndex(p => p.id === player.id) ?? -1
+  const rank = rankedIdx >= 0 ? rankedIdx + 1 : null
+  const doublesTotal = (player.doubles_wins ?? 0) + (player.doubles_losses ?? 0)
+  const doublesRankedIdx = doublesTotal > 0
+    ? (allDoublesPlayers?.filter(p => (p.doubles_wins + p.doubles_losses) > 0).findIndex(p => p.id === player.id) ?? -1)
+    : -1
+  const doublesRank = doublesRankedIdx >= 0 ? doublesRankedIdx + 1 : null
   const totalPlayers = allPlayers?.length ?? 0
 
   const { data: teamMemberships } = await supabase
@@ -128,7 +134,7 @@ export default async function MyPage() {
     rankPoints.push({ label: `試合${i + 1}`, rank: approxRank })
   }
 
-  const rankHistory = last5.length > 0
+  const rankHistory = last5.length > 0 && rank != null
     ? [...rankPoints, { label: '現在', rank }]
     : []
 
@@ -173,14 +179,17 @@ export default async function MyPage() {
                 rank === 1 ? 'border-yellow-400 bg-yellow-400/20 text-yellow-400' :
                 rank === 2 ? 'border-gray-400 bg-gray-400/20 text-gray-300' :
                 rank === 3 ? 'border-orange-400 bg-orange-400/20 text-orange-400' :
-                'border-purple-500 bg-purple-500/20 text-purple-300'
+                rank != null ? 'border-purple-500 bg-purple-500/20 text-purple-300' :
+                'border-gray-700 bg-gray-800/40 text-gray-600'
               }`}>
-                {rank}
+                {rank ?? '—'}
               </div>
               {rank === 1 && (
                 <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-lg">👑</span>
               )}
-              <p className="text-xs text-gray-400 text-center mt-1">全{totalPlayers}人中</p>
+              <p className="text-xs text-gray-400 text-center mt-1">
+                {rank != null ? `全${totalPlayers}人中` : '試合なし'}
+              </p>
             </div>
 
             <div className="flex items-center gap-4">
@@ -256,7 +265,7 @@ export default async function MyPage() {
               <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center col-span-2">
                 <p className="text-xs text-gray-400 mb-1">ランキングポイント</p>
                 <p className="text-3xl font-bold text-white">{player.doubles_rating ?? 1000}</p>
-                <p className="text-xs text-gray-500 mt-1">第{doublesRank}位</p>
+                <p className="text-xs text-gray-500 mt-1">{doublesRank != null ? `第${doublesRank}位` : '試合なし'}</p>
               </div>
               <div className="bg-[#12082a] border border-purple-800/30 rounded-xl p-3 text-center">
                 <p className="text-xs text-gray-400 mb-1">勝利</p>
