@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getPlayerRankings } from '@/lib/queries/rankings'
+import { getPlayers } from '@/lib/queries/players'
 import { getRecentAllMatches, getTotalMatchesCount, getRecentDoublesMatches } from '@/lib/queries/matches'
 import { getRecentNotices } from '@/lib/queries/notices'
 import { getRecentTournamentWinners } from '@/lib/queries/tournaments'
@@ -17,7 +18,8 @@ export async function MonthlyModalSection() {
 
 // 統計 + トッププレーヤーをまとめて取得（getPlayerRankings を1回だけ呼ぶ）
 export async function StatsAndTopPlayersSection() {
-  const [players, totalMatchesCount] = await Promise.all([
+  const [allPlayers, players, totalMatchesCount] = await Promise.all([
+    getPlayers(),
     getPlayerRankings(),
     getTotalMatchesCount(),
   ])
@@ -31,7 +33,7 @@ export async function StatsAndTopPlayersSection() {
       {/* 統計 */}
       <section className="grid grid-cols-3 gap-4 px-4 mb-10 max-w-xl mx-auto">
         {[
-          { label: 'メンバー', value: players.length },
+          { label: 'メンバー', value: allPlayers.length },
           { label: '試合数', value: totalMatchesCount },
           { label: '平均pts', value: avgRating },
         ].map(stat => (
