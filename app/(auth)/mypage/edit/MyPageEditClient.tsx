@@ -17,11 +17,13 @@ export default function MyPageEditClient({
   avatars,
   email,
   isWelcome = false,
+  takenUrls = [],
 }: {
   player: Player
   avatars: Avatar[]
   email: string
   isWelcome?: boolean
+  takenUrls?: string[]
 }) {
   const [name, setName] = useState(player.name)
   const [fullName, setFullName] = useState(player.full_name ?? '')
@@ -291,7 +293,7 @@ export default function MyPageEditClient({
             {/* プリセットアバター */}
             <div>
               <p className="text-xs text-gray-400 mb-2">またはプリセットから選択：</p>
-              <AvatarPicker avatars={avatars} selected={avatarUrl} onSelect={setAvatarUrl} />
+              <AvatarPicker avatars={avatars} selected={avatarUrl} onSelect={setAvatarUrl} takenUrls={takenUrls} />
             </div>
           </div>
 

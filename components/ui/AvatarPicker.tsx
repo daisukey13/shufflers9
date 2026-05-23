@@ -9,9 +9,10 @@ type Props = {
   onSelect: (url: string) => void
   size?: 'sm' | 'md'
   playerId?: string
+  takenUrls?: string[]
 }
 
-export default function AvatarPicker({ avatars, selected, onSelect, size = 'md', playerId }: Props) {
+export default function AvatarPicker({ avatars, selected, onSelect, size = 'md', playerId, takenUrls }: Props) {
   const [page, setPage] = useState(0)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -19,6 +20,7 @@ export default function AvatarPicker({ avatars, selected, onSelect, size = 'md',
   const perPage = 30
   const totalPages = Math.ceil(avatars.length / perPage)
   const visible = avatars.slice(page * perPage, (page + 1) * perPage)
+  const takenSet = new Set(takenUrls ?? [])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -76,22 +78,30 @@ export default function AvatarPicker({ avatars, selected, onSelect, size = 'md',
       )}
 
       <div className={size === 'sm' ? 'grid grid-cols-10 gap-1' : 'grid grid-cols-5 gap-2'}>
-        {visible.map(avatar => (
-          <button
-            key={avatar.id}
-            type="button"
-            onClick={() => onSelect(avatar.url)}
-            className={`rounded-full overflow-hidden border-2 transition flex-shrink-0 ${
-              size === 'sm' ? 'w-9 h-9' : 'aspect-square'
-            } ${
-              selected === avatar.url
-                ? 'border-purple-400 scale-110'
-                : 'border-transparent hover:border-purple-600'
-            }`}
-          >
-            <img src={avatar.url} alt={avatar.id} className="w-full h-full object-cover" />
-          </button>
-        ))}
+        {visible.map(avatar => {
+          const baseUrl = avatar.url.split('?')[0]
+          const isTaken = takenSet.has(baseUrl) && selected !== avatar.url
+          return (
+            <button
+              key={avatar.id}
+              type="button"
+              onClick={() => { if (!isTaken) onSelect(avatar.url) }}
+              disabled={isTaken}
+              title={isTaken ? '使用中' : undefined}
+              className={`relative rounded-full overflow-hidden border-2 transition flex-shrink-0 ${
+                size === 'sm' ? 'w-9 h-9' : 'aspect-square'
+              } ${
+                isTaken
+                  ? 'border-transparent opacity-30 cursor-not-allowed'
+                  : selected === avatar.url
+                  ? 'border-purple-400 scale-110'
+                  : 'border-transparent hover:border-purple-600'
+              }`}
+            >
+              <img src={avatar.url} alt={avatar.id} className="w-full h-full object-cover" />
+            </button>
+          )
+        })}
       </div>
       {totalPages > 1 && (
         <div className="flex justify-center gap-2">

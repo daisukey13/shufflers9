@@ -19,8 +19,16 @@ export default async function MyPageEditPage({
   const player = await getPlayerByUserId(user.id)
   if (!player) redirect('/login')
 
-  const avatars = await getPresetAvatars()
+  const [avatars, { data: takenData }] = await Promise.all([
+    getPresetAvatars(),
+    supabase.from('players').select('avatar_url').not('avatar_url', 'is', null).neq('id', player.id),
+  ])
+
+  const takenUrls = takenData
+    ?.map(p => p.avatar_url!.split('?')[0])
+    .filter(url => url.includes('/preset/')) ?? []
+
   const { welcome } = await searchParams
 
-  return <MyPageEditClient player={player} avatars={avatars} email={user.email ?? ''} isWelcome={welcome === '1'} />
+  return <MyPageEditClient player={player} avatars={avatars} email={user.email ?? ''} isWelcome={welcome === '1'} takenUrls={takenUrls} />
 }

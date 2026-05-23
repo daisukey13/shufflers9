@@ -9,6 +9,14 @@ export default async function ProfileSetupPage() {
 
   if (!user) redirect('/login')
 
-  const avatars = await getPresetAvatars()
-  return <ProfileSetupClient avatars={avatars} />
+  const [avatars, { data: takenData }] = await Promise.all([
+    getPresetAvatars(),
+    supabase.from('players').select('avatar_url').not('avatar_url', 'is', null),
+  ])
+
+  const takenUrls = takenData
+    ?.map(p => p.avatar_url!.split('?')[0])
+    .filter(url => url.includes('/preset/')) ?? []
+
+  return <ProfileSetupClient avatars={avatars} takenUrls={takenUrls} />
 }

@@ -10,7 +10,7 @@ const LINE_URL = 'https://line.me/R/ti/p/@123foiue'
 
 type Avatar = { id: string; url: string }
 
-export default function ProfileSetupClient({ avatars }: { avatars: Avatar[] }) {
+export default function ProfileSetupClient({ avatars, takenUrls = [] }: { avatars: Avatar[], takenUrls?: string[] }) {
   const [name, setName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState(avatars[0]?.url ?? '')
   const [loading, setLoading] = useState(false)
@@ -148,6 +148,7 @@ export default function ProfileSetupClient({ avatars }: { avatars: Avatar[] }) {
               selected={avatarUrl}
               onSelect={setAvatarUrl}
               playerId={playerId}
+              takenUrls={takenUrls}
             />
           </div>
 
