@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -34,7 +33,28 @@ export default function PairingClient({
   const [manualP1, setManualP1] = useState('')
   const [manualP2, setManualP2] = useState('')
   const router = useRouter()
-  const supabase = createClient()
+
+  const insertPair = async (player1_id: string, player2_id: string) => {
+    const res = await fetch('/api/admin/tournament-pairs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournament_id: tournament.id, player1_id, player2_id }),
+    })
+    const json = await res.json()
+    if (!res.ok) return json.error as string
+    return null
+  }
+
+  const deletePair = async (id: string) => {
+    const res = await fetch('/api/admin/tournament-pairs', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    const json = await res.json()
+    if (!res.ok) return json.error as string
+    return null
+  }
 
   // ペア済みプレーヤーIDセット
   const pairedIds = new Set(pairs.flatMap(p => [p.player1.id, p.player2.id]))
@@ -75,12 +95,8 @@ export default function PairingClient({
     setLoading(true)
     setError(null)
     for (const [a, b] of mutualPairs) {
-      const { error: err } = await supabase.from('tournament_pairs').insert({
-        tournament_id: tournament.id,
-        player1_id: a.player_id,
-        player2_id: b.player_id,
-      })
-      if (err) { setError('登録失敗: ' + err.message); setLoading(false); router.refresh(); return }
+      const err = await insertPair(a.player_id, b.player_id)
+      if (err) { setError('登録失敗: ' + err); setLoading(false); router.refresh(); return }
     }
     setLoading(false)
     router.refresh()
@@ -92,12 +108,8 @@ export default function PairingClient({
     if (manualP1 === manualP2) { setError('同じプレーヤーは選択できません'); return }
     setLoading(true)
     setError(null)
-    const { error: err } = await supabase.from('tournament_pairs').insert({
-      tournament_id: tournament.id,
-      player1_id: manualP1,
-      player2_id: manualP2,
-    })
-    if (err) { setError('登録失敗: ' + err.message); setLoading(false); return }
+    const err = await insertPair(manualP1, manualP2)
+    if (err) { setError('登録失敗: ' + err); setLoading(false); return }
     setManualP1('')
     setManualP2('')
     setLoading(false)
@@ -105,7 +117,6 @@ export default function PairingClient({
   }
 
   // HC均等自動ペアリング（スネークドラフト方式）
-  // 未ペアを HC 昇順ソート → 1番目と最後, 2番目と2番目最後... でペアリング
   const handleAutoPair = async () => {
     const remaining = unpaired
       .filter(e => !mutualIds.has(e.player_id))
@@ -121,7 +132,6 @@ export default function PairingClient({
     setLoading(true)
     setError(null)
 
-    // スネーク: [0, n-1], [1, n-2], ...
     const newPairs: [string, string][] = []
     let lo = 0, hi = remaining.length - 1
     while (lo < hi) {
@@ -130,12 +140,8 @@ export default function PairingClient({
     }
 
     for (const [p1, p2] of newPairs) {
-      const { error: err } = await supabase.from('tournament_pairs').insert({
-        tournament_id: tournament.id,
-        player1_id: p1,
-        player2_id: p2,
-      })
-      if (err) { setError('登録失敗: ' + err.message); setLoading(false); router.refresh(); return }
+      const err = await insertPair(p1, p2)
+      if (err) { setError('登録失敗: ' + err); setLoading(false); router.refresh(); return }
     }
     setLoading(false)
     router.refresh()
@@ -144,7 +150,7 @@ export default function PairingClient({
   // ペア削除
   const handleDeletePair = async (pairId: string) => {
     if (!confirm('このペアを削除しますか？')) return
-    await supabase.from('tournament_pairs').delete().eq('id', pairId)
+    await deletePair(pairId)
     router.refresh()
   }
 
@@ -156,8 +162,13 @@ export default function PairingClient({
       if (!confirm('ペア作成を完了し、予選管理へ進みますか？')) return
     }
     setLoading(true)
-    await supabase.from('tournaments').update({ status: 'qualifying' }).eq('id', tournament.id)
+    const res = await fetch(`/api/admin/tournament-pairs/start-qualifying`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournament_id: tournament.id }),
+    })
     setLoading(false)
+    if (!res.ok) { const j = await res.json(); setError(j.error); return }
     router.push(`/admin/tournaments/${tournament.id}/qualifying`)
   }
 
