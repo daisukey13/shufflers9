@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type Player = { id: string; name: string; hc: number; rating: number }
-type OtherPlayer = { id: string; name: string }
 type Tournament = {
   id: string; name: string; status: string; description: string | null
   started_at: string | null; qualifying_start_time: string | null; finals_start_time: string | null
@@ -25,15 +24,12 @@ export default function EntryClient({
   tournament,
   player,
   existingEntry,
-  otherPlayers = [],
 }: {
   tournament: Tournament
   player: Player
   existingEntry: Entry | null
-  otherPlayers?: OtherPlayer[]
 }) {
   const [preferredDates, setPreferredDates] = useState(existingEntry?.preferred_dates ?? '')
-  const [preferredPartnerId, setPreferredPartnerId] = useState(existingEntry?.preferred_partner_id ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
