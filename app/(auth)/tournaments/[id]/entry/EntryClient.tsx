@@ -6,16 +6,18 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type Player = { id: string; name: string; hc: number; rating: number }
+type OtherPlayer = { id: string; name: string }
 type Tournament = {
   id: string; name: string; status: string; description: string | null
   started_at: string | null; qualifying_start_time: string | null; finals_start_time: string | null
   bonus_points: number; notes: string | null; venue: string | null
-  entry_fee: string | null; live_url: string | null
+  entry_fee: string | null; live_url: string | null; format: string
 }
 type Entry = {
   id: string
   status: string
   preferred_dates: string | null
+  preferred_partner_id: string | null
   cancel_requested: boolean
 }
 
@@ -23,12 +25,15 @@ export default function EntryClient({
   tournament,
   player,
   existingEntry,
+  otherPlayers = [],
 }: {
   tournament: Tournament
   player: Player
   existingEntry: Entry | null
+  otherPlayers?: OtherPlayer[]
 }) {
   const [preferredDates, setPreferredDates] = useState(existingEntry?.preferred_dates ?? '')
+  const [preferredPartnerId, setPreferredPartnerId] = useState(existingEntry?.preferred_partner_id ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -48,6 +53,7 @@ export default function EntryClient({
         player_id: player.id,
         status: 'entered',
         preferred_dates: preferredDates.trim() || null,
+        preferred_partner_id: preferredPartnerId || null,
       })
 
     if (error) {
@@ -80,7 +86,10 @@ export default function EntryClient({
 
     await supabase
       .from('tournament_entries')
-      .update({ preferred_dates: preferredDates.trim() || null })
+      .update({
+        preferred_dates: preferredDates.trim() || null,
+        preferred_partner_id: preferredPartnerId || null,
+      })
       .eq('id', existingEntry!.id)
 
     setLoading(false)
@@ -210,6 +219,28 @@ export default function EntryClient({
             <p className="font-semibold text-white">{player.name}</p>
             <p className="text-xs text-gray-400">HC {player.hc} · RP {player.rating}</p>
           </div>
+
+          {/* ダブルス：希望パートナー */}
+          {tournament.format === 'doubles' && existingEntry?.status !== 'cancelled' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                希望パートナー
+                <span className="text-gray-500 text-xs ml-2">（任意）</span>
+              </label>
+              <select
+                value={preferredPartnerId}
+                onChange={e => setPreferredPartnerId(e.target.value)}
+                disabled={existingEntry?.cancel_requested}
+                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+              >
+                <option value="">希望なし（事務局にお任せ）</option>
+                {otherPlayers.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">※ 相手方も同様に申告した場合に優先的にペアになります</p>
+            </div>
+          )}
 
           {/* 希望 */}
           {existingEntry?.status !== 'cancelled' && (

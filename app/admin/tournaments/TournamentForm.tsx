@@ -8,6 +8,7 @@ type Tournament = {
   id: string
   name: string
   type: 'singles' | 'teams'
+  format: 'singles' | 'doubles'
   status: 'open' | 'in_progress' | 'finished'
   description: string | null
   bonus_points: number
@@ -17,6 +18,7 @@ export default function TournamentForm({ tournament }: { tournament?: Tournament
   const isEdit = !!tournament
   const [name, setName] = useState(tournament?.name ?? '')
   const [type, setType] = useState<'singles' | 'teams'>(tournament?.type ?? 'singles')
+  const [format, setFormat] = useState<'singles' | 'doubles'>(tournament?.format ?? 'singles')
   const [status, setStatus] = useState<'open' | 'in_progress' | 'finished'>(tournament?.status ?? 'open')
   const [description, setDescription] = useState(tournament?.description ?? '')
   const [bonusPoints, setBonusPoints] = useState(tournament?.bonus_points ?? 0)
@@ -33,7 +35,7 @@ export default function TournamentForm({ tournament }: { tournament?: Tournament
     if (isEdit) {
       const { error } = await supabase
         .from('tournaments')
-        .update({ name, type, status, description: description || null, bonus_points: bonusPoints })
+        .update({ name, type, format, status, description: description || null, bonus_points: bonusPoints })
         .eq('id', tournament.id)
 
       if (error) {
@@ -54,6 +56,7 @@ export default function TournamentForm({ tournament }: { tournament?: Tournament
         .insert({
           name,
           type,
+          format,
           status,
           description: description || null,
           created_by: player?.id,
@@ -121,7 +124,7 @@ export default function TournamentForm({ tournament }: { tournament?: Tournament
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">種別</label>
             <select
@@ -131,6 +134,17 @@ export default function TournamentForm({ tournament }: { tournament?: Tournament
             >
               <option value="singles">個人戦</option>
               <option value="teams">チーム戦</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">試合形式</label>
+            <select
+              value={format}
+              onChange={e => setFormat(e.target.value as 'singles' | 'doubles')}
+              className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="singles">シングルス</option>
+              <option value="doubles">ダブルス</option>
             </select>
           </div>
           <div>

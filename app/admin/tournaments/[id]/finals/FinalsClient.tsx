@@ -9,15 +9,17 @@ import { calcElo } from '@/lib/elo'
 type Player = { id: string; name: string; avatar_url: string | null }
 type Qualifier = {
   block: { id: string; block_name: string }
-  winner: { player_id: string; player: Player; is_default: boolean }
+  winner: { player_id: string; player: Player; partner_id?: string | null; partner?: Player | null; is_default: boolean }
   hasDefault: boolean
 }
 type FinalsSet = { id: string; match_id: string; set_number: number; score1: number; score2: number }
 type FinalsMatch = {
   id: string; tournament_id: string; round: number; match_number: number
   player1_id: string | null; player2_id: string | null; winner_id: string | null
+  pair1_player2_id: string | null; pair2_player2_id: string | null
   disadvantage_player_id: string | null; mode: string; scheduled_time: string | null
   player1: Player | null; player2: Player | null; winner: Player | null
+  pair1_player2: Player | null; pair2_player2: Player | null
   tournament_finals_sets: FinalsSet[]
   rating_before1: number | null; rating_before2: number | null
   rating_change1: number | null; rating_change2: number | null
@@ -61,6 +63,8 @@ export default function FinalsClient({
   )
   const [player1Id, setPlayer1Id] = useState('')
   const [player2Id, setPlayer2Id] = useState('')
+  const [pair1Player2Id, setPair1Player2Id] = useState('')
+  const [pair2Player2Id, setPair2Player2Id] = useState('')
   const [scheduledTime, setScheduledTime] = useState('')
   const [loading, setLoading] = useState(false)
   const [statusLoading, setStatusLoading] = useState(false)
@@ -81,6 +85,7 @@ export default function FinalsClient({
 
   const router = useRouter()
   const supabase = createClient()
+  const isDoubles = tournament.format === 'doubles'
 
   const isFinalsLocked = false
 
@@ -122,18 +127,36 @@ export default function FinalsClient({
     }
 
     // 最新のプレーヤーデータ取得（ロールバック後）
-    const [{ data: p1Data }, { data: p2Data }] = await Promise.all([
-      supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches').eq('id', editMatch.player1_id).single(),
-      supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches').eq('id', editMatch.player2_id).single(),
-    ])
+    const playerIds = [editMatch.player1_id, editMatch.player2_id]
+    if (isDoubles && editMatch.pair1_player2_id) playerIds.push(editMatch.pair1_player2_id)
+    if (isDoubles && editMatch.pair2_player2_id) playerIds.push(editMatch.pair2_player2_id)
+    const { data: playersData } = await supabase
+      .from('players')
+      .select('id, rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches')
+      .in('id', playerIds)
+    const getP = (id: string) => playersData?.find(p => p.id === id)
 
-    const isDoubles = tournament.format === 'doubles'
+    const p1Data = getP(editMatch.player1_id)
+    const p2Data = getP(editMatch.player2_id)
+    const p1partnerData = isDoubles && editMatch.pair1_player2_id ? getP(editMatch.pair1_player2_id) : null
+    const p2partnerData = isDoubles && editMatch.pair2_player2_id ? getP(editMatch.pair2_player2_id) : null
+
     const p1Rating = isDoubles ? (p1Data?.doubles_rating ?? 1000) : (p1Data?.rating ?? 1000)
     const p2Rating = isDoubles ? (p2Data?.doubles_rating ?? 1000) : (p2Data?.rating ?? 1000)
+    const p1partnerRating = isDoubles ? (p1partnerData?.doubles_rating ?? 1000) : 1000
+    const p2partnerRating = isDoubles ? (p2partnerData?.doubles_rating ?? 1000) : 1000
+    // For doubles ELO, use pair averages
+    const eloRating1 = isDoubles && p1partnerData ? Math.round((p1Rating + p1partnerRating) / 2) : p1Rating
+    const eloRating2 = isDoubles && p2partnerData ? Math.round((p2Rating + p2partnerRating) / 2) : p2Rating
+
     const p1Wins = isDoubles ? (p1Data?.doubles_wins ?? 0) : (p1Data?.wins ?? 0)
     const p2Wins = isDoubles ? (p2Data?.doubles_wins ?? 0) : (p2Data?.wins ?? 0)
     const p1Losses = isDoubles ? (p1Data?.doubles_losses ?? 0) : (p1Data?.losses ?? 0)
     const p2Losses = isDoubles ? (p2Data?.doubles_losses ?? 0) : (p2Data?.losses ?? 0)
+    const p1partnerWins = p1partnerData?.doubles_wins ?? 0
+    const p1partnerLosses = p1partnerData?.doubles_losses ?? 0
+    const p2partnerWins = p2partnerData?.doubles_wins ?? 0
+    const p2partnerLosses = p2partnerData?.doubles_losses ?? 0
 
     if (editMode === 'walkover' || editMode === 'forfeit') {
       const winnerId = editMatch.player1_id
@@ -142,7 +165,7 @@ export default function FinalsClient({
         winner_id: winnerId,
         mode: editMode,
         disadvantage_player_id: editDisadvantagePlayerId,
-        rating_before1: p1Rating, rating_before2: p2Rating,
+        rating_before1: eloRating1, rating_before2: eloRating2,
         rating_change1: 0, rating_change2: 0,
         wins_before1: p1Wins, wins_before2: p2Wins,
         losses_before1: p1Losses, losses_before2: p2Losses,
@@ -151,6 +174,8 @@ export default function FinalsClient({
       if (isDoubles) {
         await supabase.from('players').update({ doubles_wins: p1Wins + 1, total_matches: (p1Data?.total_matches ?? 0) + 1 }).eq('id', editMatch.player1_id)
         await supabase.from('players').update({ doubles_losses: p2Losses + 1, total_matches: (p2Data?.total_matches ?? 0) + 1 }).eq('id', editMatch.player2_id)
+        if (editMatch.pair1_player2_id) await supabase.from('players').update({ doubles_wins: p1partnerWins + 1, total_matches: (p1partnerData?.total_matches ?? 0) + 1 }).eq('id', editMatch.pair1_player2_id)
+        if (editMatch.pair2_player2_id) await supabase.from('players').update({ doubles_losses: p2partnerLosses + 1, total_matches: (p2partnerData?.total_matches ?? 0) + 1 }).eq('id', editMatch.pair2_player2_id)
       } else {
         await supabase.from('players').update({ wins: p1Wins + 1, total_matches: (p1Data?.total_matches ?? 0) + 1 }).eq('id', editMatch.player1_id)
         await supabase.from('players').update({ losses: p2Losses + 1, total_matches: (p2Data?.total_matches ?? 0) + 1 }).eq('id', editMatch.player2_id)
@@ -184,7 +209,7 @@ export default function FinalsClient({
       if (winnerId && numSets > 0) {
         const avg1 = total1 / numSets
         const avg2 = total2 / numSets
-        const { changeA, changeB } = calcElo(p1Rating, p2Rating, avg1, avg2)
+        const { changeA, changeB } = calcElo(eloRating1, eloRating2, avg1, avg2)
         const bonusRate = (tournament.bonus_points ?? 0) / 100
         rc1 = changeA > 0 && bonusRate > 0 ? Math.round(changeA * (1 + bonusRate)) : changeA
         rc2 = changeB > 0 && bonusRate > 0 ? Math.round(changeB * (1 + bonusRate)) : changeB
@@ -198,40 +223,59 @@ export default function FinalsClient({
         winner_id: winnerId,
         mode: 'normal',
         disadvantage_player_id: editDisadvantagePlayerId,
-        rating_before1: p1Rating, rating_before2: p2Rating,
+        rating_before1: eloRating1, rating_before2: eloRating2,
         rating_change1: rc1, rating_change2: rc2,
         wins_before1: p1Wins, wins_before2: p2Wins,
         losses_before1: p1Losses, losses_before2: p2Losses,
       }).eq('id', editMatch.id)
 
       if (winnerId) {
+        const p1Won = winnerId === editMatch.player1_id
         if (isDoubles) {
           await supabase.from('players').update({
             doubles_rating: p1Rating + rc1,
-            doubles_wins: p1Wins + (winnerId === editMatch.player1_id ? 1 : 0),
-            doubles_losses: p1Losses + (winnerId === editMatch.player2_id ? 1 : 0),
+            doubles_wins: p1Wins + (p1Won ? 1 : 0),
+            doubles_losses: p1Losses + (p1Won ? 0 : 1),
             total_score: (p1Data?.total_score ?? 0) + total1,
             total_matches: (p1Data?.total_matches ?? 0) + 1,
           }).eq('id', editMatch.player1_id)
           await supabase.from('players').update({
             doubles_rating: p2Rating + rc2,
-            doubles_wins: p2Wins + (winnerId === editMatch.player2_id ? 1 : 0),
-            doubles_losses: p2Losses + (winnerId === editMatch.player1_id ? 1 : 0),
+            doubles_wins: p2Wins + (p1Won ? 0 : 1),
+            doubles_losses: p2Losses + (p1Won ? 1 : 0),
             total_score: (p2Data?.total_score ?? 0) + total2,
             total_matches: (p2Data?.total_matches ?? 0) + 1,
           }).eq('id', editMatch.player2_id)
+          if (editMatch.pair1_player2_id) {
+            await supabase.from('players').update({
+              doubles_rating: p1partnerRating + rc1,
+              doubles_wins: p1partnerWins + (p1Won ? 1 : 0),
+              doubles_losses: p1partnerLosses + (p1Won ? 0 : 1),
+              total_score: (p1partnerData?.total_score ?? 0) + total1,
+              total_matches: (p1partnerData?.total_matches ?? 0) + 1,
+            }).eq('id', editMatch.pair1_player2_id)
+          }
+          if (editMatch.pair2_player2_id) {
+            await supabase.from('players').update({
+              doubles_rating: p2partnerRating + rc2,
+              doubles_wins: p2partnerWins + (p1Won ? 0 : 1),
+              doubles_losses: p2partnerLosses + (p1Won ? 1 : 0),
+              total_score: (p2partnerData?.total_score ?? 0) + total2,
+              total_matches: (p2partnerData?.total_matches ?? 0) + 1,
+            }).eq('id', editMatch.pair2_player2_id)
+          }
         } else {
           await supabase.from('players').update({
             rating: p1Rating + rc1,
-            wins: p1Wins + (winnerId === editMatch.player1_id ? 1 : 0),
-            losses: p1Losses + (winnerId === editMatch.player2_id ? 1 : 0),
+            wins: p1Wins + (p1Won ? 1 : 0),
+            losses: p1Losses + (p1Won ? 0 : 1),
             total_score: (p1Data?.total_score ?? 0) + total1,
             total_matches: (p1Data?.total_matches ?? 0) + 1,
           }).eq('id', editMatch.player1_id)
           await supabase.from('players').update({
             rating: p2Rating + rc2,
-            wins: p2Wins + (winnerId === editMatch.player2_id ? 1 : 0),
-            losses: p2Losses + (winnerId === editMatch.player1_id ? 1 : 0),
+            wins: p2Wins + (p1Won ? 0 : 1),
+            losses: p2Losses + (p1Won ? 1 : 0),
             total_score: (p2Data?.total_score ?? 0) + total2,
             total_matches: (p2Data?.total_matches ?? 0) + 1,
           }).eq('id', editMatch.player2_id)
@@ -252,28 +296,56 @@ export default function FinalsClient({
       m.wins_before1 != null && m.wins_before2 != null &&
       m.losses_before1 != null && m.losses_before2 != null
     ) {
-      const isDoubles = tournament.format === 'doubles'
-      const { data: p1 } = await supabase.from('players').select('total_score, total_matches').eq('id', m.player1_id).single()
-      const { data: p2 } = await supabase.from('players').select('total_score, total_matches').eq('id', m.player2_id).single()
       const sets = m.tournament_finals_sets
       const score1 = sets.reduce((s, x) => s + x.score1, 0)
       const score2 = sets.reduce((s, x) => s + x.score2, 0)
+
       if (isDoubles) {
+        // Fetch all 4 players' current state for rollback
+        const partnerIds = [m.player1_id, m.player2_id, m.pair1_player2_id, m.pair2_player2_id].filter(Boolean) as string[]
+        const { data: allPData } = await supabase.from('players').select('id, doubles_rating, doubles_wins, doubles_losses, total_score, total_matches').in('id', partnerIds)
+        const getDP = (id: string) => allPData?.find(p => p.id === id)
+        const p1Won = m.winner_id === m.player1_id
+        const p1d = getDP(m.player1_id)
+        // For doubles, rating_before1 is pair average — use delta reversal for individual players
         await supabase.from('players').update({
-          doubles_rating: m.rating_before1,
+          doubles_rating: Math.max(0, (p1d?.doubles_rating ?? 1000) - (m.rating_change1 ?? 0)),
           doubles_wins: m.wins_before1,
           doubles_losses: m.losses_before1,
-          total_score: Math.max(0, (p1?.total_score ?? 0) - score1),
-          total_matches: Math.max(0, (p1?.total_matches ?? 0) - 1),
+          total_score: Math.max(0, (p1d?.total_score ?? 0) - score1),
+          total_matches: Math.max(0, (p1d?.total_matches ?? 0) - 1),
         }).eq('id', m.player1_id)
+        const p2d = getDP(m.player2_id)
         await supabase.from('players').update({
-          doubles_rating: m.rating_before2,
+          doubles_rating: Math.max(0, (p2d?.doubles_rating ?? 1000) - (m.rating_change2 ?? 0)),
           doubles_wins: m.wins_before2,
           doubles_losses: m.losses_before2,
-          total_score: Math.max(0, (p2?.total_score ?? 0) - score2),
-          total_matches: Math.max(0, (p2?.total_matches ?? 0) - 1),
+          total_score: Math.max(0, (p2d?.total_score ?? 0) - score2),
+          total_matches: Math.max(0, (p2d?.total_matches ?? 0) - 1),
         }).eq('id', m.player2_id)
+        if (m.pair1_player2_id) {
+          const pd = getDP(m.pair1_player2_id)
+          await supabase.from('players').update({
+            doubles_rating: Math.max(0, (pd?.doubles_rating ?? 1000) - (m.rating_change1 ?? 0)),
+            doubles_wins: Math.max(0, (pd?.doubles_wins ?? 0) - (p1Won ? 1 : 0)),
+            doubles_losses: Math.max(0, (pd?.doubles_losses ?? 0) - (p1Won ? 0 : 1)),
+            total_score: Math.max(0, (pd?.total_score ?? 0) - score1),
+            total_matches: Math.max(0, (pd?.total_matches ?? 0) - 1),
+          }).eq('id', m.pair1_player2_id)
+        }
+        if (m.pair2_player2_id) {
+          const pd = getDP(m.pair2_player2_id)
+          await supabase.from('players').update({
+            doubles_rating: Math.max(0, (pd?.doubles_rating ?? 1000) - (m.rating_change2 ?? 0)),
+            doubles_wins: Math.max(0, (pd?.doubles_wins ?? 0) - (p1Won ? 0 : 1)),
+            doubles_losses: Math.max(0, (pd?.doubles_losses ?? 0) - (p1Won ? 1 : 0)),
+            total_score: Math.max(0, (pd?.total_score ?? 0) - score2),
+            total_matches: Math.max(0, (pd?.total_matches ?? 0) - 1),
+          }).eq('id', m.pair2_player2_id)
+        }
       } else {
+        const { data: p1 } = await supabase.from('players').select('total_score, total_matches').eq('id', m.player1_id).single()
+        const { data: p2 } = await supabase.from('players').select('total_score, total_matches').eq('id', m.player2_id).single()
         await supabase.from('players').update({
           rating: m.rating_before1,
           wins: m.wins_before1,
@@ -500,6 +572,8 @@ export default function FinalsClient({
         match_number: matchNumber++,
         player1_id: p1id,
         player2_id: p2id,
+        pair1_player2_id: isDoubles ? (q1.winner.partner_id ?? null) : null,
+        pair2_player2_id: isDoubles ? (q2.winner.partner_id ?? null) : null,
         winner_id: winnerId,
         mode: hasDefaultInMatch ? 'walkover' : 'normal',
         disadvantage_player_id: disadvantagePlayerId,
@@ -514,6 +588,7 @@ export default function FinalsClient({
         round: roundNumber,
         match_number: matchNumber++,
         player1_id: byePlayer.winner.player_id,
+        pair1_player2_id: isDoubles ? (byePlayer.winner.partner_id ?? null) : null,
         player2_id: null,
         winner_id: null,
         mode: 'normal',
@@ -537,6 +612,9 @@ export default function FinalsClient({
 
     // 組み合わせのみ登録（スコアは編集ボタンから入力）
     const matchNumber = finalsMatches.filter(m => m.round === round).length + 1
+    // For doubles, resolve partner IDs from qualifiers
+    const q1 = isDoubles ? qualifiers.find(q => q.winner?.player_id === player1Id) : null
+    const q2 = isDoubles ? qualifiers.find(q => q.winner?.player_id === player2Id) : null
 
     const { error: matchErr } = await supabase
       .from('tournament_finals_matches')
@@ -546,6 +624,8 @@ export default function FinalsClient({
         match_number: matchNumber,
         player1_id: player1Id,
         player2_id: player2Id,
+        pair1_player2_id: isDoubles ? (q1?.winner?.partner_id ?? (pair1Player2Id || null)) : null,
+        pair2_player2_id: isDoubles ? (q2?.winner?.partner_id ?? (pair2Player2Id || null)) : null,
         winner_id: null,
         disadvantage_player_id: null,
         mode: 'normal',
@@ -570,6 +650,18 @@ export default function FinalsClient({
     ...qualifiers.map(q => q.winner?.player).filter(Boolean) as Player[],
     ...(defaultPlayerId ? [{ id: defaultPlayerId, name: 'DEFAULT（不戦勝）', avatar_url: null }] : []),
   ]
+  // For doubles: pairs mapped from qualifiers (primary player id → pair label)
+  const allPairs = isDoubles
+    ? qualifiers
+        .filter(q => q.winner)
+        .map(q => ({
+          primaryId: q.winner.player_id,
+          partnerId: q.winner.partner_id ?? null,
+          label: q.winner.partner
+            ? `${q.winner.player.name} & ${q.winner.partner.name}`
+            : q.winner.player.name,
+        }))
+    : []
   const roundsInFinals = Array.from(new Set(finalsMatches.map(m => m.round))).sort()
 
   const champion = isFinalsLocked
@@ -658,7 +750,10 @@ export default function FinalsClient({
                     <img src={q.winner.player.avatar_url} className="w-8 h-8 rounded-full object-cover" />
                   )}
                   <div>
-                    <p className="text-sm font-medium text-white">{q.winner.player.name}</p>
+                    <p className="text-sm font-medium text-white">
+                      {q.winner.player.name}
+                      {isDoubles && q.winner.partner && ` & ${q.winner.partner.name}`}
+                    </p>
                     {q.hasDefault && (
                       <span className="text-[10px] text-orange-400">※1勝ディスアドバンテージ</span>
                     )}
@@ -714,6 +809,7 @@ export default function FinalsClient({
                   <div className="flex-1 text-right">
                     <p className={`font-semibold ${match.winner_id === match.player1_id ? 'text-white' : 'text-gray-400'}`}>
                       {match.player1?.name ?? '未定'}
+                      {isDoubles && match.pair1_player2 && ` & ${match.pair1_player2.name}`}
                     </p>
                     {match.disadvantage_player_id === match.player1_id && (
                       <span className="text-xs text-orange-400">1勝ディスアドバンテージ</span>
@@ -735,6 +831,7 @@ export default function FinalsClient({
                   <div className="flex-1">
                     <p className={`font-semibold ${match.winner_id === match.player2_id ? 'text-white' : 'text-gray-400'}`}>
                       {match.player2?.name ?? '未定'}
+                      {isDoubles && match.pair2_player2 && ` & ${match.pair2_player2.name}`}
                     </p>
                     {match.disadvantage_player_id === match.player2_id && (
                       <span className="text-xs text-orange-400">1勝ディスアドバンテージ</span>
@@ -745,7 +842,9 @@ export default function FinalsClient({
                   </div>
                 </div>
                 {match.winner && (
-                  <p className="text-xs text-green-400 text-center mt-2">🏆 {match.winner.name} の勝利</p>
+                  <p className="text-xs text-green-400 text-center mt-2">
+                    🏆 {match.winner.name}{isDoubles && match.winner_id === match.player1_id && match.pair1_player2 ? ` & ${match.pair1_player2.name}` : ''}{isDoubles && match.winner_id === match.player2_id && match.pair2_player2 ? ` & ${match.pair2_player2.name}` : ''} の勝利
+                  </p>
                 )}
                 {/* 開始時間設定 */}
                 <div className="flex items-center gap-2 mt-3">
@@ -849,26 +948,54 @@ export default function FinalsClient({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">プレーヤー1</label>
-                  <select value={player1Id} onChange={e => setPlayer1Id(e.target.value)}
-                    className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  >
-                    <option value="">選択</option>
-                    {allPlayers.filter(p => p.id !== player2Id).map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  <label className="block text-xs text-gray-400 mb-1">{isDoubles ? 'ペア1' : 'プレーヤー1'}</label>
+                  {isDoubles ? (
+                    <select value={player1Id} onChange={e => {
+                      setPlayer1Id(e.target.value)
+                      setPair1Player2Id(allPairs.find(p => p.primaryId === e.target.value)?.partnerId ?? '')
+                    }}
+                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="">選択</option>
+                      {allPairs.filter(p => p.primaryId !== player2Id).map(p => (
+                        <option key={p.primaryId} value={p.primaryId}>{p.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select value={player1Id} onChange={e => setPlayer1Id(e.target.value)}
+                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="">選択</option>
+                      {allPlayers.filter(p => p.id !== player2Id).map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">プレーヤー2</label>
-                  <select value={player2Id} onChange={e => setPlayer2Id(e.target.value)}
-                    className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  >
-                    <option value="">選択</option>
-                    {allPlayers.filter(p => p.id !== player1Id).map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  <label className="block text-xs text-gray-400 mb-1">{isDoubles ? 'ペア2' : 'プレーヤー2'}</label>
+                  {isDoubles ? (
+                    <select value={player2Id} onChange={e => {
+                      setPlayer2Id(e.target.value)
+                      setPair2Player2Id(allPairs.find(p => p.primaryId === e.target.value)?.partnerId ?? '')
+                    }}
+                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="">選択</option>
+                      {allPairs.filter(p => p.primaryId !== player1Id).map(p => (
+                        <option key={p.primaryId} value={p.primaryId}>{p.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select value={player2Id} onChange={e => setPlayer2Id(e.target.value)}
+                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="">選択</option>
+                      {allPlayers.filter(p => p.id !== player1Id).map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -888,9 +1015,15 @@ export default function FinalsClient({
           <div className="bg-[#1e0f3a] border border-purple-800/50 rounded-2xl p-6 w-full max-w-sm space-y-4">
             <h2 className="text-lg font-bold">試合を編集</h2>
             <div className="flex items-center justify-between text-sm text-gray-300">
-              <span className="font-medium">{editMatch.player1?.name ?? '未定'}</span>
+              <span className="font-medium">
+                {editMatch.player1?.name ?? '未定'}
+                {isDoubles && editMatch.pair1_player2 && ` & ${editMatch.pair1_player2.name}`}
+              </span>
               <span className="text-gray-500">vs</span>
-              <span className="font-medium">{editMatch.player2?.name ?? '未定'}</span>
+              <span className="font-medium">
+                {editMatch.player2?.name ?? '未定'}
+                {isDoubles && editMatch.pair2_player2 && ` & ${editMatch.pair2_player2.name}`}
+              </span>
             </div>
 
             {/* モード選択 */}

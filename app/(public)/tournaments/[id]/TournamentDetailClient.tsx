@@ -4,20 +4,24 @@ import React, { useState, useRef } from 'react'
 import Link from 'next/link'
 
 type Player = { id: string; name: string; avatar_url: string | null; hc?: number; rating?: number; is_active?: boolean }
-type BlockPlayer = { id: string; block_id: string; player_id: string; is_default: boolean; player: Player }
+type BlockPlayer = { id: string; block_id: string; player_id: string; is_default: boolean; player: Player; partner?: Player | null }
 type Block = { id: string; tournament_id: string; block_name: string; match_time_1: string | null; match_time_2: string | null; match_time_3: string | null; scores_finalized: boolean; tournament_block_players: BlockPlayer[] }
 type QualifyingMatch = {
   id: string; block_id: string; player1_id: string; player2_id: string
+  pair1_player2_id?: string | null; pair2_player2_id?: string | null
   score1: number | null; score2: number | null; winner_id: string | null
   mode: string; affects_ranking: boolean; scheduled_time: string | null
   player1: Player; player2: Player
+  pair1_player2?: Player | null; pair2_player2?: Player | null
 }
 type FinalsSet = { id: string; match_id: string; set_number: number; score1: number; score2: number }
 type FinalsMatch = {
   id: string; round: number; match_number: number
   player1_id: string | null; player2_id: string | null; winner_id: string | null
+  pair1_player2_id?: string | null; pair2_player2_id?: string | null
   disadvantage_player_id: string | null; mode: string; scheduled_time: string | null
   player1: Player | null; player2: Player | null; winner: Player | null
+  pair1_player2?: Player | null; pair2_player2?: Player | null
   tournament_finals_sets: FinalsSet[]
 }
 type Tournament = {
@@ -54,6 +58,7 @@ export default function TournamentDetailClient({
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const rankMap = new Map(rankings.map(r => [r.id, r.rank]))
+  const isDoubles = tournament.format === 'doubles'
 
   const isQualifyingDone = ['qualifying_done', 'finals', 'finished'].includes(tournament.status)
   const isFinished = tournament.status === 'finished'
@@ -78,6 +83,7 @@ export default function TournamentDetailClient({
       }, 0)
       return {
         player: bp.player,
+        partner: bp.partner ?? null,
         is_default: bp.is_default,
         wins, losses,
         scoreFor, scoreAgainst,
@@ -296,7 +302,14 @@ export default function TournamentDetailClient({
           <img src={champion.avatar_url} className="w-full h-full object-cover" />
         </div>
       )}
-      <p className="text-3xl font-bold text-yellow-100">{champion.name}</p>
+      <p className="text-3xl font-bold text-yellow-100">
+        {champion.name}
+        {isDoubles && (() => {
+          const fm = finalsMatches.find(m => m.round === maxRound && m.winner_id !== null)
+          const partner = fm?.winner_id === fm?.player1_id ? fm?.pair1_player2 : fm?.pair2_player2
+          return partner ? <span className="block text-xl font-semibold opacity-80">& {partner.name}</span> : null
+        })()}
+      </p>
       <div className="flex gap-4 mt-2">
         <div className="flex flex-col items-center px-4 py-2 rounded-xl bg-purple-900/60 border border-purple-500/40">
           <span className="text-xs text-gray-400 mb-1">ランキングポイント</span>
@@ -324,7 +337,14 @@ export default function TournamentDetailClient({
       {runnerUp.avatar_url && (
         <img src={runnerUp.avatar_url} className="w-12 h-12 rounded-full border-2 border-gray-400 object-cover" />
       )}
-      <p className="text-xl font-bold text-gray-200">{runnerUp.name}</p>
+      <p className="text-xl font-bold text-gray-200">
+        {runnerUp.name}
+        {isDoubles && (() => {
+          const fm = finalMatch
+          const partner = fm?.winner_id === fm?.player1_id ? fm?.pair2_player2 : fm?.pair1_player2
+          return partner ? <span className="block text-sm font-normal opacity-80">& {partner.name}</span> : null
+        })()}
+      </p>
     </div>
   </div>
 )}
@@ -391,7 +411,10 @@ export default function TournamentDetailClient({
                             </div>
                           </div>
                           {/* プレーヤー名 */}
-                          <p className="text-2xl font-extrabold text-amber-100 neon-gold mb-2">{winner.player.name}</p>
+                          <p className="text-2xl font-extrabold text-amber-100 neon-gold mb-2">
+                            {winner.player.name}
+                            {isDoubles && winner.partner && <span className="text-lg"> & {winner.partner.name}</span>}
+                          </p>
                           {/* 進出テキスト */}
                           <p className="text-lg font-extrabold tracking-widest neon-gold">🏆 決勝トーナメント進出！</p>
                         </div>
@@ -441,6 +464,7 @@ export default function TournamentDetailClient({
                                   ) : null}
                                   <span className={`underline decoration-dotted ${s.is_default ? 'text-gray-500' : 'text-white'}`}>
                                     {s.player.name}
+                                    {isDoubles && s.partner && <span className="text-gray-300"> & {s.partner.name}</span>}
                                   </span>
                                 </button>
                               </td>
@@ -491,6 +515,7 @@ export default function TournamentDetailClient({
           className={`flex-1 text-right hover:opacity-80 ${m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}`}
         >
           {m.player1.name}
+          {isDoubles && m.pair1_player2 && <span className="block text-xs opacity-70">& {m.pair1_player2.name}</span>}
         </button>
         <span className="text-white font-bold flex-shrink-0">
           {m.mode === 'walkover' ? 'W/O' : m.winner_id ? `${m.score1} - ${m.score2}` : '-'}
@@ -500,6 +525,7 @@ export default function TournamentDetailClient({
           className={`flex-1 hover:opacity-80 ${m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}`}
         >
           {m.player2.name}
+          {isDoubles && m.pair2_player2 && <span className="block text-xs opacity-70">& {m.pair2_player2.name}</span>}
         </button>
         {m.mode !== 'normal' && (
           <span className="text-xs text-yellow-400 flex-shrink-0">
@@ -668,6 +694,7 @@ export default function TournamentDetailClient({
                                           className={`text-sm font-semibold truncate underline decoration-dotted hover:opacity-80 ${isFinished && match.winner_id === match.player1_id ? 'text-white' : 'text-gray-400'}`}
                                         >
                                           {match.player1?.name ?? '未定'}
+                                          {isDoubles && match.pair1_player2 && <span className="block text-xs font-normal opacity-70">& {match.pair1_player2.name}</span>}
                                         </button>
                                         {match.disadvantage_player_id === match.player1_id && (
                                           <p className="text-[10px] text-orange-400">1勝ディスアドバンテージ</p>
@@ -717,6 +744,7 @@ export default function TournamentDetailClient({
                                           className={`text-sm font-semibold truncate underline decoration-dotted hover:opacity-80 ${isFinished && match.winner_id === match.player2_id ? 'text-white' : 'text-gray-400'}`}
                                         >
                                           {match.player2?.name ?? '未定'}
+                                          {isDoubles && match.pair2_player2 && <span className="block text-xs font-normal opacity-70">& {match.pair2_player2.name}</span>}
                                         </button>
                                         {match.disadvantage_player_id === match.player2_id && (
                                           <p className="text-[10px] text-orange-400">1勝ディスアドバンテージ</p>
@@ -754,7 +782,14 @@ export default function TournamentDetailClient({
                                     <img src={champion.avatar_url} className="w-full h-full object-cover" />
                                   </div>
                                 )}
-                                <p className="text-xl font-bold text-yellow-100 mb-2">{champion.name}</p>
+                                <p className="text-xl font-bold text-yellow-100 mb-2">
+                                  {champion.name}
+                                  {isDoubles && (() => {
+                                    const fm = finalsMatches.find(m => m.round === maxRound && m.winner_id !== null)
+                                    const partner = fm?.winner_id === fm?.player1_id ? fm?.pair1_player2 : fm?.pair2_player2
+                                    return partner ? <span className="block text-sm font-normal opacity-80">& {partner.name}</span> : null
+                                  })()}
+                                </p>
                                 <div className="flex flex-col gap-1">
                                   <span className="text-xs px-2 py-0.5 rounded-full bg-purple-900/60 border border-purple-500/40 text-yellow-100">RP {champion.rating ?? '-'}</span>
                                   <span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/60 border border-blue-500/40 text-yellow-100">HC {champion.hc ?? '-'}</span>

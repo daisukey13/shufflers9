@@ -32,6 +32,12 @@ export default async function AdminTournamentPage({ params }: { params: Promise<
           <p className="font-semibold text-white">📋 エントリー管理</p>
           <p className="text-sm text-gray-400 mt-1">エントリーの確認・管理</p>
         </Link>
+        {tournament.format === 'doubles' && (
+          <Link href={`/admin/tournaments/${id}/pairing`} className="p-5 bg-green-900/20 border border-green-800/30 rounded-2xl hover:bg-green-900/40 transition">
+            <p className="font-semibold text-white">🤝 ペア作成</p>
+            <p className="text-sm text-gray-400 mt-1">ダブルスペアの割り当て</p>
+          </Link>
+        )}
         <Link href={`/admin/tournaments/${id}/qualifying`} className="p-5 bg-purple-900/20 border border-purple-800/30 rounded-2xl hover:bg-purple-900/40 transition">
           <p className="font-semibold text-white">🏒 予選管理</p>
           <p className="text-sm text-gray-400 mt-1">予選ブロック・試合管理</p>

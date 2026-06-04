@@ -12,11 +12,13 @@ type Entry = {
   player_id: string
   status: string
   preferred_dates: string | null
+  preferred_partner_id: string | null
   cancel_requested: boolean
   created_at: string
   player: Player
+  preferred_partner?: Player | null
 }
-type Tournament = { id: string; name: string; status: string }
+type Tournament = { id: string; name: string; status: string; format: string }
 
 export default function EntriesAdminClient({
   tournament,
@@ -66,15 +68,26 @@ export default function EntriesAdminClient({
     router.refresh()
   }
 
+  const isDoubles = tournament.format === 'doubles'
+
   const handleCloseEntry = async () => {
-    if (!confirm(`エントリーを締め切り、予選作成へ進みますか？\n（エントリー数：${activeEntries.length}名）`)) return
+    const nextPage = isDoubles ? 'ペア作成' : '予選作成'
+    if (!confirm(`エントリーを締め切り、${nextPage}へ進みますか？\n（エントリー数：${activeEntries.length}名）`)) return
     setLoading(true)
     await supabase.from('tournaments').update({ status: 'entry_closed' }).eq('id', tournament.id)
     setLoading(false)
-    router.push(`/admin/tournaments/${tournament.id}/qualifying`)
+    if (isDoubles) {
+      router.push(`/admin/tournaments/${tournament.id}/pairing`)
+    } else {
+      router.push(`/admin/tournaments/${tournament.id}/qualifying`)
+    }
   }
 
   const handleStartQualifying = async () => {
+    if (isDoubles) {
+      router.push(`/admin/tournaments/${tournament.id}/pairing`)
+      return
+    }
     if (!confirm('予選を開始しますか？')) return
     setLoading(true)
     await supabase.from('tournaments').update({ status: 'qualifying' }).eq('id', tournament.id)
@@ -101,14 +114,16 @@ export default function EntriesAdminClient({
         <div className="p-4 bg-green-900/20 border border-green-700/40 rounded-2xl flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-green-300">エントリー完了・締切</p>
-            <p className="text-xs text-gray-400 mt-0.5">締め切って予選作成へ進みます（現在 {activeEntries.length}名）</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              締め切って{isDoubles ? 'ペア作成' : '予選作成'}へ進みます（現在 {activeEntries.length}名）
+            </p>
           </div>
           <button
             onClick={handleCloseEntry}
             disabled={loading || activeEntries.length === 0}
             className="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg text-sm font-bold transition whitespace-nowrap"
           >
-            締切 → 予選作成へ
+            {isDoubles ? '締切 → ペア作成へ' : '締切 → 予選作成へ'}
           </button>
         </div>
       )}
@@ -117,15 +132,17 @@ export default function EntriesAdminClient({
       {tournament.status === 'entry_closed' && (
         <div className="p-4 bg-blue-900/20 border border-blue-700/40 rounded-2xl flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-blue-300">予選管理へ進む</p>
-            <p className="text-xs text-gray-400 mt-0.5">ステータスを予選中に変更して予選管理へ移動します</p>
+            <p className="text-sm font-semibold text-blue-300">{isDoubles ? 'ペア作成へ進む' : '予選管理へ進む'}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {isDoubles ? 'ペア作成ページへ移動します' : 'ステータスを予選中に変更して予選管理へ移動します'}
+            </p>
           </div>
           <button
             onClick={handleStartQualifying}
             disabled={loading}
             className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg text-sm font-bold transition whitespace-nowrap"
           >
-            予選開始 → 予選管理へ
+            {isDoubles ? 'ペア作成へ →' : '予選開始 → 予選管理へ'}
           </button>
         </div>
       )}
@@ -184,6 +201,11 @@ export default function EntriesAdminClient({
                     </Link>
                     <span className="text-xs text-gray-500">HC {entry.player.hc} · RP {entry.player.rating}</span>
                   </div>
+                  {isDoubles && entry.preferred_partner_id && (
+                    <p className="text-xs text-green-400 mt-0.5">
+                      🤝 希望パートナー：{entry.preferred_partner?.name ?? entry.preferred_partner_id}
+                    </p>
+                  )}
                   {entry.preferred_dates && (
                     <p className="text-xs text-blue-400 mt-0.5">💬 {entry.preferred_dates}</p>
                   )}

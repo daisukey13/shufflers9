@@ -16,7 +16,7 @@ export default async function FinalsPage({ params }: { params: Promise<{ id: str
 
   const { data: blocks } = await supabase
     .from('tournament_blocks')
-    .select('*, tournament_block_players(*, player:players(id, name, avatar_url, hc, rating))')
+    .select('*, tournament_block_players(*, player:players(id, name, avatar_url, hc, rating), partner:players!tournament_block_players_partner_id_fkey(id, name, avatar_url))')
     .eq('tournament_id', id)
     .order('block_name')
 
@@ -27,7 +27,7 @@ export default async function FinalsPage({ params }: { params: Promise<{ id: str
 
   const { data: finalsMatches } = await supabase
     .from('tournament_finals_matches')
-    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), winner:players!winner_id(id, name, avatar_url), tournament_finals_sets(*)')
+    .select('*, player1:players!player1_id(id, name, avatar_url), player2:players!player2_id(id, name, avatar_url), winner:players!winner_id(id, name, avatar_url), pair1_player2:players!pair1_player2_id(id, name, avatar_url), pair2_player2:players!pair2_player2_id(id, name, avatar_url), tournament_finals_sets(*)')
     .eq('tournament_id', id)
     .order('round')
     .order('match_number')

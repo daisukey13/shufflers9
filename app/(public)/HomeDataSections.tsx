@@ -6,6 +6,7 @@ import { getRecentNotices } from '@/lib/queries/notices'
 import { getRecentTournamentWinners } from '@/lib/queries/tournaments'
 import { getLastMonthWinRanking } from '@/lib/queries/monthly-ranking'
 import { getActiveBanners } from '@/lib/queries/banners'
+
 import MonthlyRankingModal from '@/components/ui/MonthlyRankingModal'
 import BannerSlider from '@/components/ui/BannerSlider'
 import TopPlayersFlip from './TopPlayersFlip'

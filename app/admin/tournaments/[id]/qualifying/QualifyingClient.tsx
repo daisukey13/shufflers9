@@ -5,20 +5,24 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-type Player = { id: string; name: string; avatar_url: string | null; hc: number; rating: number }
-type BlockPlayer = { id: string; block_id: string; player_id: string; is_default: boolean; player: Player }
+type Player = { id: string; name: string; avatar_url: string | null; hc: number; rating: number; doubles_rating?: number }
+type BlockPlayer = { id: string; block_id: string; player_id: string; partner_id: string | null; is_default: boolean; player: Player; partner?: Player | null }
 type Block = { id: string; tournament_id: string; block_name: string; match_time_1: string | null; match_time_2: string | null; match_time_3: string | null; scores_finalized: boolean; tournament_block_players: BlockPlayer[] }
 type Match = {
   id: string; block_id: string; player1_id: string; player2_id: string
+  pair1_player2_id: string | null; pair2_player2_id: string | null
   score1: number | null; score2: number | null; winner_id: string | null
   mode: string; affects_ranking: boolean; scheduled_time: string | null
   player1: { id: string; name: string; avatar_url: string | null }
   player2: { id: string; name: string; avatar_url: string | null }
+  pair1_player2?: { id: string; name: string; avatar_url: string | null } | null
+  pair2_player2?: { id: string; name: string; avatar_url: string | null } | null
   player1_rating_change: number | null; player2_rating_change: number | null
   player1_rating_before: number | null; player2_rating_before: number | null
   player1_wins_before: number | null; player2_wins_before: number | null
   player1_losses_before: number | null; player2_losses_before: number | null
 }
+type TournamentPair = { id: string; player1_id: string; player2_id: string; player1: Player; player2: Player }
 type Tournament = { id: string; name: string; status: string; format: string; bonus_points: number }
 
 const timeOptions = (() => {
@@ -38,6 +42,7 @@ export default function QualifyingClient({
   defaultPlayerId,
   blocks,
   matches,
+  tournamentPairs = [],
 }: {
   tournament: Tournament
   players: Player[]
@@ -45,9 +50,13 @@ export default function QualifyingClient({
   defaultPlayerId: string
   blocks: Block[]
   matches: Match[]
+  tournamentPairs?: TournamentPair[]
 }) {
+  const isDoubles = tournament.format === 'doubles'
   const [showNewBlock, setShowNewBlock] = useState(false)
+  // シングルス: プレーヤーID3つ / ダブルス: ペアID3つ
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>(['', '', ''])
+  const [selectedPairs, setSelectedPairs] = useState<string[]>(['', '', ''])
   const [blockLoading, setBlockLoading] = useState(false)
   const [blockError, setBlockError] = useState<string | null>(null)
 
@@ -124,23 +133,7 @@ export default function QualifyingClient({
 
     const bp = block.tournament_block_players
     if (bp.length < 2) {
-      alert(`ブロック${block.block_name}にプレーヤーが${bp.length}名しか登録されていません。\n先にブロックを削除して再作成してください。`)
-      setAutoMatchLoading(null)
-      return
-    }
-
-    // 全有効ペアを動的生成（同一player_idの組み合わせを除外）
-    const pairs: [BlockPlayer, BlockPlayer][] = []
-    for (let i = 0; i < bp.length; i++) {
-      for (let j = i + 1; j < bp.length; j++) {
-        if (bp[i].player_id !== bp[j].player_id) {
-          pairs.push([bp[i], bp[j]])
-        }
-      }
-    }
-
-    if (pairs.length === 0) {
-      alert(`ブロック${block.block_name}に有効なペアが見つかりません。`)
+      alert(`ブロック${block.block_name}に${isDoubles ? 'ペア' : 'プレーヤー'}が${bp.length}つしか登録されていません。`)
       setAutoMatchLoading(null)
       return
     }
@@ -148,30 +141,58 @@ export default function QualifyingClient({
     const times = getBlockTimes(block.id)
     let timeIdx = 0
 
-    for (const [p1, p2] of pairs) {
-      const hasDefault = p1.is_default || p2.is_default
-
-      const alreadyExists = matches.some(m =>
-        m.block_id === block.id &&
-        ((m.player1_id === p1.player_id && m.player2_id === p2.player_id) ||
-         (m.player1_id === p2.player_id && m.player2_id === p1.player_id))
-      )
-      if (alreadyExists) { timeIdx++; continue }
-
-      const scheduledTime = hasDefault ? null : (times[timeIdx] || null)
-
-      await supabase.from('tournament_qualifying_matches').insert({
-        block_id: block.id,
-        player1_id: p1.player_id,
-        player2_id: p2.player_id,
-        score1: null,
-        score2: null,
-        winner_id: null,
-        mode: 'normal',
-        affects_ranking: true,
-        scheduled_time: scheduledTime,
-      })
-      timeIdx++
+    if (isDoubles) {
+      // ダブルス：ペア vs ペアの試合を作成
+      for (let i = 0; i < bp.length; i++) {
+        for (let j = i + 1; j < bp.length; j++) {
+          const pair1 = bp[i]
+          const pair2 = bp[j]
+          const alreadyExists = matches.some(m =>
+            m.block_id === block.id &&
+            ((m.player1_id === pair1.player_id && m.player2_id === pair2.player_id) ||
+             (m.player1_id === pair2.player_id && m.player2_id === pair1.player_id))
+          )
+          if (alreadyExists) { timeIdx++; continue }
+          await supabase.from('tournament_qualifying_matches').insert({
+            block_id: block.id,
+            player1_id: pair1.player_id,
+            pair1_player2_id: pair1.partner_id,
+            player2_id: pair2.player_id,
+            pair2_player2_id: pair2.partner_id,
+            score1: null, score2: null, winner_id: null,
+            mode: 'normal', affects_ranking: true,
+            scheduled_time: times[timeIdx] || null,
+          })
+          timeIdx++
+        }
+      }
+    } else {
+      // シングルス：従来通り
+      const pairs: [BlockPlayer, BlockPlayer][] = []
+      for (let i = 0; i < bp.length; i++) {
+        for (let j = i + 1; j < bp.length; j++) {
+          if (bp[i].player_id !== bp[j].player_id) {
+            pairs.push([bp[i], bp[j]])
+          }
+        }
+      }
+      for (const [p1, p2] of pairs) {
+        const hasDefault = p1.is_default || p2.is_default
+        const alreadyExists = matches.some(m =>
+          m.block_id === block.id &&
+          ((m.player1_id === p1.player_id && m.player2_id === p2.player_id) ||
+           (m.player1_id === p2.player_id && m.player2_id === p1.player_id))
+        )
+        if (alreadyExists) { timeIdx++; continue }
+        await supabase.from('tournament_qualifying_matches').insert({
+          block_id: block.id,
+          player1_id: p1.player_id, player2_id: p2.player_id,
+          score1: null, score2: null, winner_id: null,
+          mode: 'normal', affects_ranking: true,
+          scheduled_time: hasDefault ? null : (times[timeIdx] || null),
+        })
+        timeIdx++
+      }
     }
 
     setAutoMatchLoading(null)
@@ -200,24 +221,22 @@ export default function QualifyingClient({
 
     if (!blockMatches || blockMatches.length === 0) return
 
-    const isDoubles = tournament.format === 'doubles'
-    // プレーヤーごとにRP差分を集計
+    const doublesFormat = tournament.format === 'doubles'
+    // プレーヤーごとにRP差分を集計（ダブルスはペアの全員に同じ変化）
     const playerDeltas = new Map<string, { ratingDelta: number; winsDelta: number; lossesDelta: number }>()
+    const addDelta = (id: string, rd: number, wd: number, ld: number) => {
+      const prev = playerDeltas.get(id) ?? { ratingDelta: 0, winsDelta: 0, lossesDelta: 0 }
+      playerDeltas.set(id, { ratingDelta: prev.ratingDelta + rd, winsDelta: prev.winsDelta + wd, lossesDelta: prev.lossesDelta + ld })
+    }
     for (const m of blockMatches) {
       const p1Won = m.winner_id === m.player1_id
-      const get = (id: string) => playerDeltas.get(id) ?? { ratingDelta: 0, winsDelta: 0, lossesDelta: 0 }
-      const d1 = get(m.player1_id)
-      playerDeltas.set(m.player1_id, {
-        ratingDelta: d1.ratingDelta - m.player1_rating_change,
-        winsDelta: d1.winsDelta - (p1Won ? 1 : 0),
-        lossesDelta: d1.lossesDelta - (p1Won ? 0 : 1),
-      })
-      const d2 = get(m.player2_id)
-      playerDeltas.set(m.player2_id, {
-        ratingDelta: d2.ratingDelta - m.player2_rating_change,
-        winsDelta: d2.winsDelta - (p1Won ? 0 : 1),
-        lossesDelta: d2.lossesDelta - (p1Won ? 1 : 0),
-      })
+      addDelta(m.player1_id, -(m.player1_rating_change ?? 0), -(p1Won ? 1 : 0), -(p1Won ? 0 : 1))
+      addDelta(m.player2_id, -(m.player2_rating_change ?? 0), -(p1Won ? 0 : 1), -(p1Won ? 1 : 0))
+      // ダブルスのパートナーにも同じ変化を適用
+      if (doublesFormat) {
+        if (m.pair1_player2_id) addDelta(m.pair1_player2_id, -(m.player1_rating_change ?? 0), -(p1Won ? 1 : 0), -(p1Won ? 0 : 1))
+        if (m.pair2_player2_id) addDelta(m.pair2_player2_id, -(m.player2_rating_change ?? 0), -(p1Won ? 0 : 1), -(p1Won ? 1 : 0))
+      }
     }
 
     // プレーヤー一括更新
@@ -226,7 +245,7 @@ export default function QualifyingClient({
         .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
         .eq('id', playerId).single()
       if (!p) continue
-      if (isDoubles) {
+      if (doublesFormat) {
         await supabase.from('players').update({
           doubles_rating: (p.doubles_rating ?? 1000) + delta.ratingDelta,
           doubles_wins: (p.doubles_wins ?? 0) + delta.winsDelta,
@@ -262,6 +281,46 @@ export default function QualifyingClient({
 
   // ランダムブロック自動生成
   const handleAutoGenerate = async () => {
+    if (isDoubles) {
+      // ダブルス：ペアをブロックに割り当て
+      if (tournamentPairs.length === 0) {
+        setAutoError('ペアが作成されていません。先にペア作成を完了してください。')
+        return
+      }
+      if (!confirm(`${tournamentPairs.length}ペアをランダムにブロック分けします（3ペア1ブロック）。よろしいですか？`)) return
+      setAutoLoading(true)
+      setAutoError(null)
+
+      const shuffled = [...tournamentPairs].sort(() => Math.random() - 0.5)
+      const blockGroups: TournamentPair[][] = []
+      for (let i = 0; i < shuffled.length; i += 3) {
+        blockGroups.push(shuffled.slice(i, i + 3))
+      }
+      const startIndex = blocks.length
+      for (let i = 0; i < blockGroups.length; i++) {
+        const group = blockGroups[i]
+        const blockName = blockNames[startIndex + i]
+        const { data: block, error: blockErr } = await supabase
+          .from('tournament_blocks')
+          .insert({ tournament_id: tournament.id, block_name: blockName })
+          .select().single()
+        if (blockErr || !block) continue
+        const { error: bpErr } = await supabase.from('tournament_block_players').insert(
+          group.map(pair => ({
+            block_id: block.id,
+            player_id: pair.player1_id,
+            partner_id: pair.player2_id,
+            is_default: false,
+          }))
+        )
+        if (bpErr) console.error(`ブロック${blockName} 登録エラー:`, bpErr.message)
+      }
+      setAutoLoading(false)
+      router.refresh()
+      return
+    }
+
+    // シングルス：従来通り個人をブロックに割り当て
     if (enteredPlayers.length === 0) {
       setAutoError('エントリー済みのプレーヤーがいません')
       return
@@ -292,7 +351,6 @@ export default function QualifyingClient({
       if (blockErr || !block) continue
 
       const blockPlayers = [...group]
-      // DEFAULTは最大1人まで補充（同一player_idの重複INSERT=UNIQUE制約違反を防ぐ）
       if (blockPlayers.length < 3) {
         blockPlayers.push({ id: defaultPlayerId } as Player)
       }
@@ -321,40 +379,36 @@ export default function QualifyingClient({
       : `この試合を削除しますか？`
     if (!confirm(msg)) return
 
-    const isDoubles = tournament.format === 'doubles'
+    const doublesFormat = tournament.format === 'doubles'
 
     if (hasRp) {
-      const { data: p1 } = await supabase.from('players')
-        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
-        .eq('id', match.player1_id).single()
-      const { data: p2 } = await supabase.from('players')
-        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
-        .eq('id', match.player2_id).single()
-
-      if (p1 && p2) {
-        const p1Won = match.winner_id === match.player1_id
-        if (isDoubles) {
+      const p1Won = match.winner_id === match.player1_id
+      // 更新が必要なプレーヤーIDと変化量のリスト
+      const updates: { id: string; ratingChange: number; winDelta: number; lossDelta: number }[] = [
+        { id: match.player1_id, ratingChange: match.player1_rating_change!, winDelta: p1Won ? 1 : 0, lossDelta: p1Won ? 0 : 1 },
+        { id: match.player2_id, ratingChange: match.player2_rating_change!, winDelta: p1Won ? 0 : 1, lossDelta: p1Won ? 1 : 0 },
+      ]
+      if (doublesFormat) {
+        if (match.pair1_player2_id) updates.push({ id: match.pair1_player2_id, ratingChange: match.player1_rating_change!, winDelta: p1Won ? 1 : 0, lossDelta: p1Won ? 0 : 1 })
+        if (match.pair2_player2_id) updates.push({ id: match.pair2_player2_id, ratingChange: match.player2_rating_change!, winDelta: p1Won ? 0 : 1, lossDelta: p1Won ? 1 : 0 })
+      }
+      for (const u of updates) {
+        const { data: p } = await supabase.from('players')
+          .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
+          .eq('id', u.id).single()
+        if (!p) continue
+        if (doublesFormat) {
           await supabase.from('players').update({
-            doubles_rating: (p1.doubles_rating ?? 1000) - match.player1_rating_change!,
-            doubles_wins: (p1.doubles_wins ?? 0) - (p1Won ? 1 : 0),
-            doubles_losses: (p1.doubles_losses ?? 0) - (p1Won ? 0 : 1),
-          }).eq('id', match.player1_id)
-          await supabase.from('players').update({
-            doubles_rating: (p2.doubles_rating ?? 1000) - match.player2_rating_change!,
-            doubles_wins: (p2.doubles_wins ?? 0) - (p1Won ? 0 : 1),
-            doubles_losses: (p2.doubles_losses ?? 0) - (p1Won ? 1 : 0),
-          }).eq('id', match.player2_id)
+            doubles_rating: (p.doubles_rating ?? 1000) - u.ratingChange,
+            doubles_wins: (p.doubles_wins ?? 0) - u.winDelta,
+            doubles_losses: (p.doubles_losses ?? 0) - u.lossDelta,
+          }).eq('id', u.id)
         } else {
           await supabase.from('players').update({
-            rating: p1.rating - match.player1_rating_change!,
-            wins: (p1.wins ?? 0) - (p1Won ? 1 : 0),
-            losses: (p1.losses ?? 0) - (p1Won ? 0 : 1),
-          }).eq('id', match.player1_id)
-          await supabase.from('players').update({
-            rating: p2.rating - match.player2_rating_change!,
-            wins: (p2.wins ?? 0) - (p1Won ? 0 : 1),
-            losses: (p2.losses ?? 0) - (p1Won ? 1 : 0),
-          }).eq('id', match.player2_id)
+            rating: p.rating - u.ratingChange,
+            wins: (p.wins ?? 0) - u.winDelta,
+            losses: (p.losses ?? 0) - u.lossDelta,
+          }).eq('id', u.id)
         }
       }
     }
@@ -454,47 +508,65 @@ export default function QualifyingClient({
   const handleConfirmEdit = async () => {
     if (!editMatch || !rpPreview) return
     setEditLoading(true)
-    const isDoubles = tournament.format === 'doubles'
+    const doublesFormat = tournament.format === 'doubles'
 
-    const { data: p1 } = await supabase.from('players')
-      .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
-      .eq('id', editMatch.player1_id).single()
-    const { data: p2 } = await supabase.from('players')
-      .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
-      .eq('id', editMatch.player2_id).single()
+    // 関係するプレーヤーを全員取得
+    const playerIds = [editMatch.player1_id, editMatch.player2_id]
+    if (doublesFormat) {
+      if (editMatch.pair1_player2_id) playerIds.push(editMatch.pair1_player2_id)
+      if (editMatch.pair2_player2_id) playerIds.push(editMatch.pair2_player2_id)
+    }
+    const playerDataMap = new Map<string, any>()
+    for (const pid of playerIds) {
+      const { data } = await supabase.from('players')
+        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses')
+        .eq('id', pid).single()
+      if (data) playerDataMap.set(pid, data)
+    }
 
-    if (p1 && p2) {
-      // 試合レコード更新
-      await supabase.from('tournament_qualifying_matches').update({
-        score1: rpPreview.s1, score2: rpPreview.s2,
-        winner_id: rpPreview.newWinnerId,
-        player1_rating_change: rpPreview.newChangeA,
-        player2_rating_change: rpPreview.newChangeB,
-      }).eq('id', editMatch.id)
+    // 試合レコード更新
+    await supabase.from('tournament_qualifying_matches').update({
+      score1: rpPreview.s1, score2: rpPreview.s2,
+      winner_id: rpPreview.newWinnerId,
+      player1_rating_change: rpPreview.newChangeA,
+      player2_rating_change: rpPreview.newChangeB,
+    }).eq('id', editMatch.id)
 
-      // プレーヤーRP・勝敗を差分で修正
-      if (isDoubles) {
+    // pair1 (player1 + pair1_player2) に p1Delta を適用
+    for (const pid of [editMatch.player1_id, ...(doublesFormat && editMatch.pair1_player2_id ? [editMatch.pair1_player2_id] : [])]) {
+      const p = playerDataMap.get(pid)
+      if (!p) continue
+      if (doublesFormat) {
         await supabase.from('players').update({
-          doubles_rating: (p1.doubles_rating ?? 1000) + rpPreview.p1Delta,
-          doubles_wins: (p1.doubles_wins ?? 0) + rpPreview.p1WinsDelta,
-          doubles_losses: (p1.doubles_losses ?? 0) + rpPreview.p1LossesDelta,
-        }).eq('id', editMatch.player1_id)
-        await supabase.from('players').update({
-          doubles_rating: (p2.doubles_rating ?? 1000) + rpPreview.p2Delta,
-          doubles_wins: (p2.doubles_wins ?? 0) + rpPreview.p2WinsDelta,
-          doubles_losses: (p2.doubles_losses ?? 0) + rpPreview.p2LossesDelta,
-        }).eq('id', editMatch.player2_id)
+          doubles_rating: (p.doubles_rating ?? 1000) + rpPreview.p1Delta,
+          doubles_wins: (p.doubles_wins ?? 0) + rpPreview.p1WinsDelta,
+          doubles_losses: (p.doubles_losses ?? 0) + rpPreview.p1LossesDelta,
+        }).eq('id', pid)
       } else {
         await supabase.from('players').update({
-          rating: p1.rating + rpPreview.p1Delta,
-          wins: (p1.wins ?? 0) + rpPreview.p1WinsDelta,
-          losses: (p1.losses ?? 0) + rpPreview.p1LossesDelta,
-        }).eq('id', editMatch.player1_id)
+          rating: p.rating + rpPreview.p1Delta,
+          wins: (p.wins ?? 0) + rpPreview.p1WinsDelta,
+          losses: (p.losses ?? 0) + rpPreview.p1LossesDelta,
+        }).eq('id', pid)
+      }
+    }
+
+    // pair2 (player2 + pair2_player2) に p2Delta を適用
+    for (const pid of [editMatch.player2_id, ...(doublesFormat && editMatch.pair2_player2_id ? [editMatch.pair2_player2_id] : [])]) {
+      const p = playerDataMap.get(pid)
+      if (!p) continue
+      if (doublesFormat) {
         await supabase.from('players').update({
-          rating: p2.rating + rpPreview.p2Delta,
-          wins: (p2.wins ?? 0) + rpPreview.p2WinsDelta,
-          losses: (p2.losses ?? 0) + rpPreview.p2LossesDelta,
-        }).eq('id', editMatch.player2_id)
+          doubles_rating: (p.doubles_rating ?? 1000) + rpPreview.p2Delta,
+          doubles_wins: (p.doubles_wins ?? 0) + rpPreview.p2WinsDelta,
+          doubles_losses: (p.doubles_losses ?? 0) + rpPreview.p2LossesDelta,
+        }).eq('id', pid)
+      } else {
+        await supabase.from('players').update({
+          rating: p.rating + rpPreview.p2Delta,
+          wins: (p.wins ?? 0) + rpPreview.p2WinsDelta,
+          losses: (p.losses ?? 0) + rpPreview.p2LossesDelta,
+        }).eq('id', pid)
       }
     }
 
@@ -509,31 +581,11 @@ export default function QualifyingClient({
     setBlockLoading(true)
     setBlockError(null)
 
-    const filled = selectedPlayers.filter(p => p !== '')
-    if (filled.length < 1) {
-      setBlockError('少なくとも1人選択してください')
-      setBlockLoading(false)
-      return
-    }
-
-    // 空欄をDEFAULTで補充（defaultPlayerIdが無効なら空欄はスキップ）
-    const finalPlayers = selectedPlayers.map(pid =>
-      pid === '' && defaultPlayerId ? defaultPlayerId : pid
-    ).filter(pid => pid !== '')
-
-    if (finalPlayers.length < 1) {
-      setBlockError('プレーヤーを選択してください')
-      setBlockLoading(false)
-      return
-    }
-
     const blockName = blockNames[blocks.length]
-
     const { data: block, error: blockErr } = await supabase
       .from('tournament_blocks')
       .insert({ tournament_id: tournament.id, block_name: blockName })
-      .select()
-      .single()
+      .select().single()
 
     if (blockErr || !block) {
       setBlockError('ブロック作成に失敗しました')
@@ -541,23 +593,59 @@ export default function QualifyingClient({
       return
     }
 
-    const blockPlayers = finalPlayers.filter(p => p !== '').map(pid => ({
-      block_id: block.id,
-      player_id: pid,
-      is_default: pid === defaultPlayerId,
-    }))
+    if (isDoubles) {
+      // ダブルス：選択したペアIDからplayer1/player2を特定して登録
+      const filledPairs = selectedPairs.filter(p => p !== '')
+      if (filledPairs.length < 2) {
+        await supabase.from('tournament_blocks').delete().eq('id', block.id)
+        setBlockError('最低2ペア選択してください')
+        setBlockLoading(false)
+        return
+      }
+      const bpRows = filledPairs.map(pairId => {
+        const pair = tournamentPairs.find(p => p.id === pairId)
+        return {
+          block_id: block.id,
+          player_id: pair!.player1_id,
+          partner_id: pair!.player2_id,
+          is_default: false,
+        }
+      })
+      const { error: bpErr } = await supabase.from('tournament_block_players').insert(bpRows)
+      if (bpErr) {
+        setBlockError('メンバー設定に失敗しました')
+        setBlockLoading(false)
+        return
+      }
+      setSelectedPairs(['', '', ''])
+    } else {
+      // シングルス：従来通り
+      const finalPlayers = selectedPlayers.map(pid =>
+        pid === '' && defaultPlayerId ? defaultPlayerId : pid
+      ).filter(pid => pid !== '')
 
-    const { error: bpErr } = await supabase
-      .from('tournament_block_players')
-      .insert(blockPlayers)
+      if (finalPlayers.length < 1) {
+        await supabase.from('tournament_blocks').delete().eq('id', block.id)
+        setBlockError('プレーヤーを選択してください')
+        setBlockLoading(false)
+        return
+      }
 
-    if (bpErr) {
-      setBlockError('メンバー設定に失敗しました')
-      setBlockLoading(false)
-      return
+      const { error: bpErr } = await supabase.from('tournament_block_players').insert(
+        finalPlayers.map(pid => ({
+          block_id: block.id,
+          player_id: pid,
+          is_default: pid === defaultPlayerId,
+        }))
+      )
+      if (bpErr) {
+        setBlockError('メンバー設定に失敗しました')
+        setBlockLoading(false)
+        return
+      }
+      setSelectedPlayers(['', '', ''])
     }
 
-    setSelectedPlayers(['', '', ''])
     setShowNewBlock(false)
     setBlockLoading(false)
     router.refresh()
@@ -615,112 +703,106 @@ export default function QualifyingClient({
     }
 
     if (isNormal && winnerId && finalScore1 !== null && finalScore2 !== null) {
-      const isDoubles = tournament.format === 'doubles'
+      // ダブルスの場合、現在のブロックからパートナーを特定
+      const currentBlock = blocks.find(b => b.id === blockId)
+      const pair1bp = isDoubles ? currentBlock?.tournament_block_players.find(bp => bp.player_id === matchPlayer1) : null
+      const pair2bp = isDoubles ? currentBlock?.tournament_block_players.find(bp => bp.player_id === matchPlayer2) : null
+      const pair1p2Id = pair1bp?.partner_id ?? null
+      const pair2p2Id = pair2bp?.partner_id ?? null
+
       const { data: p1 } = await supabase
-        .from('players')
-        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches, hc')
-        .eq('id', matchPlayer1)
-        .single()
+        .from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches, hc')
+        .eq('id', matchPlayer1).single()
       const { data: p2 } = await supabase
-        .from('players')
-        .select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches, hc')
-        .eq('id', matchPlayer2)
-        .single()
+        .from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches, hc')
+        .eq('id', matchPlayer2).single()
+      const { data: pp1 } = pair1p2Id ? await supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches, hc').eq('id', pair1p2Id).single() : { data: null }
+      const { data: pp2 } = pair2p2Id ? await supabase.from('players').select('rating, doubles_rating, wins, losses, doubles_wins, doubles_losses, total_score, total_matches, hc').eq('id', pair2p2Id).single() : { data: null }
 
       if (p1 && p2) {
-        const r1 = isDoubles ? (p1.doubles_rating ?? 1000) : p1.rating
-        const r2 = isDoubles ? (p2.doubles_rating ?? 1000) : p2.rating
+        // ELO計算：ダブルスはペア平均レーティング使用
+        const r1 = isDoubles ? ((p1.doubles_rating ?? 1000) + (pp1?.doubles_rating ?? 1000)) / 2 : p1.rating
+        const r2 = isDoubles ? ((p2.doubles_rating ?? 1000) + (pp2?.doubles_rating ?? 1000)) / 2 : p2.rating
+
         const { data: elo } = await supabase.rpc('calc_elo', {
-          rating_a: r1,
-          rating_b: r2,
-          score_a: finalScore1,
-          score_b: finalScore2,
+          rating_a: r1, rating_b: r2,
+          score_a: finalScore1, score_b: finalScore2,
           matches_a: p1.total_matches ?? 0,
           matches_b: p2.total_matches ?? 0,
         })
         if (elo?.[0]) {
-          const eloResult = elo[0]
-
-          // ボーナスレート適用（プラスRPのみ。マイナスRP・HCは対象外）
           const bonusRate = (tournament.bonus_points ?? 0) / 100
-          let changeA = eloResult.change_a
-          let changeB = eloResult.change_b
+          let changeA = elo[0].change_a
+          let changeB = elo[0].change_b
           if (bonusRate > 0) {
             if (changeA > 0) changeA = Math.round(changeA * (1 + bonusRate))
             if (changeB > 0) changeB = Math.round(changeB * (1 + bonusRate))
           }
 
           const p1Win = finalScore1 > finalScore2
-          const p1NewWins = isDoubles ? p1.doubles_wins ?? 0 : p1.wins
-          const p1NewLosses = isDoubles ? p1.doubles_losses ?? 0 : p1.losses
-          const p2NewWins = isDoubles ? p2.doubles_wins ?? 0 : p2.wins
-          const p2NewLosses = isDoubles ? p2.doubles_losses ?? 0 : p2.losses
-          const p1WinsAfter = p1Win ? p1NewWins + 1 : p1NewWins
-          const p1LossesAfter = !p1Win ? p1NewLosses + 1 : p1NewLosses
-          const p2WinsAfter = !p1Win ? p2NewWins + 1 : p2NewWins
-          const p2LossesAfter = p1Win ? p2NewLosses + 1 : p2NewLosses
 
-          // 登録前の値・変化量を試合レコードに保存（ボーナス適用済み）
+          // 試合レコード更新（pair2_player2_id含む）
           if (insertedMatch?.id) {
             await supabase.from('tournament_qualifying_matches').update({
-              player1_rating_before: r1,
-              player2_rating_before: r2,
-              player1_rating_change: changeA,
-              player2_rating_change: changeB,
-              player1_wins_before: p1NewWins,
-              player2_wins_before: p2NewWins,
-              player1_losses_before: p1NewLosses,
-              player2_losses_before: p2NewLosses,
+              pair1_player2_id: pair1p2Id,
+              pair2_player2_id: pair2p2Id,
+              player1_rating_before: r1, player2_rating_before: r2,
+              player1_rating_change: changeA, player2_rating_change: changeB,
+              player1_wins_before: isDoubles ? (p1.doubles_wins ?? 0) : p1.wins,
+              player2_wins_before: isDoubles ? (p2.doubles_wins ?? 0) : p2.wins,
+              player1_losses_before: isDoubles ? (p1.doubles_losses ?? 0) : p1.losses,
+              player2_losses_before: isDoubles ? (p2.doubles_losses ?? 0) : p2.losses,
             }).eq('id', insertedMatch.id)
           }
 
-          if (isDoubles) {
-            await supabase.from('players').update({
-              doubles_rating: r1 + changeA,
-              doubles_wins: p1WinsAfter,
-              doubles_losses: p1LossesAfter,
-              total_score: (p1.total_score ?? 0) + finalScore1,
-              total_matches: (p1.total_matches ?? 0) + 1,
-            }).eq('id', matchPlayer1)
-            await supabase.from('players').update({
-              doubles_rating: r2 + changeB,
-              doubles_wins: p2WinsAfter,
-              doubles_losses: p2LossesAfter,
-              total_score: (p2.total_score ?? 0) + finalScore2,
-              total_matches: (p2.total_matches ?? 0) + 1,
-            }).eq('id', matchPlayer2)
-          } else {
-            await supabase.from('players').update({
-              rating: r1 + changeA,
-              wins: p1WinsAfter,
-              losses: p1LossesAfter,
-              total_score: (p1.total_score ?? 0) + finalScore1,
-              total_matches: (p1.total_matches ?? 0) + 1,
-            }).eq('id', matchPlayer1)
-            await supabase.from('players').update({
-              rating: r2 + changeB,
-              wins: p2WinsAfter,
-              losses: p2LossesAfter,
-              total_score: (p2.total_score ?? 0) + finalScore2,
-              total_matches: (p2.total_matches ?? 0) + 1,
-            }).eq('id', matchPlayer2)
+          // ペア1の全プレーヤーを更新
+          const updatePairPlayers = async (
+            mainId: string, mainData: typeof p1,
+            partnerId: string | null, partnerData: typeof pp1,
+            ratingChange: number, win: boolean,
+            pairScore: number, pairOpponentScore: number,
+          ) => {
+            const players = [{ id: mainId, data: mainData }, ...(partnerId && partnerData ? [{ id: partnerId, data: partnerData }] : [])]
+            for (const { id: pid, data: pd } of players) {
+              if (!pd) continue
+              if (isDoubles) {
+                const newWins = (pd.doubles_wins ?? 0) + (win ? 1 : 0)
+                const newLosses = (pd.doubles_losses ?? 0) + (win ? 0 : 1)
+                const newTotalScore = (pd.total_score ?? 0) + pairScore
+                const newTotalMatches = (pd.total_matches ?? 0) + 1
+                await supabase.from('players').update({
+                  doubles_rating: (pd.doubles_rating ?? 1000) + ratingChange,
+                  doubles_wins: newWins,
+                  doubles_losses: newLosses,
+                  total_score: newTotalScore,
+                  total_matches: newTotalMatches,
+                }).eq('id', pid)
+                const { data: hc } = await supabase.rpc('calc_hc', {
+                  p_wins: newWins, p_losses: newLosses,
+                  p_total_score: newTotalScore, p_total_matches: newTotalMatches,
+                })
+                if (hc !== null) await supabase.from('players').update({ hc }).eq('id', pid)
+              } else {
+                const newWins = pd.wins + (win ? 1 : 0)
+                const newLosses = pd.losses + (win ? 0 : 1)
+                const newTotalScore = (pd.total_score ?? 0) + pairScore
+                const newTotalMatches = (pd.total_matches ?? 0) + 1
+                await supabase.from('players').update({
+                  rating: pd.rating + ratingChange,
+                  wins: newWins, losses: newLosses,
+                  total_score: newTotalScore, total_matches: newTotalMatches,
+                }).eq('id', pid)
+                const { data: hc } = await supabase.rpc('calc_hc', {
+                  p_wins: newWins, p_losses: newLosses,
+                  p_total_score: newTotalScore, p_total_matches: newTotalMatches,
+                })
+                if (hc !== null) await supabase.from('players').update({ hc }).eq('id', pid)
+              }
+            }
           }
 
-          const { data: hc1 } = await supabase.rpc('calc_hc', {
-            p_wins: p1WinsAfter,
-            p_losses: p1LossesAfter,
-            p_total_score: (p1.total_score ?? 0) + finalScore1,
-            p_total_matches: (p1.total_matches ?? 0) + 1,
-          })
-          if (hc1 !== null) await supabase.from('players').update({ hc: hc1 }).eq('id', matchPlayer1)
-
-          const { data: hc2 } = await supabase.rpc('calc_hc', {
-            p_wins: p2WinsAfter,
-            p_losses: p2LossesAfter,
-            p_total_score: (p2.total_score ?? 0) + finalScore2,
-            p_total_matches: (p2.total_matches ?? 0) + 1,
-          })
-          if (hc2 !== null) await supabase.from('players').update({ hc: hc2 }).eq('id', matchPlayer2)
+          await updatePairPlayers(matchPlayer1, p1, pair1p2Id, pp1, changeA, p1Win, finalScore1, finalScore2)
+          await updatePairPlayers(matchPlayer2, p2, pair2p2Id, pp2, changeB, !p1Win, finalScore2, finalScore1)
         }
       }
     }
@@ -815,12 +897,17 @@ export default function QualifyingClient({
       )}
 
       {/* ランダムブロック自動生成 */}
-      {!isQualifyingLocked && blocks.length === 0 && enteredPlayers.length > 0 && (
+      {!isQualifyingLocked && blocks.length === 0 && (isDoubles ? tournamentPairs.length > 0 : enteredPlayers.length > 0) && (
         <div className="p-4 bg-blue-900/20 border border-blue-700/30 rounded-xl space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-blue-300">🎲 ランダムブロック自動生成</p>
-              <p className="text-xs text-gray-400 mt-0.5">エントリー済み{enteredPlayers.length}名をランダムに3人ずつブロック分けします</p>
+              <p className="text-sm font-semibold text-blue-300">🎲 ブロック自動生成</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {isDoubles
+                  ? `確定済み${tournamentPairs.length}ペアをランダムに3ペアずつブロック分けします`
+                  : `エントリー済み${enteredPlayers.length}名をランダムに3人ずつブロック分けします`
+                }
+              </p>
             </div>
             <button
               onClick={handleAutoGenerate}
@@ -852,70 +939,134 @@ export default function QualifyingClient({
               )}
               <p className="text-xs text-gray-400">3人未満の場合はDEFAULTプレーヤーで自動補充されます</p>
 
-              {/* エントリー済みで未配置のプレーヤーを一覧表示 */}
-              {(() => {
-                const assignedIds = new Set(blocks.flatMap(b => b.tournament_block_players.map(bp => bp.player_id)))
-                const unassigned = enteredPlayers.filter(p => !assignedIds.has(p.id) && !selectedPlayers.includes(p.id))
-                if (unassigned.length === 0) return null
-                return (
-                  <div className="p-3 bg-green-900/20 border border-green-700/30 rounded-xl">
-                    <p className="text-xs font-semibold text-green-400 mb-2">📋 エントリー済み・未配置 ({unassigned.length}名)</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {unassigned.map(p => (
-                        <span key={p.id} className="text-xs px-2 py-0.5 bg-green-900/40 border border-green-600/40 text-green-300 rounded-full">
-                          {p.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
-
-              {[0, 1, 2].map(i => {
-                const assignedIds = new Set(blocks.flatMap(b => b.tournament_block_players.map(bp => bp.player_id)))
-                const enteredIds = new Set(enteredPlayers.map(p => p.id))
-                const availablePlayers = players.filter(p => !selectedPlayers.includes(p.id) || selectedPlayers[i] === p.id)
-                const enteredUnassigned = availablePlayers.filter(p => enteredIds.has(p.id) && !assignedIds.has(p.id))
-                const enteredAssigned = availablePlayers.filter(p => enteredIds.has(p.id) && assignedIds.has(p.id))
-                const others = availablePlayers.filter(p => !enteredIds.has(p.id))
-                return (
-                  <div key={i}>
-                    <label className="block text-sm text-gray-300 mb-1">プレーヤー {i + 1}</label>
-                    <select
-                      value={selectedPlayers[i]}
-                      onChange={e => {
-                        const updated = [...selectedPlayers]
-                        updated[i] = e.target.value
-                        setSelectedPlayers(updated)
-                      }}
-                      className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="">── 空欄（DEFAULT補充）──</option>
-                      {enteredUnassigned.length > 0 && (
-                        <optgroup label="✅ エントリー済み・未配置">
-                          {enteredUnassigned.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}（HC:{p.hc} RP:{p.rating}）</option>
-                          ))}
-                        </optgroup>
+              {isDoubles ? (
+                // ダブルス：ペア選択
+                (() => {
+                  const assignedPlayer1Ids = new Set(blocks.flatMap(b => b.tournament_block_players.map(bp => bp.player_id)))
+                  const unassignedPairs = tournamentPairs.filter(p => !assignedPlayer1Ids.has(p.player1_id) && !selectedPairs.includes(p.id))
+                  return (
+                    <>
+                      {unassignedPairs.length > 0 && (
+                        <div className="p-3 bg-green-900/20 border border-green-700/30 rounded-xl">
+                          <p className="text-xs font-semibold text-green-400 mb-2">📋 未配置ペア ({unassignedPairs.length}組)</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {unassignedPairs.map(p => (
+                              <span key={p.id} className="text-xs px-2 py-0.5 bg-green-900/40 border border-green-600/40 text-green-300 rounded-full">
+                                {p.player1.name} &amp; {p.player2.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       )}
-                      {enteredAssigned.length > 0 && (
-                        <optgroup label="⚠️ エントリー済み・配置済み">
-                          {enteredAssigned.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}（HC:{p.hc} RP:{p.rating}）※配置済み</option>
+                      {[0, 1, 2].map(i => {
+                        const assignedIds = new Set(blocks.flatMap(b => b.tournament_block_players.map(bp => bp.player_id)))
+                        const available = tournamentPairs.filter(p =>
+                          (!selectedPairs.includes(p.id) || selectedPairs[i] === p.id)
+                        )
+                        const unassigned = available.filter(p => !assignedIds.has(p.player1_id))
+                        const assigned = available.filter(p => assignedIds.has(p.player1_id))
+                        return (
+                          <div key={i}>
+                            <label className="block text-sm text-gray-300 mb-1">ペア {i + 1}</label>
+                            <select
+                              value={selectedPairs[i]}
+                              onChange={e => {
+                                const updated = [...selectedPairs]
+                                updated[i] = e.target.value
+                                setSelectedPairs(updated)
+                              }}
+                              className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            >
+                              <option value="">── 選択してください ──</option>
+                              {unassigned.length > 0 && (
+                                <optgroup label="✅ 未配置ペア">
+                                  {unassigned.map(p => (
+                                    <option key={p.id} value={p.id}>{p.player1.name} &amp; {p.player2.name}（HC:{p.player1.hc}/{p.player2.hc}）</option>
+                                  ))}
+                                </optgroup>
+                              )}
+                              {assigned.length > 0 && (
+                                <optgroup label="⚠️ 配置済みペア">
+                                  {assigned.map(p => (
+                                    <option key={p.id} value={p.id}>{p.player1.name} &amp; {p.player2.name} ※配置済み</option>
+                                  ))}
+                                </optgroup>
+                              )}
+                            </select>
+                          </div>
+                        )
+                      })}
+                    </>
+                  )
+                })()
+              ) : (
+                // シングルス：従来のプレーヤー選択
+                <>
+                  {(() => {
+                    const assignedIds = new Set(blocks.flatMap(b => b.tournament_block_players.map(bp => bp.player_id)))
+                    const unassigned = enteredPlayers.filter(p => !assignedIds.has(p.id) && !selectedPlayers.includes(p.id))
+                    if (unassigned.length === 0) return null
+                    return (
+                      <div className="p-3 bg-green-900/20 border border-green-700/30 rounded-xl">
+                        <p className="text-xs font-semibold text-green-400 mb-2">📋 エントリー済み・未配置 ({unassigned.length}名)</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {unassigned.map(p => (
+                            <span key={p.id} className="text-xs px-2 py-0.5 bg-green-900/40 border border-green-600/40 text-green-300 rounded-full">
+                              {p.name}
+                            </span>
                           ))}
-                        </optgroup>
-                      )}
-                      {others.length > 0 && (
-                        <optgroup label="── エントリー外のプレーヤー ──">
-                          {others.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}（HC:{p.hc} RP:{p.rating}）</option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </select>
-                  </div>
-                )
-              })}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                  {[0, 1, 2].map(i => {
+                    const assignedIds = new Set(blocks.flatMap(b => b.tournament_block_players.map(bp => bp.player_id)))
+                    const enteredIds = new Set(enteredPlayers.map(p => p.id))
+                    const availablePlayers = players.filter(p => !selectedPlayers.includes(p.id) || selectedPlayers[i] === p.id)
+                    const enteredUnassigned = availablePlayers.filter(p => enteredIds.has(p.id) && !assignedIds.has(p.id))
+                    const enteredAssigned = availablePlayers.filter(p => enteredIds.has(p.id) && assignedIds.has(p.id))
+                    const others = availablePlayers.filter(p => !enteredIds.has(p.id))
+                    return (
+                      <div key={i}>
+                        <label className="block text-sm text-gray-300 mb-1">プレーヤー {i + 1}</label>
+                        <select
+                          value={selectedPlayers[i]}
+                          onChange={e => {
+                            const updated = [...selectedPlayers]
+                            updated[i] = e.target.value
+                            setSelectedPlayers(updated)
+                          }}
+                          className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="">── 空欄（DEFAULT補充）──</option>
+                          {enteredUnassigned.length > 0 && (
+                            <optgroup label="✅ エントリー済み・未配置">
+                              {enteredUnassigned.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}（HC:{p.hc} RP:{p.rating}）</option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {enteredAssigned.length > 0 && (
+                            <optgroup label="⚠️ エントリー済み・配置済み">
+                              {enteredAssigned.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}（HC:{p.hc} RP:{p.rating}）※配置済み</option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {others.length > 0 && (
+                            <optgroup label="── エントリー外のプレーヤー ──">
+                              {others.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}（HC:{p.hc} RP:{p.rating}）</option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </select>
+                      </div>
+                    )
+                  })}
+                  <p className="text-xs text-gray-400">3人未満の場合はDEFAULTプレーヤーで自動補充されます</p>
+                </>
+              )}
               <button
                 onClick={handleCreateBlock}
                 disabled={blockLoading}
@@ -1117,15 +1268,19 @@ export default function QualifyingClient({
                     <h3 className="text-sm font-semibold text-gray-300 mb-2">試合結果</h3>
                     <div className="space-y-1">
                       {blockMatches.map((m, idx) => (
-                        <div key={m.id} className="flex items-center gap-3 p-2 bg-black/20 rounded-lg text-sm">
+                        <div key={m.id} className="flex items-center gap-2 p-2 bg-black/20 rounded-lg text-sm flex-wrap">
                           <span className="text-xs text-gray-500 flex-shrink-0 w-12">
                             {m.scheduled_time ? `⏰ ${m.scheduled_time}` : `第${idx + 1}試合`}
                           </span>
-                          <span className={m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player1.name}</span>
+                          <span className={m.winner_id === m.player1_id ? 'text-white font-bold' : 'text-gray-400'}>
+                            {m.player1.name}{isDoubles && m.pair1_player2 ? ` & ${m.pair1_player2.name}` : ''}
+                          </span>
                           <span className="text-white font-bold flex-shrink-0">
                             {m.winner_id ? (m.mode === 'walkover' ? 'W/O' : `${m.score1} - ${m.score2}`) : '－'}
                           </span>
-                          <span className={m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}>{m.player2.name}</span>
+                          <span className={m.winner_id === m.player2_id ? 'text-white font-bold' : 'text-gray-400'}>
+                            {m.player2.name}{isDoubles && m.pair2_player2 ? ` & ${m.pair2_player2.name}` : ''}
+                          </span>
                           {m.mode !== 'normal' && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-400">
                               {m.mode === 'walkover' ? '不戦勝' : '途中棄権'}
