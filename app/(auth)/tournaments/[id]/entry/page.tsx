@@ -35,24 +35,11 @@ export default async function EntryPage({ params }: { params: Promise<{ id: stri
     .eq('player_id', player.id)
     .single()
 
-  // ダブルス大会の場合、エントリー済み他プレーヤー一覧を取得
-  let otherPlayers: { id: string; name: string }[] = []
-  if (tournament.format === 'doubles') {
-    const { data: entries } = await supabase
-      .from('tournament_entries')
-      .select('player_id, player:players!tournament_entries_player_id_fkey(id, name)')
-      .eq('tournament_id', id)
-      .eq('status', 'entered')
-      .neq('player_id', player.id)
-    otherPlayers = (entries ?? []).map((e: any) => e.player).filter(Boolean)
-  }
-
   return (
     <EntryClient
       tournament={tournament}
       player={player}
       existingEntry={entry}
-      otherPlayers={otherPlayers}
     />
   )
 }
