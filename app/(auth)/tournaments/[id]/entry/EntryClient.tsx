@@ -49,7 +49,6 @@ export default function EntryClient({
         player_id: player.id,
         status: 'entered',
         preferred_dates: preferredDates.trim() || null,
-        preferred_partner_id: preferredPartnerId || null,
       })
 
     if (error) {
@@ -84,7 +83,6 @@ export default function EntryClient({
       .from('tournament_entries')
       .update({
         preferred_dates: preferredDates.trim() || null,
-        preferred_partner_id: preferredPartnerId || null,
       })
       .eq('id', existingEntry!.id)
 
@@ -163,6 +161,13 @@ export default function EntryClient({
           )
         })()}
 
+        {/* ダブルス大会バッジ */}
+        {tournament.format === 'doubles' && (
+          <div className="p-3 bg-blue-900/20 border border-blue-700/30 rounded-xl">
+            <p className="text-blue-300 text-sm font-medium">🤝 この大会はダブルス形式です</p>
+          </div>
+        )}
+
         {/* ステータス表示 */}
         {!canEntry && !existingEntry && (
           <div className="p-4 bg-yellow-900/20 border border-yellow-700/30 rounded-xl">
@@ -216,28 +221,6 @@ export default function EntryClient({
             <p className="text-xs text-gray-400">HC {player.hc} · RP {player.rating}</p>
           </div>
 
-          {/* ダブルス：希望パートナー */}
-          {tournament.format === 'doubles' && existingEntry?.status !== 'cancelled' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                希望パートナー
-                <span className="text-gray-500 text-xs ml-2">（任意）</span>
-              </label>
-              <select
-                value={preferredPartnerId}
-                onChange={e => setPreferredPartnerId(e.target.value)}
-                disabled={existingEntry?.cancel_requested}
-                className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
-              >
-                <option value="">希望なし（事務局にお任せ）</option>
-                {otherPlayers.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">※ 相手方も同様に申告した場合に優先的にペアになります</p>
-            </div>
-          )}
-
           {/* 希望 */}
           {existingEntry?.status !== 'cancelled' && (
             <div>
@@ -248,8 +231,10 @@ export default function EntryClient({
               <textarea
                 value={preferredDates}
                 onChange={e => setPreferredDates(e.target.value)}
-                rows={3}
-                placeholder="大会事務局からの回答はLINEまたは電話でします。"
+                rows={4}
+                placeholder={tournament.format === 'doubles'
+                  ? 'パートナーが決まっている場合はお名前を明記してください。決まっていない場合は事務局がパートナーを組みます。\n大会事務局からの回答はLINEまたは電話でします。'
+                  : '大会事務局からの回答はLINEまたは電話でします。'}
                 disabled={existingEntry?.cancel_requested}
                 className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
               />
