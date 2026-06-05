@@ -75,8 +75,25 @@ export default function AdminMatchesClient({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rpInfo, setRpInfo] = useState<RpInfo | null>(null)
+  const [recalcLoading, setRecalcLoading] = useState(false)
+  const [recalcResult, setRecalcResult] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  const handleRecalcStats = async () => {
+    if (!confirm('全プレーヤーのRP・勝敗・HCを試合履歴から再計算します。\n現在の値は上書きされます。続行しますか？')) return
+    setRecalcLoading(true)
+    setRecalcResult(null)
+    const res = await fetch('/api/admin/recalc-stats', { method: 'POST' })
+    const json = await res.json()
+    setRecalcLoading(false)
+    if (res.ok) {
+      setRecalcResult(`✅ ${json.updated}名のstatsを再計算しました`)
+      router.refresh()
+    } else {
+      setRecalcResult(`❌ 失敗: ${json.error ?? JSON.stringify(json.errors)}`)
+    }
+  }
 
   const filterByDate = <T extends { played_at: string }>(matches: T[]) => {
     if (!dateFilter) return matches
@@ -399,7 +416,21 @@ export default function AdminMatchesClient({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">📋 試合管理</h1>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="text-2xl font-bold">📋 試合管理</h1>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            onClick={handleRecalcStats}
+            disabled={recalcLoading}
+            className="text-xs px-3 py-1.5 bg-yellow-700/40 hover:bg-yellow-700/60 disabled:opacity-50 text-yellow-300 rounded-lg transition"
+          >
+            {recalcLoading ? '再計算中...' : '🔄 stats再計算'}
+          </button>
+          {recalcResult && (
+            <p className="text-xs text-gray-400">{recalcResult}</p>
+          )}
+        </div>
+      </div>
 
       {/* タブ */}
       <div className="flex gap-2 bg-black/20 rounded-lg p-1">
