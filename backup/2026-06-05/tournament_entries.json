@@ -1,0 +1,35 @@
+[
+  {
+    "id": "e152e59d-68d3-4b7f-8f13-e8ab7f9c65bf",
+    "tournament_id": "c543d9e9-1fcf-4680-a8be-0aef5b8a15cf",
+    "player_id": "cfb97c95-0efe-4382-a850-616fc7363ec7",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-06-04T11:20:19.64664+00:00",
+    "preferred_partner_id": null
+  },
+  {
+    "id": "1ca9436c-d425-48d9-bfe4-95474a8860d3",
+    "tournament_id": "f13b6592-5aac-4e87-b7e0-558ceafdf2e1",
+    "player_id": "cfb97c95-0efe-4382-a850-616fc7363ec7",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-06-04T23:39:29.915246+00:00",
+    "preferred_partner_id": null
+  },
+  {
+    "id": "226df951-ff9e-41f4-bdd5-3506944516d4",
+    "tournament_id": "c543d9e9-1fcf-4680-a8be-0aef5b8a15cf",
+    "player_id": "fb42214b-88bf-4b6f-b944-35f6dd9b6a72",
+    "status": "entered",
+    "preferred_dates": null,
+    "cancel_requested": false,
+    "registered_by": null,
+    "created_at": "2026-06-04T23:40:09.719066+00:00",
+    "preferred_partner_id": null
+  }
+]
