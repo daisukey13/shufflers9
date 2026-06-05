@@ -15,14 +15,15 @@ export async function POST(req: NextRequest) {
 
   const { tournament_id, player1_id, player2_id } = await req.json()
   const adminClient = createAdminClient()
-  const { data, error } = await adminClient
+  const { error } = await adminClient
     .from('tournament_pairs')
     .insert({ tournament_id, player1_id, player2_id })
-    .select()
-    .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  return NextResponse.json({ data })
+  // 重複の場合はスキップ（既にペア済み）
+  if (error && !error.message.includes('duplicate key')) {
+    return NextResponse.json({ error: error.message }, { status: 400 })
+  }
+  return NextResponse.json({ success: true })
 }
 
 export async function DELETE(req: NextRequest) {
