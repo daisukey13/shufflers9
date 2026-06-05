@@ -1,12 +1,14 @@
 export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
 import PairingClient from './PairingClient'
 
 export default async function PairingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   const { data: tournament } = await supabase
     .from('tournaments')
@@ -18,7 +20,7 @@ export default async function PairingPage({ params }: { params: Promise<{ id: st
   if (tournament.format !== 'doubles') redirect(`/admin/tournaments/${id}`)
 
   // エントリー済み参加者（希望パートナー情報含む）
-  const { data: entries } = await supabase
+  const { data: entries } = await adminClient
     .from('tournament_entries')
     .select(`
       id, player_id, preferred_partner_id,
@@ -31,7 +33,7 @@ export default async function PairingPage({ params }: { params: Promise<{ id: st
     .order('created_at')
 
   // 既存ペア
-  const { data: pairs } = await supabase
+  const { data: pairs } = await adminClient
     .from('tournament_pairs')
     .select(`
       id,
