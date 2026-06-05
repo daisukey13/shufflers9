@@ -15,10 +15,10 @@ export default function RegisterSinglesPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
     const load = async () => {
+      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
@@ -56,96 +56,31 @@ export default function RegisterSinglesPage() {
     const s1 = parseInt(myScore)
     const s2 = parseInt(oppScore)
 
-    const { data: me } = await supabase.from('players').select('rating').eq('id', myId).single()
-    const { data: opp } = await supabase.from('players').select('rating').eq('id', opponent).single()
-
-    if (!me || !opp) {
-      setError('プレーヤー情報の取得に失敗しました')
-      setLoading(false)
-      return
-    }
-
-    const { count: matchesMe } = await supabase
-      .from('singles_matches')
-      .select('*', { count: 'exact', head: true })
-      .or(`player1_id.eq.${myId},player2_id.eq.${myId}`)
-
-    const { count: matchesOpp } = await supabase
-      .from('singles_matches')
-      .select('*', { count: 'exact', head: true })
-      .or(`player1_id.eq.${opponent},player2_id.eq.${opponent}`)
-
-    const { data: elo, error: eloError } = await supabase.rpc('calc_elo', {
-      rating_a: me.rating,
-      rating_b: opp.rating,
-      score_a: s1,
-      score_b: s2,
-      matches_a: matchesMe ?? 0,
-      matches_b: matchesOpp ?? 0,
-    })
-
-    if (eloError || !elo?.[0]) {
-      setError(`レーティング計算に失敗しました: ${eloError?.message ?? '不明なエラー'}`)
-      setLoading(false)
-      return
-    }
-
-    const eloResult = elo[0]
-    const winnerId = s1 > s2 ? myId : s1 < s2 ? opponent : null
-
-    // 登録時点のランクとHCを保存
     const player1Rank = players.findIndex(p => p.id === myId) + 1
     const player2Rank = players.findIndex(p => p.id === opponent) + 1
     const player1Hc = players.find(p => p.id === myId)?.hc ?? 36
     const player2Hc = players.find(p => p.id === opponent)?.hc ?? 36
 
-    const { error: matchError } = await supabase.from('singles_matches').insert({
-      player1_id: myId,
-      player2_id: opponent,
-      score1: s1,
-      score2: s2,
-      winner_id: winnerId,
-      rating_change1: eloResult.change_a,
-      rating_change2: eloResult.change_b,
-      registered_by: myId,
-      status: 'confirmed',
-      player1_hc: player1Hc,
-      player2_hc: player2Hc,
-      player1_rank: player1Rank,
-      player2_rank: player2Rank,
-      ...(myComment.trim() ? { comment1: myComment.trim() } : {}),
+    const res = await fetch('/api/matches/register/singles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        opponent_id: opponent,
+        score1: s1,
+        score2: s2,
+        comment1: myComment.trim() || null,
+        player1_hc: player1Hc,
+        player2_hc: player2Hc,
+        player1_rank: player1Rank,
+        player2_rank: player2Rank,
+      }),
     })
 
-    if (matchError) {
-      setError(`登録に失敗しました: ${matchError.message}`)
+    const json = await res.json()
+    if (!res.ok) {
+      setError(json.error ?? '登録に失敗しました')
       setLoading(false)
       return
-    }
-
-    await supabase.from('players').update({
-      rating: eloResult.new_rating_a,
-      wins: s1 > s2 ? players.find(p => p.id === myId)!.wins + 1 : players.find(p => p.id === myId)!.wins,
-      losses: s1 < s2 ? players.find(p => p.id === myId)!.losses + 1 : players.find(p => p.id === myId)!.losses,
-      total_score: (players.find(p => p.id === myId)?.total_score ?? 0) + s1,
-      total_matches: (players.find(p => p.id === myId)?.total_matches ?? 0) + 1,
-    }).eq('id', myId)
-
-    await supabase.from('players').update({
-      rating: eloResult.new_rating_b,
-      wins: s2 > s1 ? players.find(p => p.id === opponent)!.wins + 1 : players.find(p => p.id === opponent)!.wins,
-      losses: s2 < s1 ? players.find(p => p.id === opponent)!.losses + 1 : players.find(p => p.id === opponent)!.losses,
-      total_score: (players.find(p => p.id === opponent)?.total_score ?? 0) + s2,
-      total_matches: (players.find(p => p.id === opponent)?.total_matches ?? 0) + 1,
-    }).eq('id', opponent)
-
-    const { data: hcResult } = await supabase.rpc('calc_hc', {
-      p_wins: s1 > s2 ? players.find(p => p.id === myId)!.wins + 1 : players.find(p => p.id === myId)!.wins,
-      p_losses: s1 < s2 ? players.find(p => p.id === myId)!.losses + 1 : players.find(p => p.id === myId)!.losses,
-      p_total_score: (players.find(p => p.id === myId)?.total_score ?? 0) + s1,
-      p_total_matches: (players.find(p => p.id === myId)?.total_matches ?? 0) + 1,
-    })
-    if (hcResult !== null) {
-      await supabase.from('players').update({ hc: hcResult }).eq('id', myId)
     }
 
     router.push('/mypage')
