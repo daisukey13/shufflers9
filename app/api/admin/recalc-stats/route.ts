@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
 
   if (matchesError) return NextResponse.json({ error: matchesError.message }, { status: 400 })
 
-  // 全プレーヤー取得
+  // 全アクティブプレーヤー取得（管理者も含む）
   const { data: players, error: playersError } = await adminClient
     .from('players')
-    .select('id, is_admin')
-    .eq('is_admin', false)
+    .select('id')
+    .eq('is_active', true)
 
   if (playersError) return NextResponse.json({ error: playersError.message }, { status: 400 })
 
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     total_matches: number
   }> = {}
 
-  for (const p of players ?? []) {
+  for (const p of (players ?? [])) {
     statsMap[p.id] = { rating: 1000, wins: 0, losses: 0, draws: 0, total_score: 0, total_matches: 0 }
   }
 
