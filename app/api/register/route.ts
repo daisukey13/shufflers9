@@ -4,6 +4,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function POST(req: NextRequest) {
   const { email, password, name, avatarUrl, turnstileToken } = await req.json()
 
+  if (typeof email !== 'string' || !email || typeof password !== 'string' || password.length < 6
+    || typeof name !== 'string' || !name.trim() || name.length > 50) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+
   // Turnstile検証
   const turnstileRes = await fetch(`${req.nextUrl.origin}/api/turnstile`, {
     method: 'POST',

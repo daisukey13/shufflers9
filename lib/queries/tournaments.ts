@@ -17,19 +17,25 @@ export const getRecentTournamentWinners = unstable_cache(
 
     if (error || !data) return []
 
+    type FinalsRow = {
+      winner_id: string | null
+      round: number
+      winner: { id: string; name: string; avatar_url: string | null } | null
+    }
+
     return data.map(t => {
-      const matches = (t.tournament_finals_matches as any[]) ?? []
-      const best = matches.reduce<any>((prev, curr) =>
+      const matches = (t.tournament_finals_matches ?? []) as unknown as FinalsRow[]
+      const best = matches.reduce<FinalsRow | null>((prev, curr) =>
         (prev?.round ?? -1) > (curr?.round ?? -1) ? prev : curr, null)
       if (!best?.winner_id || !best?.winner) return null
       return {
         tournamentId: t.id,
         tournamentName: t.name,
         finishedAt: t.finished_at,
-        winner: best.winner as { id: string; name: string; avatar_url: string | null },
+        winner: best.winner,
       }
     }).filter((r): r is NonNullable<typeof r> => r !== null)
   },
   ['recent-tournament-winners'],
-  { revalidate: 1800 } // 30分
+  { revalidate: 1800, tags: ['tournaments'] } // 30分
 )

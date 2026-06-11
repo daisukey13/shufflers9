@@ -20,7 +20,7 @@ export const getPlayerRankings = unstable_cache(
     return data
   },
   ['player-rankings'],
-  { revalidate: 300 } // 5分
+  { revalidate: 300, tags: ['players'] } // 5分
 )
 
 // ダブルス込みの全アクティブプレーヤー取得（rankingsページで重複フェッチを避けるため）
@@ -39,7 +39,7 @@ export const getAllActivePlayers = unstable_cache(
     return data
   },
   ['all-active-players'],
-  { revalidate: 300 } // 5分
+  { revalidate: 300, tags: ['players'] } // 5分
 )
 
 // 同ポイント同順位・以下繰り下げのランク付与（汎用）

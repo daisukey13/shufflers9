@@ -5,6 +5,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function POST(req: NextRequest) {
   const { turnstileToken, nameOrEmail, password, mode } = await req.json()
 
+  if (typeof nameOrEmail !== 'string' || !nameOrEmail.trim() || typeof password !== 'string' || !password) {
+    return NextResponse.json({ error: 'ログイン情報を入力してください' }, { status: 400 })
+  }
+
   // 1. Turnstile 検証
   const tsRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
@@ -62,30 +63,39 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 各プレーヤーを更新
+  // 各プレーヤーを更新（並列・同時実行数を制限）
   const errors: string[] = []
-  for (const [playerId, stats] of Object.entries(statsMap)) {
-    const { error: updateError } = await adminClient.from('players').update({
-      rating: stats.rating,
-      wins: stats.wins,
-      losses: stats.losses,
-      total_score: stats.total_score,
-      total_matches: stats.total_matches,
-    }).eq('id', playerId)
+  const entries = Object.entries(statsMap)
+  const CONCURRENCY = 10
 
-    if (updateError) { errors.push(`${playerId}: ${updateError.message}`); continue }
+  for (let i = 0; i < entries.length; i += CONCURRENCY) {
+    await Promise.all(entries.slice(i, i + CONCURRENCY).map(async ([playerId, stats]) => {
+      // HC計算とstats更新を並行実行
+      const [{ error: updateError }, { data: hc }] = await Promise.all([
+        adminClient.from('players').update({
+          rating: stats.rating,
+          wins: stats.wins,
+          losses: stats.losses,
+          total_score: stats.total_score,
+          total_matches: stats.total_matches,
+        }).eq('id', playerId),
+        adminClient.rpc('calc_hc', {
+          p_wins: stats.wins,
+          p_losses: stats.losses,
+          p_total_score: stats.total_score,
+          p_total_matches: stats.total_matches,
+        }),
+      ])
 
-    // HC再計算
-    const { data: hc } = await adminClient.rpc('calc_hc', {
-      p_wins: stats.wins,
-      p_losses: stats.losses,
-      p_total_score: stats.total_score,
-      p_total_matches: stats.total_matches,
-    })
-    if (hc !== null) {
-      await adminClient.from('players').update({ hc }).eq('id', playerId)
-    }
+      if (updateError) { errors.push(`${playerId}: ${updateError.message}`); return }
+      if (hc !== null) {
+        await adminClient.from('players').update({ hc }).eq('id', playerId)
+      }
+    }))
   }
+
+  revalidateTag('players', 'max')
+  revalidateTag('matches', 'max')
 
   if (errors.length > 0) {
     return NextResponse.json({ success: false, errors }, { status: 207 })

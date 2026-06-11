@@ -84,7 +84,7 @@ export const getThisMonthWinRate = unstable_cache(
   }
 },
   ['this-month-win-rate'],
-  { revalidate: 600 } // 10分
+  { revalidate: 600, tags: ['matches'] } // 10分
 )
 
 // 直近10試合のRP上昇率ランキング（最低5試合以上）
@@ -139,7 +139,7 @@ export const getRecentRatingGrowth = unstable_cache(
   }
 },
   ['recent-rating-growth'],
-  { revalidate: 600 } // 10分
+  { revalidate: 600, tags: ['matches'] } // 10分
 )
 
 export type MonthlyRankingEntry = {
@@ -263,5 +263,5 @@ export const getLastMonthWinRanking = unstable_cache(
   return { entries: entries.slice(0, 5), month }
 },
   ['last-month-win-ranking'],
-  { revalidate: 1800 } // 30分
+  { revalidate: 1800, tags: ['matches'] } // 30分
 )

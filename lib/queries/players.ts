@@ -19,7 +19,7 @@ export const getPlayers = unstable_cache(
     return data
   },
   ['players-list'],
-  { revalidate: 300 } // 5分
+  { revalidate: 300, tags: ['players'] } // 5分
 )
 
 export async function getPlayerById(id: string): Promise<Player | null> {

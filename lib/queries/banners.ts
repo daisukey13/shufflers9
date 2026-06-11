@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
+import { unstable_cache } from 'next/cache'
 
 export type Banner = {
   id: string
@@ -11,21 +13,25 @@ export type Banner = {
   sort_order: number
 }
 
-export async function getActiveBanners(): Promise<Banner[]> {
-  const supabase = await createClient()
-  const now = new Date().toISOString()
+export const getActiveBanners = unstable_cache(
+  async (): Promise<Banner[]> => {
+    const supabase = createPublicClient()
+    const now = new Date().toISOString()
 
-  const { data } = await supabase
-    .from('banners')
-    .select('*')
-    .eq('is_active', true)
-    .or(`starts_at.is.null,starts_at.lte.${now}`)
-    .or(`ends_at.is.null,ends_at.gte.${now}`)
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true })
+    const { data } = await supabase
+      .from('banners')
+      .select('*')
+      .eq('is_active', true)
+      .or(`starts_at.is.null,starts_at.lte.${now}`)
+      .or(`ends_at.is.null,ends_at.gte.${now}`)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
 
-  return data ?? []
-}
+    return data ?? []
+  },
+  ['active-banners'],
+  { revalidate: 120 } // 2分（管理画面がクライアント直更新のため短め）
+)
 
 export async function getAllBanners(): Promise<Banner[]> {
   const supabase = await createClient()

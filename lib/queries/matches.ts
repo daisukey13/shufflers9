@@ -75,7 +75,7 @@ export async function getRecentAllMatches(limit = 5) {
     // 本戦試合（スコア確定済みのみ、walkoverを除く）
   const { data: finals } = await supabase
     .from('tournament_finals_matches')
-    .select('*, player1:players!player1_id(id, name, avatar_url, is_active), player2:players!player2_id(id, name, avatar_url, is_active), tournament:tournaments(name)')
+    .select('*, player1:players!player1_id(id, name, avatar_url, is_active), player2:players!player2_id(id, name, avatar_url, is_active), tournament:tournaments(name), tournament_finals_sets(score1, score2)')
     .not('winner_id', 'is', null)
     .neq('mode', 'walkover')
     .order('created_at', { ascending: false })
@@ -116,8 +116,11 @@ export async function getRecentAllMatches(limit = 5) {
       type: 'finals' as const,
       player1: m.player1,
       player2: m.player2,
-      score1: m.tournament_finals_sets?.[0]?.score1 ?? null,
-      score2: m.tournament_finals_sets?.[0]?.score2 ?? null,
+      // 複数セットは合計スコアで表示
+      score1: m.tournament_finals_sets?.length
+        ? m.tournament_finals_sets.reduce((s: number, set: { score1: number | null }) => s + (set.score1 ?? 0), 0) : null,
+      score2: m.tournament_finals_sets?.length
+        ? m.tournament_finals_sets.reduce((s: number, set: { score2: number | null }) => s + (set.score2 ?? 0), 0) : null,
       winner_id: m.winner_id,
       played_at: m.created_at,
       label: m.tournament?.name ? `${m.tournament.name} 本戦` : '本戦',
@@ -209,7 +212,7 @@ const _getLastRatingChangePerPlayer = unstable_cache(
     return entries.filter((e): e is { playerId: string; change: number; date: string; hasBonus: boolean } => e.change !== null)
   },
   ['last-rating-change-per-player'],
-  { revalidate: 300 } // 5分
+  { revalidate: 300, tags: ['matches'] } // 5分
 )
 
 export async function getLastRatingChangePerPlayer(): Promise<Map<string, { change: number; date: string; hasBonus: boolean }>> {
