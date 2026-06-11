@@ -68,6 +68,8 @@ export default function RecentMatchesTabs({
           ) : (
             singlesMatches.map(match => {
               const winnerId = match.winner_id
+              const p1Win = winnerId != null && winnerId === match.player1?.id
+              const p2Win = winnerId != null && winnerId === match.player2?.id
               const date = new Date(match.played_at)
               const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
               return (
@@ -98,7 +100,7 @@ export default function RecentMatchesTabs({
                             </span>
                           )}
                         </div>
-                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
+                        <div className={`w-12 h-12 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${p1Win ? 'border-amber-400 avatar-glow-win' : 'border-purple-700/30'}`}>
                           {match.player1?.avatar_url
                             ? <img src={match.player1.avatar_url} className="w-full h-full object-cover" />
                             : <span className="text-2xl flex items-center justify-center h-full">👤</span>
@@ -117,7 +119,7 @@ export default function RecentMatchesTabs({
                             </span>
                           )}
                         </div>
-                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
+                        <div className={`w-12 h-12 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${p1Win ? 'border-amber-400 avatar-glow-win' : 'border-purple-700/30'}`}>
                           {match.player1?.avatar_url
                             ? <img src={match.player1.avatar_url} className="w-full h-full object-cover" />
                             : <span className="text-2xl flex items-center justify-center h-full">👤</span>
@@ -131,7 +133,7 @@ export default function RecentMatchesTabs({
                     </div>
                     {match.player2?.is_active !== false ? (
                       <Link href={`/players/${match.player2?.id}`} className="flex-1 flex items-center gap-2">
-                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
+                        <div className={`w-12 h-12 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${p2Win ? 'border-amber-400 avatar-glow-win' : 'border-purple-700/30'}`}>
                           {match.player2?.avatar_url
                             ? <img src={match.player2.avatar_url} className="w-full h-full object-cover" />
                             : <span className="text-2xl flex items-center justify-center h-full">👤</span>
@@ -155,7 +157,7 @@ export default function RecentMatchesTabs({
                       </Link>
                     ) : (
                       <div className="flex-1 flex items-center gap-2">
-                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30 flex-shrink-0">
+                        <div className={`w-12 h-12 rounded-full overflow-hidden bg-gray-800 border-2 flex-shrink-0 ${p2Win ? 'border-amber-400 avatar-glow-win' : 'border-purple-700/30'}`}>
                           {match.player2?.avatar_url
                             ? <img src={match.player2.avatar_url} className="w-full h-full object-cover" />
                             : <span className="text-2xl flex items-center justify-center h-full">👤</span>
@@ -190,6 +192,7 @@ export default function RecentMatchesTabs({
             doublesMatches.map(match => {
               const date = new Date(match.played_at)
               const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+              const hasWinner = match.winner_pair != null
               const isPair1Winner = match.winner_pair === 1
               return (
                 <div key={match.id} className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-2xl">
@@ -199,7 +202,7 @@ export default function RecentMatchesTabs({
                     <div className="flex-1 flex flex-col items-end gap-1">
                       <div className="flex gap-1">
                         {[match.pair1_player1, match.pair1_player2].map((p, i) => (
-                          <div key={i} className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30">
+                          <div key={i} className={`w-10 h-10 rounded-full overflow-hidden bg-gray-800 border-2 ${hasWinner && isPair1Winner ? 'border-amber-400 avatar-glow-win' : 'border-purple-700/30'}`}>
                             {p?.avatar_url
                               ? <img src={p.avatar_url} className="w-full h-full object-cover" />
                               : <span className="text-lg flex items-center justify-center h-full">👤</span>
@@ -221,7 +224,7 @@ export default function RecentMatchesTabs({
                     <div className="flex-1 flex flex-col items-start gap-1">
                       <div className="flex gap-1">
                         {[match.pair2_player1, match.pair2_player2].map((p, i) => (
-                          <div key={i} className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 border border-purple-700/30">
+                          <div key={i} className={`w-10 h-10 rounded-full overflow-hidden bg-gray-800 border-2 ${hasWinner && !isPair1Winner ? 'border-amber-400 avatar-glow-win' : 'border-purple-700/30'}`}>
                             {p?.avatar_url
                               ? <img src={p.avatar_url} className="w-full h-full object-cover" />
                               : <span className="text-lg flex items-center justify-center h-full">👤</span>
