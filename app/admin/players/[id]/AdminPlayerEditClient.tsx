@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { notifyStatsChanged } from '@/lib/revalidate-client'
 import { useRouter } from 'next/navigation'
 import AvatarPicker from '@/components/ui/AvatarPicker'
 import { ADDRESS_OPTIONS } from '@/lib/constants'
@@ -80,6 +81,7 @@ export default function AdminPlayerEditClient({
       return
     }
 
+    notifyStatsChanged()
     setSuccess(true)
     setLoading(false)
     setTimeout(() => router.push('/admin/players'), 1500)

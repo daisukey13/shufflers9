@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { notifyStatsChanged } from '@/lib/revalidate-client'
 import { useRouter } from 'next/navigation'
 
 type Player = { id: string; name: string; avatar_url: string | null; rating: number; hc: number; doubles_rating: number }
@@ -372,6 +373,7 @@ export default function AdminMatchRegisterClient({
       }
     }
 
+    notifyStatsChanged()
     setSuccess(true)
     setLoading(false)
     resetForm()

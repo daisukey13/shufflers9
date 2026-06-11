@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { notifyStatsChanged } from '@/lib/revalidate-client'
 import { useRouter } from 'next/navigation'
 import AvatarPicker from '@/components/ui/AvatarPicker'
 import Link from 'next/link'
@@ -58,6 +59,7 @@ export default function ProfileSetupClient({ avatars, takenUrls = [] }: { avatar
       return
     }
 
+    notifyStatsChanged()
     setDone(true)
   }
 

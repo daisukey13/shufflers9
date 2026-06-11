@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { notifyStatsChanged } from '@/lib/revalidate-client'
 import { useRouter } from 'next/navigation'
 import AvatarPicker from '@/components/ui/AvatarPicker'
 import { ADDRESS_OPTIONS } from '@/lib/constants'
@@ -139,6 +140,7 @@ export default function MyPageEditClient({
       return
     }
 
+    notifyStatsChanged()
     setLoading(false)
     if (isWelcome) {
       setShowLineBanner(true)

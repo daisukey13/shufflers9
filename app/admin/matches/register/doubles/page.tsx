@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { notifyStatsChanged } from '@/lib/revalidate-client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Player } from '@/types'
@@ -146,6 +147,7 @@ export default function AdminRegisterDoublesPage() {
         }
       }
 
+      notifyStatsChanged()
       setSuccess(true)
       setTimeout(() => {
         router.push('/admin/matches')

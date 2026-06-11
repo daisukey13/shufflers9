@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { notifyStatsChanged } from '@/lib/revalidate-client'
 import { useRouter } from 'next/navigation'
 
 type SinglesMatch = {
@@ -145,6 +146,7 @@ export default function AdminMatchesClient({
       if (m.status === 'retirement' || m.status === 'walkover') {
         setRpInfo({ entries: [], winnerChanged })
         setLoading(false)
+        notifyStatsChanged()
         router.refresh()
         return
       }
@@ -337,6 +339,7 @@ export default function AdminMatchesClient({
     }
 
     setLoading(false)
+    notifyStatsChanged()
     router.refresh()
   }
 
@@ -407,6 +410,7 @@ export default function AdminMatchesClient({
     const table = type === 'singles' ? 'singles_matches' : type === 'teams' ? 'teams_matches' : 'doubles_matches'
     const { error } = await supabase.from(table).delete().eq('id', id)
     if (error) { alert('削除に失敗しました'); return }
+    notifyStatsChanged()
     router.refresh()
   }
 
