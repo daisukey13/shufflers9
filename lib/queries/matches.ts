@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
+import { unstable_cache } from 'next/cache'
 import { SinglesMatch, TeamsMatch } from '@/types'
 import { calcElo } from '@/lib/elo'
 
@@ -160,53 +162,62 @@ export async function getTotalMatchesCount(): Promise<number> {
   return (singlesCount ?? 0) + (doublesCount ?? 0) + (qualifyingCount ?? 0) + (finalsCount ?? 0)
 }
 
+const _getLastRatingChangePerPlayer = unstable_cache(
+  async (): Promise<{ playerId: string; change: number; date: string; hasBonus: boolean }[]> => {
+    const supabase = createPublicClient()
+
+    const [{ data: singles }, { data: qualifying }, { data: finals }] = await Promise.all([
+      supabase
+        .from('singles_matches')
+        .select('player1_id, player2_id, rating_change1, rating_change2, played_at')
+        .not('winner_id', 'is', null)
+        .order('played_at', { ascending: false })
+        .limit(300),
+      supabase
+        .from('tournament_qualifying_matches')
+        .select('player1_id, player2_id, player1_rating_change, player2_rating_change, created_at, block:tournament_blocks(tournament:tournaments(bonus_points))')
+        .eq('mode', 'normal')
+        .not('winner_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(300),
+      supabase
+        .from('tournament_finals_matches')
+        .select('player1_id, player2_id, rating_change1, rating_change2, played_at, tournament:tournaments(bonus_points)')
+        .not('winner_id', 'is', null)
+        .order('played_at', { ascending: false })
+        .limit(300),
+    ])
+
+    const entries: { playerId: string; change: number | null; date: string; hasBonus: boolean }[] = []
+
+    singles?.forEach((m: any) => {
+      entries.push({ playerId: m.player1_id, change: m.rating_change1, date: m.played_at, hasBonus: false })
+      entries.push({ playerId: m.player2_id, change: m.rating_change2, date: m.played_at, hasBonus: false })
+    })
+    qualifying?.forEach((m: any) => {
+      const hasBonus = (m.block?.tournament?.bonus_points ?? 0) > 0
+      entries.push({ playerId: m.player1_id, change: m.player1_rating_change, date: m.created_at, hasBonus })
+      entries.push({ playerId: m.player2_id, change: m.player2_rating_change, date: m.created_at, hasBonus })
+    })
+    finals?.forEach((m: any) => {
+      const hasBonus = (m.tournament?.bonus_points ?? 0) > 0
+      entries.push({ playerId: m.player1_id, change: m.rating_change1, date: m.played_at, hasBonus })
+      entries.push({ playerId: m.player2_id, change: m.rating_change2, date: m.played_at, hasBonus })
+    })
+
+    entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    return entries.filter((e): e is { playerId: string; change: number; date: string; hasBonus: boolean } => e.change !== null)
+  },
+  ['last-rating-change-per-player'],
+  { revalidate: 300 } // 5分
+)
+
 export async function getLastRatingChangePerPlayer(): Promise<Map<string, { change: number; date: string; hasBonus: boolean }>> {
-  const supabase = await createClient()
-
-  const [{ data: singles }, { data: qualifying }, { data: finals }] = await Promise.all([
-    supabase
-      .from('singles_matches')
-      .select('player1_id, player2_id, rating_change1, rating_change2, played_at')
-      .not('winner_id', 'is', null)
-      .order('played_at', { ascending: false })
-      .limit(300),
-    supabase
-      .from('tournament_qualifying_matches')
-      .select('player1_id, player2_id, player1_rating_change, player2_rating_change, created_at, block:tournament_blocks(tournament:tournaments(bonus_points))')
-      .eq('mode', 'normal')
-      .not('winner_id', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(300),
-    supabase
-      .from('tournament_finals_matches')
-      .select('player1_id, player2_id, rating_change1, rating_change2, played_at, tournament:tournaments(bonus_points)')
-      .not('winner_id', 'is', null)
-      .order('played_at', { ascending: false })
-      .limit(300),
-  ])
-
-  const entries: { playerId: string; change: number | null; date: string; hasBonus: boolean }[] = []
-
-  singles?.forEach((m: any) => {
-    entries.push({ playerId: m.player1_id, change: m.rating_change1, date: m.played_at, hasBonus: false })
-    entries.push({ playerId: m.player2_id, change: m.rating_change2, date: m.played_at, hasBonus: false })
-  })
-  qualifying?.forEach((m: any) => {
-    const hasBonus = (m.block?.tournament?.bonus_points ?? 0) > 0
-    entries.push({ playerId: m.player1_id, change: m.player1_rating_change, date: m.created_at, hasBonus })
-    entries.push({ playerId: m.player2_id, change: m.player2_rating_change, date: m.created_at, hasBonus })
-  })
-  finals?.forEach((m: any) => {
-    const hasBonus = (m.tournament?.bonus_points ?? 0) > 0
-    entries.push({ playerId: m.player1_id, change: m.rating_change1, date: m.played_at, hasBonus })
-    entries.push({ playerId: m.player2_id, change: m.rating_change2, date: m.played_at, hasBonus })
-  })
-
-  entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  const entries = await _getLastRatingChangePerPlayer()
 
   const result = new Map<string, { change: number; date: string; hasBonus: boolean }>()
   for (const e of entries) {
-    if (!result.has(e.playerId) && e.change !== null) {
+    if (!result.has(e.playerId)) {
       result.set(e.playerId, { change: e.change, date: e.date, hasBonus: e.hasBonus })
     }
   }

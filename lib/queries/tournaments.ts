@@ -1,42 +1,35 @@
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
+import { unstable_cache } from 'next/cache'
 
-export async function getRecentTournamentWinners(limit = 5) {
-  const supabase = await createClient()
+export const getRecentTournamentWinners = unstable_cache(
+  async (limit = 5) => {
+    const supabase = createPublicClient()
 
-  const { data: tournaments, error: tError } = await supabase
-    .from('tournaments')
-    .select('id, name, finished_at')
-    .eq('status', 'finished')
-    .order('finished_at', { ascending: false })
-    .limit(limit)
-  if (tError || !tournaments || tournaments.length === 0) return []
+    const { data, error } = await supabase
+      .from('tournaments')
+      .select(`
+        id, name, finished_at,
+        tournament_finals_matches(winner_id, round, winner:players!winner_id(id, name, avatar_url))
+      `)
+      .eq('status', 'finished')
+      .order('finished_at', { ascending: false })
+      .limit(limit)
 
-  const results = await Promise.all(
-    tournaments.map(async (t) => {
-      const { data: finals } = await supabase
-        .from('tournament_finals_matches')
-        .select('winner_id, round')
-        .eq('tournament_id', t.id)
-        .order('round', { ascending: false })
-        .limit(1)
-        .single()
-      if (!finals?.winner_id) return null
+    if (error || !data) return []
 
-      const { data: player } = await supabase
-        .from('players')
-        .select('id, name, avatar_url')
-        .eq('id', finals.winner_id)
-        .single()
-      if (!player) return null
-
+    return data.map(t => {
+      const matches = (t.tournament_finals_matches as any[]) ?? []
+      const best = matches.reduce<any>((prev, curr) =>
+        (prev?.round ?? -1) > (curr?.round ?? -1) ? prev : curr, null)
+      if (!best?.winner_id || !best?.winner) return null
       return {
         tournamentId: t.id,
         tournamentName: t.name,
         finishedAt: t.finished_at,
-        winner: player,
+        winner: best.winner as { id: string; name: string; avatar_url: string | null },
       }
-    })
-  )
-
- return results.filter((r): r is NonNullable<typeof r> => r !== null)
-}
+    }).filter((r): r is NonNullable<typeof r> => r !== null)
+  },
+  ['recent-tournament-winners'],
+  { revalidate: 1800 } // 30分
+)

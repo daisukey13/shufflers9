@@ -1,21 +1,46 @@
 import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
+import { unstable_cache } from 'next/cache'
 import { Player, Team } from '@/types'
 
-export async function getPlayerRankings(): Promise<Player[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('players')
-    .select('*')
-    .eq('is_active', true)
-    .eq('is_admin', false)
-    .gt('total_matches', 0)
-    .order('rating', { ascending: false })
-    .order('hc', { ascending: false })
-    .order('total_matches', { ascending: false })
+export const getPlayerRankings = unstable_cache(
+  async (): Promise<Player[]> => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('is_active', true)
+      .eq('is_admin', false)
+      .gt('total_matches', 0)
+      .order('rating', { ascending: false })
+      .order('hc', { ascending: false })
+      .order('total_matches', { ascending: false })
 
-  if (error) throw error
-  return data
-}
+    if (error) throw error
+    return data
+  },
+  ['player-rankings'],
+  { revalidate: 300 } // 5分
+)
+
+// ダブルス込みの全アクティブプレーヤー取得（rankingsページで重複フェッチを避けるため）
+export const getAllActivePlayers = unstable_cache(
+  async (): Promise<Player[]> => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('is_active', true)
+      .eq('is_admin', false)
+      .order('rating', { ascending: false })
+      .order('hc', { ascending: false })
+
+    if (error) throw error
+    return data
+  },
+  ['all-active-players'],
+  { revalidate: 300 } // 5分
+)
 
 // 同ポイント同順位・以下繰り下げのランク付与（汎用）
 export function calcRanks<T>(

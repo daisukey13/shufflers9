@@ -1,9 +1,8 @@
 export const dynamic = 'force-dynamic'
 
-import { getPlayerRankings, calcRanks, singlesTie, doublesTie } from '@/lib/queries/rankings'
+import { getAllActivePlayers, calcRanks, singlesTie, doublesTie } from '@/lib/queries/rankings'
 import { getLastRatingChangePerPlayer } from '@/lib/queries/matches'
 import { getThisMonthWinRate, getRecentRatingGrowth } from '@/lib/queries/monthly-ranking'
-import { createClient } from '@/lib/supabase/server'
 import { Player } from '@/types'
 import Link from 'next/link'
 import RankingsTabContent from './RankingsTabContent'
@@ -16,22 +15,15 @@ export default async function RankingsPage({
   const { tab } = await searchParams
   const activeTab = tab === 'doubles' ? 'doubles' : 'singles'
 
-  const supabase = await createClient()
-
-  const [singlesRaw, { data: doublesRaw }, lastRpChanges, thisMonthWinRate, recentGrowth] = await Promise.all([
-    getPlayerRankings(),
-    supabase
-      .from('players')
-      .select('*')
-      .eq('is_active', true)
-      .eq('is_admin', false)
-      .or('doubles_wins.gt.0,doubles_losses.gt.0')
-      .order('doubles_rating', { ascending: false })
-      .order('hc', { ascending: false }),
+  const [allPlayers, lastRpChanges, thisMonthWinRate, recentGrowth] = await Promise.all([
+    getAllActivePlayers(),
     getLastRatingChangePerPlayer(),
     getThisMonthWinRate(),
     getRecentRatingGrowth(),
   ])
+
+  const singlesRaw = allPlayers.filter(p => p.total_matches > 0)
+  const doublesRaw = allPlayers.filter(p => p.doubles_wins > 0 || p.doubles_losses > 0)
 
   const doublesSorted = [...(doublesRaw ?? [])].sort((a: Player, b: Player) => {
     if (b.doubles_rating !== a.doubles_rating) return b.doubles_rating - a.doubles_rating

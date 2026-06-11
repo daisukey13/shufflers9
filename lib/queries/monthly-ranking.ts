@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
+import { unstable_cache } from 'next/cache'
 
 export type ShortTermAward = {
   id: string
@@ -9,8 +10,9 @@ export type ShortTermAward = {
 }
 
 // 今月の勝率ランキング（最低3試合以上）
-export async function getThisMonthWinRate(): Promise<ShortTermAward | null> {
-  const supabase = await createClient()
+export const getThisMonthWinRate = unstable_cache(
+  async (): Promise<ShortTermAward | null> => {
+  const supabase = createPublicClient()
 
   const now = new Date()
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -80,11 +82,15 @@ export async function getThisMonthWinRate(): Promise<ShortTermAward | null> {
     value: `${Math.round(best.rate * 100)}%`,
     sub: `${best.wins}勝${losses}敗`,
   }
-}
+},
+  ['this-month-win-rate'],
+  { revalidate: 600 } // 10分
+)
 
 // 直近10試合のRP上昇率ランキング（最低5試合以上）
-export async function getRecentRatingGrowth(): Promise<ShortTermAward | null> {
-  const supabase = await createClient()
+export const getRecentRatingGrowth = unstable_cache(
+  async (): Promise<ShortTermAward | null> => {
+  const supabase = createPublicClient()
 
   const { data: matches } = await supabase
     .from('singles_matches')
@@ -131,7 +137,10 @@ export async function getRecentRatingGrowth(): Promise<ShortTermAward | null> {
     value: `${best.gain > 0 ? '+' : ''}${best.gain}pt`,
     sub: `直近${best.count}試合`,
   }
-}
+},
+  ['recent-rating-growth'],
+  { revalidate: 600 } // 10分
+)
 
 export type MonthlyRankingEntry = {
   id: string
@@ -145,11 +154,12 @@ export type MonthlyRankingEntry = {
   currentRank: number
 }
 
-export async function getLastMonthWinRanking(): Promise<{
+export const getLastMonthWinRanking = unstable_cache(
+  async (): Promise<{
   entries: MonthlyRankingEntry[]
   month: string // e.g. "2026年3月"
-}> {
-  const supabase = await createClient()
+}> => {
+  const supabase = createPublicClient()
 
   const now = new Date()
   const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -251,4 +261,7 @@ export async function getLastMonthWinRanking(): Promise<{
   })
 
   return { entries: entries.slice(0, 5), month }
-}
+},
+  ['last-month-win-ranking'],
+  { revalidate: 1800 } // 30分
+)
