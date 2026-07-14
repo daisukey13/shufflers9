@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import { toJSTDateTimeLocal, jstWallClockToISO } from '@/lib/date'
 
 type Participant = {
   player_id: string
@@ -57,8 +58,8 @@ export default function EditEventPage() {
       if (ev) {
         setTitle(ev.title ?? '')
         setEventType(ev.event_type ?? 'practice')
-        setStartsAt(ev.starts_at ? new Date(ev.starts_at).toISOString().slice(0, 16) : '')
-        setEndsAt(ev.ends_at ? new Date(ev.ends_at).toISOString().slice(0, 16) : '')
+        setStartsAt(ev.starts_at ? toJSTDateTimeLocal(ev.starts_at) : '')
+        setEndsAt(ev.ends_at ? toJSTDateTimeLocal(ev.ends_at) : '')
         setVenue(ev.venue ?? '')
         setDescription(ev.description ?? '')
         setNotes(ev.notes ?? '')
@@ -79,8 +80,8 @@ export default function EditEventPage() {
     const { error } = await supabase.from('events').update({
       title: title.trim(),
       event_type: eventType,
-      starts_at: startsAt ? new Date(startsAt).toISOString() : null,
-      ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+      starts_at: startsAt ? jstWallClockToISO(startsAt) : null,
+      ends_at: endsAt ? jstWallClockToISO(endsAt) : null,
       venue: venue.trim() || null,
       description: description.trim() || null,
       notes: notes.trim() || null,

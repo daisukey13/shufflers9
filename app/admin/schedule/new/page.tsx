@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { jstWallClockToISO } from '@/lib/date'
 
 export default function NewEventPage() {
   const [title, setTitle] = useState('')
@@ -28,8 +29,8 @@ export default function NewEventPage() {
     const { error } = await supabase.from('events').insert({
       title: title.trim(),
       event_type: eventType,
-      starts_at: startsAt ? new Date(startsAt).toISOString() : null,
-      ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+      starts_at: startsAt ? jstWallClockToISO(startsAt) : null,
+      ends_at: endsAt ? jstWallClockToISO(endsAt) : null,
       venue: venue.trim() || null,
       description: description.trim() || null,
       notes: notes.trim() || null,

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import Link from 'next/link'
+import { jstParts } from '@/lib/date'
 
 type Player = { id: string; name: string; avatar_url: string | null; hc?: number; rating?: number; is_active?: boolean }
 type BlockPlayer = { id: string; block_id: string; player_id: string; is_default: boolean; player: Player; partner?: Player | null }
@@ -155,9 +156,9 @@ export default function TournamentDetailClient({
           {/* 大会詳細 */}
           {(() => {
             const weekdays = ['日', '月', '火', '水', '木', '金', '土']
-            const dateObj = tournament.started_at ? new Date(tournament.started_at) : null
-            const dateStr = dateObj
-              ? `${dateObj.getFullYear()}年${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${weekdays[dateObj.getDay()]}曜日）`
+            const dp = tournament.started_at ? jstParts(tournament.started_at) : null
+            const dateStr = dp
+              ? `${dp.year}年${dp.month}月${dp.day}日（${weekdays[dp.weekday]}曜日）`
               : null
 
             const hasTime = tournament.qualifying_start_time || tournament.finals_start_time

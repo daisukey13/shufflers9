@@ -7,6 +7,7 @@ import LogoutButton from '@/components/ui/LogoutButton'
 import TournamentBadges from '@/components/ui/TournamentBadges'
 import RankChart from '@/components/ui/RankChart'
 import MyPageMatchList from './MyPageMatchList'
+import { formatMatchDateTime } from '@/lib/date'
 
 export default async function MyPage() {
   const supabase = await createClient()
@@ -470,8 +471,7 @@ export default async function MyPage() {
                   const opp1 = isPair1 ? match.pair2_player1 : match.pair1_player1
                   const opp2 = isPair1 ? match.pair2_player2 : match.pair1_player2
                   const ratingChange = isPair1 ? match.rating_change1 : match.rating_change2
-                  const date = new Date(match.played_at)
-                  const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+                  const dateStr = formatMatchDateTime(match.played_at)
 
                   return (
                     <div

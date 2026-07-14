@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { formatMatchDateTime } from '@/lib/date'
 
 type SinglesMatch = {
   id: string
@@ -70,8 +71,7 @@ export default function RecentMatchesTabs({
               const winnerId = match.winner_id
               const p1Win = winnerId != null && winnerId === match.player1?.id
               const p2Win = winnerId != null && winnerId === match.player2?.id
-              const date = new Date(match.played_at)
-              const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+              const dateStr = formatMatchDateTime(match.played_at)
               return (
                 <div key={match.id} className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-2xl">
                   <div className="flex items-center justify-between mb-3">
@@ -190,8 +190,7 @@ export default function RecentMatchesTabs({
             <p className="text-gray-500 text-sm text-center">試合がありません</p>
           ) : (
             doublesMatches.map(match => {
-              const date = new Date(match.played_at)
-              const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+              const dateStr = formatMatchDateTime(match.played_at)
               const hasWinner = match.winner_pair != null
               const isPair1Winner = match.winner_pair === 1
               return (

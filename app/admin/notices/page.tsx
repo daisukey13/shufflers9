@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { formatDateJST } from '@/lib/date'
 
 export default async function AdminNoticesPage() {
   const supabase = await createClient()
@@ -41,7 +42,7 @@ export default async function AdminNoticesPage() {
                 <p className="font-medium text-white truncate">{notice.title}</p>
               </div>
               <p className="text-xs text-gray-400">
-                {new Date(notice.created_at).toLocaleDateString('ja-JP')}
+                {formatDateJST(notice.created_at)}
               </p>
             </div>
             <Link

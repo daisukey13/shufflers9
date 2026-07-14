@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import TournamentBadges from '@/components/ui/TournamentBadges'
 import ShareCardButton from '@/components/ui/ShareCardButton'
 import Link from 'next/link'
+import { formatDateJST } from '@/lib/date'
 
 const PER_PAGE = 10
 
@@ -323,7 +324,7 @@ export default async function PlayerPage({
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-white">vs {opponent?.name ?? '不明'}</p>
                         <p className="text-xs text-gray-400">
-                          {new Date(match.played_at).toLocaleDateString('ja-JP')}
+                          {formatDateJST(match.played_at)}
                           {match.tournament_name && (
                             <span className="ml-1.5 text-purple-400">
                               🏆 {match.tournament_name}
@@ -422,7 +423,7 @@ export default async function PlayerPage({
                           )}
                         </p>
                         <p className="text-xs text-gray-400">
-                          {new Date(match.played_at).toLocaleDateString('ja-JP')}
+                          {formatDateJST(match.played_at)}
                         </p>
                       </div>
                       <span className="font-bold text-white">{myScore} - {oppScore}</span>

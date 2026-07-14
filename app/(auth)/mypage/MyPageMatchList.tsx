@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { formatMatchDateTime } from '@/lib/date'
 
 export default function MyPageMatchList({
   matches,
@@ -55,8 +56,7 @@ export default function MyPageMatchList({
         const oppScore = isP1 ? match.score2 : match.score1
         const isWin = match.winner_id === playerId
         const ratingChange: number | null = isP1 ? match.rating_change1 : match.rating_change2
-        const date = new Date(match.played_at)
-        const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+        const dateStr = formatMatchDateTime(match.played_at)
 
         // コメントはシングルス（通常試合）のみ
         const isSingles = match.source === 'singles'

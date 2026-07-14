@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { formatDateJST } from '@/lib/date'
 
 type Player = { id: string; name: string; avatar_url: string | null; hc: number; rating: number }
 type Entry = {
@@ -213,7 +214,7 @@ export default function EntriesAdminClient({
                     <p className="text-xs text-red-400 mt-0.5">⚠️ キャンセル申請中</p>
                   )}
                   <p className="text-xs text-gray-600 mt-0.5">
-                    {new Date(entry.created_at).toLocaleDateString('ja-JP')}
+                    {formatDateJST(entry.created_at)}
                   </p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">

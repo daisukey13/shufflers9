@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { formatDateJST } from '@/lib/date'
 
 const URL_REGEX = /https?:\/\/[^\s\u3000\u3001\u3002\uff0e\uff0c\uff01\uff1f\u300d\u300f\u3011\u3015\uff09\uff3d\uff5d]+/g
 
@@ -46,7 +47,7 @@ export default async function NoticePage({ params }: { params: Promise<{ id: str
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">{notice.title}</h1>
           <p className="text-xs text-gray-400">
-            {new Date(notice.published_at).toLocaleDateString('ja-JP')}
+            {formatDateJST(notice.published_at)}
           </p>
         </div>
         <hr className="border-purple-800/30" />

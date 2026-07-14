@@ -5,6 +5,7 @@ import { Player } from '@/types'
 import AvatarPicker from '@/components/ui/AvatarPicker'
 import Link from 'next/link'
 import { ADDRESS_OPTIONS } from '@/lib/constants'
+import { formatDateJST } from '@/lib/date'
 
 type Avatar = { id: string; url: string }
 
@@ -271,7 +272,7 @@ export default function AdminPlayersClient({
             <div className="flex-1 min-w-0">
               <p className="font-medium text-white truncate">{player.name || '（未設定）'}</p>
               <p className="text-xs text-gray-400">
-                {new Date(player.created_at).toLocaleDateString('ja-JP')}
+                {formatDateJST(player.created_at)}
                 {!player.is_active && ' · 脱退済み'}
               </p>
             </div>

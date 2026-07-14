@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { formatDateJST } from '@/lib/date'
 
 export default async function TournamentsPage() {
   const supabase = await createClient()
@@ -36,8 +37,7 @@ export default async function TournamentsPage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return null
-    const d = new Date(dateStr)
-    return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
+    return formatDateJST(dateStr)
   }
 
   return (

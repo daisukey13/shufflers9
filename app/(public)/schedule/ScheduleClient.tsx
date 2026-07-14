@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { jstParts, toJSTDateKey } from '@/lib/date'
 
 export type EventItem = {
   id: string
@@ -28,18 +29,17 @@ function isEnded(ev: EventItem): boolean {
 }
 
 function toLocalDate(iso: string) {
-  const d = new Date(iso)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return toJSTDateKey(iso)
 }
 
 function formatDate(iso: string) {
-  const d = new Date(iso)
+  const p = jstParts(iso)
   const weekdays = ['日', '月', '火', '水', '木', '金', '土']
   return {
-    date: `${d.getMonth() + 1}月${d.getDate()}日（${weekdays[d.getDay()]}）`,
-    time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
-    month: `${d.getFullYear()}年${d.getMonth() + 1}月`,
-    sortKey: d.getFullYear() * 100 + d.getMonth(),
+    date: `${p.month}月${p.day}日（${weekdays[p.weekday]}）`,
+    time: `${p.hourStr}:${p.minute}`,
+    month: `${p.year}年${p.month}月`,
+    sortKey: p.year * 100 + p.month,
   }
 }
 
@@ -151,11 +151,13 @@ export default function ScheduleClient({
     Record<string, { id: string; name: string; avatar_url: string | null }[]>
   >({})
 
-  // カレンダー用 state
-  const today = new Date()
+  // カレンダー用 state（東京時間基準）
+  const nowJst = jstParts(new Date())
+  const todayYear = nowJst.year
+  const todayMonth = nowJst.month - 1 // 0-11
   const [view, setView] = useState<'calendar' | 'list'>('calendar')
-  const [calYear, setCalYear] = useState(today.getFullYear())
-  const [calMonth, setCalMonth] = useState(today.getMonth()) // 0-11
+  const [calYear, setCalYear] = useState(todayYear)
+  const [calMonth, setCalMonth] = useState(todayMonth)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   const handleToggle = async (
@@ -201,7 +203,7 @@ export default function ScheduleClient({
   // カレンダーグリッド生成
   const firstDay = new Date(calYear, calMonth, 1).getDay() // 0=日
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
-  const todayKey = toLocalDate(today.toISOString())
+  const todayKey = toJSTDateKey(new Date())
   const weekdays = ['日', '月', '火', '水', '木', '金', '土']
 
   const prevMonth = () => {
@@ -215,8 +217,8 @@ export default function ScheduleClient({
     setSelectedDate(null)
   }
   const goToday = () => {
-    setCalYear(today.getFullYear())
-    setCalMonth(today.getMonth())
+    setCalYear(todayYear)
+    setCalMonth(todayMonth)
     setSelectedDate(null)
   }
 
@@ -278,7 +280,7 @@ export default function ScheduleClient({
               </button>
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-white">{calYear}年{calMonth + 1}月</span>
-                {(calYear !== today.getFullYear() || calMonth !== today.getMonth()) && (
+                {(calYear !== todayYear || calMonth !== todayMonth) && (
                   <button onClick={goToday} className="text-xs px-2 py-1 bg-purple-900/40 hover:bg-purple-900/70 text-purple-300 rounded-lg transition">
                     今月
                   </button>

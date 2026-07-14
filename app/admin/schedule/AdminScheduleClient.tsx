@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { jstParts } from '@/lib/date'
 
 type EventRow = {
   id: string
@@ -35,9 +36,9 @@ export default function AdminScheduleClient({ events }: { events: EventRow[] }) 
   }
 
   const formatDate = (iso: string) => {
-    const d = new Date(iso)
+    const p = jstParts(iso)
     const weekdays = ['日', '月', '火', '水', '木', '金', '土']
-    return `${d.getMonth() + 1}/${d.getDate()}（${weekdays[d.getDay()]}） ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    return `${p.month}/${p.day}（${weekdays[p.weekday]}） ${p.hourStr}:${p.minute}`
   }
 
   return (

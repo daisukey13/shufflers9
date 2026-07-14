@@ -6,6 +6,7 @@ import { getRecentNotices } from '@/lib/queries/notices'
 import { getRecentTournamentWinners } from '@/lib/queries/tournaments'
 import { getLastMonthWinRanking } from '@/lib/queries/monthly-ranking'
 import { getActiveBanners } from '@/lib/queries/banners'
+import { formatDateJST } from '@/lib/date'
 
 import MonthlyRankingModal from '@/components/ui/MonthlyRankingModal'
 import BannerSlider from '@/components/ui/BannerSlider'
@@ -73,7 +74,7 @@ export async function NoticesSection() {
         {notices.map(notice => {
           const publishedAt = new Date(notice.published_at)
           const isNew = (Date.now() - publishedAt.getTime()) < 7 * 24 * 60 * 60 * 1000
-          const dateStr = `${publishedAt.getFullYear()}/${publishedAt.getMonth() + 1}/${publishedAt.getDate()}`
+          const dateStr = formatDateJST(notice.published_at)
           return (
             <Link
               key={notice.id}

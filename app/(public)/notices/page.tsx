@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { formatDateJST } from '@/lib/date'
 
 const PER_PAGE = 10
 
@@ -39,7 +40,7 @@ export default async function NoticesPage({
             {notices?.map(notice => {
               const publishedAt = new Date(notice.published_at)
               const isNew = (Date.now() - publishedAt.getTime()) < 7 * 24 * 60 * 60 * 1000
-              const dateStr = publishedAt.toLocaleDateString('ja-JP')
+              const dateStr = formatDateJST(notice.published_at)
               const preview = notice.body
                 ? notice.body.slice(0, 15) + (notice.body.length > 15 ? '...' : '')
                 : ''

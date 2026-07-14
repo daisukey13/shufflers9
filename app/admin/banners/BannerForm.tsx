@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { Banner } from '@/lib/queries/banners'
+import { toJSTDateTimeLocal, jstWallClockToISO } from '@/lib/date'
 
 export default function BannerForm({ banner }: { banner?: Banner }) {
   const isEdit = !!banner
@@ -12,10 +13,10 @@ export default function BannerForm({ banner }: { banner?: Banner }) {
   const [body, setBody] = useState(banner?.body ?? '')
   const [linkUrl, setLinkUrl] = useState(banner?.link_url ?? '')
   const [startsAt, setStartsAt] = useState(
-    banner?.starts_at ? new Date(banner.starts_at).toISOString().slice(0, 16) : ''
+    banner?.starts_at ? toJSTDateTimeLocal(banner.starts_at) : ''
   )
   const [endsAt, setEndsAt] = useState(
-    banner?.ends_at ? new Date(banner.ends_at).toISOString().slice(0, 16) : ''
+    banner?.ends_at ? toJSTDateTimeLocal(banner.ends_at) : ''
   )
   const [isActive, setIsActive] = useState(banner?.is_active ?? true)
   const [sortOrder, setSortOrder] = useState(banner?.sort_order ?? 0)
@@ -34,8 +35,8 @@ export default function BannerForm({ banner }: { banner?: Banner }) {
       title: title.trim(),
       body: body.trim() || null,
       link_url: linkUrl.trim() || null,
-      starts_at: startsAt ? new Date(startsAt).toISOString() : null,
-      ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+      starts_at: startsAt ? jstWallClockToISO(startsAt) : null,
+      ends_at: endsAt ? jstWallClockToISO(endsAt) : null,
       is_active: isActive,
       sort_order: sortOrder,
     }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Banner } from '@/lib/queries/banners'
+import { formatDateTimeJST } from '@/lib/date'
 
 function statusLabel(banner: Banner) {
   const now = new Date()
@@ -18,8 +19,7 @@ function statusLabel(banner: Banner) {
 
 function formatDt(iso: string | null) {
   if (!iso) return '—'
-  const d = new Date(iso)
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return formatDateTimeJST(iso)
 }
 
 export default function BannerAdminClient({ banners }: { banners: Banner[] }) {

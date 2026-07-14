@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { createClient } from '@/lib/supabase/server'
 import { getPlayerRankings, calcRanks, singlesTie } from '@/lib/queries/rankings'
+import { formatDateJST } from '@/lib/date'
 import fs from 'fs'
 import path from 'path'
 
@@ -111,8 +112,7 @@ export async function GET(
     const oppScore = isP1 ? (latestMatchRaw as any).score2 : (latestMatchRaw as any).score1
     const isWin = (latestMatchRaw as any).winner_id === id
     const ratingChange = isP1 ? (latestMatchRaw as any).rating_change1 : (latestMatchRaw as any).rating_change2
-    const date = new Date((latestMatchRaw as any).played_at)
-    const dateStr = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+    const dateStr = formatDateJST((latestMatchRaw as any).played_at)
     return { opponent, myScore, oppScore, isWin, ratingChange, dateStr }
   })() : null
 

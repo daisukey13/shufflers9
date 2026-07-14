@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notifyStatsChanged } from '@/lib/revalidate-client'
 import { useRouter } from 'next/navigation'
+import { formatDateJST } from '@/lib/date'
 
 type SinglesMatch = {
   id: string
@@ -503,7 +504,7 @@ export default function AdminMatchesClient({
                     )}
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    {new Date(m.played_at).toLocaleDateString('ja-JP')}
+                    {formatDateJST(m.played_at)}
                     <span className="ml-2 text-gray-600">変化: {m.rating_change1 >= 0 ? '+' : ''}{m.rating_change1} / {m.rating_change2 >= 0 ? '+' : ''}{m.rating_change2}</span>
                   </p>
                 </div>
@@ -546,7 +547,7 @@ export default function AdminMatchesClient({
                     </span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    {new Date(m.played_at).toLocaleDateString('ja-JP')}
+                    {formatDateJST(m.played_at)}
                     <span className="ml-2 text-gray-600">変化: {m.rating_change1 >= 0 ? '+' : ''}{m.rating_change1} / {m.rating_change2 >= 0 ? '+' : ''}{m.rating_change2}</span>
                   </p>
                 </div>

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { formatDateJST } from '@/lib/date'
 
 export default async function TournamentMatches({
   tournamentId,
@@ -50,7 +51,7 @@ export default async function TournamentMatches({
                   <span className="font-medium text-white">{name2 ?? '不明'}</span>
                 </div>
                 <p className="text-xs text-gray-400 flex-shrink-0">
-                  {new Date(match.played_at).toLocaleDateString('ja-JP')}
+                  {formatDateJST(match.played_at)}
                 </p>
               </div>
             )

@@ -1,5 +1,7 @@
 import { createPublicClient } from '@/lib/supabase/public'
 import { unstable_cache } from 'next/cache'
+import { getPlayerRankings, calcRanks, singlesTie } from './rankings'
+import { jstParts, jstMonthStartISO } from '@/lib/date'
 
 export type ShortTermAward = {
   id: string
@@ -14,9 +16,9 @@ export const getThisMonthWinRate = unstable_cache(
   async (): Promise<ShortTermAward | null> => {
   const supabase = createPublicClient()
 
-  const now = new Date()
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-  const startISO = firstDay.toISOString()
+  // 東京時間の「今月1日 00:00」以降（サーバーは UTC なのでローカル日付は使えない）
+  const nowJst = jstParts(new Date())
+  const startISO = jstMonthStartISO(nowJst.year, nowJst.month)
 
   const [{ data: singles }, { data: doubles }, { data: players }] = await Promise.all([
     supabase
@@ -161,40 +163,39 @@ export const getLastMonthWinRanking = unstable_cache(
 }> => {
   const supabase = createPublicClient()
 
-  const now = new Date()
-  const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const lastDay = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
-  const month = `${firstDay.getFullYear()}年${firstDay.getMonth() + 1}月`
+  // 東京時間の「先月1日 00:00」以上・「今月1日 00:00」未満（サーバーは UTC なのでローカル日付は使えない）
+  const nowJst = jstParts(new Date())
+  const startISO = jstMonthStartISO(nowJst.year, nowJst.month - 1)
+  const endISO = jstMonthStartISO(nowJst.year, nowJst.month) // 排他的上限
 
-  const startISO = firstDay.toISOString()
-  const endISO = lastDay.toISOString()
+  const prevYear = nowJst.month === 1 ? nowJst.year - 1 : nowJst.year
+  const prevMonth = nowJst.month === 1 ? 12 : nowJst.month - 1
+  const month = `${prevYear}年${prevMonth}月`
 
-  const [{ data: singles }, { data: doubles }, { data: allPlayers }] = await Promise.all([
+  const [{ data: singles }, { data: doubles }, { data: allPlayers }, rankingPlayers] = await Promise.all([
     supabase
       .from('singles_matches')
       .select('player1_id, player2_id, score1, score2, winner_id')
       .gte('played_at', startISO)
-      .lte('played_at', endISO)
+      .lt('played_at', endISO)
       .not('winner_id', 'is', null),
     supabase
       .from('doubles_matches')
       .select('pair1_player1_id, pair1_player2_id, pair2_player1_id, pair2_player2_id, score1, score2, winner_pair')
       .gte('played_at', startISO)
-      .lte('played_at', endISO)
+      .lt('played_at', endISO)
       .not('winner_pair', 'is', null),
     supabase
       .from('players')
       .select('id, name, avatar_url, address, rating, hc')
       .eq('is_active', true)
-      .eq('is_admin', false)
-      .order('hc', { ascending: true })
-      .order('rating', { ascending: false })
-      .order('created_at', { ascending: true }),
+      .eq('is_admin', false),
+    getPlayerRankings(),
   ])
 
-  // 現在のRP順位マップ
+  // 現在のRPランキング順位マップ（RP降順・同ポイント同順位。ランキングページ/プレーヤー詳細と一致させる）
   const rankMap = new Map<string, number>()
-  ;(allPlayers ?? []).forEach((p, i) => rankMap.set(p.id, i + 1))
+  calcRanks(rankingPlayers, singlesTie).forEach(p => rankMap.set(p.id, p.rank))
   const playerMap = new Map((allPlayers ?? []).map(p => [p.id, p]))
 
   // 月間集計

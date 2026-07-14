@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
+import { formatMatchDateTime } from '@/lib/date'
 
 type MatchItem = {
   id: string
@@ -171,8 +172,7 @@ export default function MatchesClient({
           <div className="space-y-4">
             {matches.map(match => {
               const upset = isUpset(match)
-              const date = new Date(match.played_at)
-              const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+              const dateStr = formatMatchDateTime(match.played_at)
               const { label, color } = typeLabel(match.type, match.blockName)
 
               const isDoubles = match.type === 'doubles'

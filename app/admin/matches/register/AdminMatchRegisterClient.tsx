@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notifyStatsChanged } from '@/lib/revalidate-client'
 import { useRouter } from 'next/navigation'
+import { toJSTDateTimeLocal, jstWallClockToISO } from '@/lib/date'
 
 type Player = { id: string; name: string; avatar_url: string | null; rating: number; hc: number; doubles_rating: number }
 type Team = { id: string; name: string; avatar_url: string | null; rating: number }
@@ -35,7 +36,7 @@ export default function AdminMatchRegisterClient({
   // 共通
   const [score1, setScore1] = useState('')
   const [score2, setScore2] = useState('')
-  const [playedAt, setPlayedAt] = useState(new Date().toISOString().slice(0, 16))
+  const [playedAt, setPlayedAt] = useState(toJSTDateTimeLocal(new Date()))
   const [tournamentType, setTournamentType] = useState<'normal' | 'tournament'>('normal')
   const [tournamentId, setTournamentId] = useState('')
   const [rankedPlayers, setRankedPlayers] = useState<Player[]>([])
@@ -77,7 +78,7 @@ export default function AdminMatchRegisterClient({
     setResultType('normal')
     setTournamentId('')
     setTournamentType('normal')
-    setPlayedAt(new Date().toISOString().slice(0, 16))
+    setPlayedAt(toJSTDateTimeLocal(new Date()))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,7 +153,7 @@ export default function AdminMatchRegisterClient({
           rating_change1: eloResult.change_a,
           rating_change2: eloResult.change_b,
           status: 'confirmed',
-          played_at: new Date(playedAt).toISOString(),
+          played_at: jstWallClockToISO(playedAt),
           tournament_id: tournamentType === 'tournament' && tournamentId ? tournamentId : null,
           player1_hc: player1Hc,
           player2_hc: player2Hc,
@@ -217,7 +218,7 @@ export default function AdminMatchRegisterClient({
           rating_change1: 0,
           rating_change2: 0,
           status: resultType,
-          played_at: new Date(playedAt).toISOString(),
+          played_at: jstWallClockToISO(playedAt),
           tournament_id: tournamentType === 'tournament' && tournamentId ? tournamentId : null,
           player1_hc: player1Hc,
           player2_hc: player2Hc,
@@ -330,7 +331,7 @@ export default function AdminMatchRegisterClient({
         rating_change1: eloResult.change_a,
         rating_change2: eloResult.change_b,
         mode: 'normal',
-        played_at: new Date(playedAt).toISOString(),
+        played_at: jstWallClockToISO(playedAt),
       })
 
       if (matchError) {
