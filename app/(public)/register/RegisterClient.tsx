@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Turnstile from '@/components/ui/Turnstile'
 import Link from 'next/link'
@@ -8,6 +9,7 @@ import Link from 'next/link'
 type Step = 'account' | 'verify'
 
 export default function RegisterClient() {
+  const router = useRouter()
   const [step, setStep] = useState<Step>('account')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -15,6 +17,11 @@ export default function RegisterClient() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // OTP コード確認ステップ用
+  const [code, setCode] = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resentNote, setResentNote] = useState<string | null>(null)
   const supabase = createClient()
 
   // URLのエラーパラメータを検出
@@ -48,13 +55,9 @@ export default function RegisterClient() {
       return
     }
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/confirm`,
-      },
-    })
+    // 確認コード（OTP）をメールで送信。リンクではなく6桁コードのため
+    // au 等の「URL付きメール拒否」を回避できる（メール本文は Supabase テンプレートで {{ .Token }} を使う）。
+    const { error } = await supabase.auth.signUp({ email, password })
 
     if (error) {
       setError(error.message)
@@ -64,6 +67,43 @@ export default function RegisterClient() {
 
     setStep('verify')
     setLoading(false)
+  }
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const token = code.trim()
+    if (!/^\d{6}$/.test(token)) {
+      setError('6桁の確認コードを入力してください')
+      return
+    }
+    setVerifying(true)
+    setError(null)
+
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' })
+
+    if (error) {
+      setError('コードが正しくないか、有効期限が切れています。再送してお試しください。')
+      setVerifying(false)
+      return
+    }
+
+    // 認証成功でセッション確立 → プロフィール入力へ
+    router.replace('/mypage/edit?welcome=1')
+  }
+
+  const handleResend = async () => {
+    setResending(true)
+    setError(null)
+    setResentNote(null)
+
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setResentNote('確認コードを再送しました。')
+    }
+    setResending(false)
   }
 
   return (
@@ -190,34 +230,62 @@ export default function RegisterClient() {
             </form>
           )}
 
-          {/* Step2: メール確認待ち */}
+          {/* Step2: 確認コード入力 */}
           {step === 'verify' && (
-            <div className="text-center space-y-5 py-4">
-              <div className="text-6xl">📧</div>
-              <div className="space-y-2">
-                <h2 className="text-lg font-bold text-white">確認メールを送信しました</h2>
+            <div className="space-y-5 py-2">
+              <div className="text-center space-y-2">
+                <div className="text-6xl">📧</div>
+                <h2 className="text-lg font-bold text-white">確認コードを送信しました</h2>
                 <p className="text-sm text-gray-400">
                   <span className="text-purple-400 font-medium">{email}</span>{' '}
-                  に確認メールを送りました。
-                </p>
-                <p className="text-sm text-gray-400">
-                  メール内のリンクをクリックして登録を完了してください。
+                  宛に6桁の確認コードを送りました。メールに記載のコードを入力してください。
                 </p>
               </div>
-              <div className="bg-purple-900/30 rounded-xl p-4 text-left space-y-2">
-                <p className="text-xs text-gray-300 font-medium">📌 次のステップ：</p>
-                <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-                  <li>メールボックスを確認する</li>
-                  <li>メール内のリンクをクリック（自動でログインされます）</li>
-                  <li>プロフィールを入力して登録完了</li>
-                </ol>
+
+              <form onSubmit={handleVerify} className="space-y-4">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                  placeholder="123456"
+                  className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-3 text-center text-2xl tracking-[0.4em] font-mono text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                {resentNote && (
+                  <p className="text-sm text-green-400 bg-green-900/20 px-3 py-2 rounded-lg">{resentNote}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={verifying || code.length !== 6}
+                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
+                >
+                  {verifying ? '確認中...' : '登録を完了する'}
+                </button>
+              </form>
+
+              <div className="bg-purple-900/30 rounded-xl p-4 space-y-2">
+                <p className="text-xs text-gray-400">
+                  コードが届かない場合は迷惑メールフォルダをご確認ください。auメールをご利用の場合、「URL付きメール拒否」を有効にしていてもコードは届きます（本メールにURLは含まれません）。
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="text-xs text-purple-400 hover:text-purple-300 underline disabled:opacity-50"
+                >
+                  {resending ? '再送中...' : 'コードを再送する'}
+                </button>
               </div>
-              <p className="text-xs text-gray-500">
-                メールが届かない場合は迷惑メールフォルダをご確認ください。
-              </p>
-              <a href="/login" className="block text-sm text-purple-400 hover:text-purple-300">
-                ← ログインページへ
-              </a>
+
+              <button
+                type="button"
+                onClick={() => { setStep('account'); setCode(''); setError(null); setResentNote(null) }}
+                className="block w-full text-center text-sm text-gray-500 hover:text-gray-400"
+              >
+                ← メールアドレスを入力し直す
+              </button>
             </div>
           )}
         </div>
