@@ -36,6 +36,11 @@ export default function AdminPlayerEditClient({
   avatars: Avatar[]
 }) {
   const [name, setName] = useState(player.name)
+  const [emailValue, setEmailValue] = useState(email)
+  const [savedEmail, setSavedEmail] = useState(email)
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [emailSuccess, setEmailSuccess] = useState(false)
   const [fullName, setFullName] = useState(player.full_name ?? '')
   const [phone, setPhone] = useState(player.phone ?? '')
   const [address, setAddress] = useState(player.address ?? '')
@@ -87,6 +92,39 @@ export default function AdminPlayerEditClient({
     setTimeout(() => router.push('/admin/players'), 1500)
   }
 
+  const handleEmailUpdate = async () => {
+    const next = emailValue.trim()
+    setEmailError(null)
+    setEmailSuccess(false)
+    if (next === savedEmail) {
+      setEmailError('メールアドレスが変更されていません')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) {
+      setEmailError('メールアドレスの形式が正しくありません')
+      return
+    }
+    setEmailLoading(true)
+
+    const res = await fetch('/api/admin/update-player-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId: player.id, email: next }),
+    })
+    const data = await res.json()
+
+    if (!res.ok) {
+      setEmailError(data.error ?? '変更に失敗しました')
+      setEmailLoading(false)
+      return
+    }
+
+    setSavedEmail(next)
+    setEmailValue(next)
+    setEmailSuccess(true)
+    setEmailLoading(false)
+  }
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
@@ -127,26 +165,42 @@ export default function AdminPlayerEditClient({
 </div>
 
         {/* 基本情報 */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">表示名</label>
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">表示名</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            required
+            className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+
+        {/* メールアドレス（ログインID・auth 側を直接更新するため別扱い） */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">メールアドレス（ログインID）</label>
+          <div className="flex gap-2">
             <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-              className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              type="email"
+              value={emailValue}
+              onChange={e => { setEmailValue(e.target.value); setEmailError(null); setEmailSuccess(false) }}
+              placeholder="member@example.com"
+              className="flex-1 bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
+            <button
+              type="button"
+              onClick={handleEmailUpdate}
+              disabled={emailLoading || emailValue.trim() === savedEmail}
+              className="shrink-0 bg-purple-700 hover:bg-purple-600 disabled:opacity-40 text-white px-4 rounded-lg text-sm font-medium transition"
+            >
+              {emailLoading ? '変更中...' : 'メール変更'}
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">メールアドレス</label>
-            <input
-              type="text"
-              value={email}
-              disabled
-              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-400"
-            />
-          </div>
+          {emailError && <p className="text-xs text-red-400 mt-1">{emailError}</p>}
+          {emailSuccess && <p className="text-xs text-green-400 mt-1">✅ メールアドレスを変更しました（確認メール不要で即時反映）</p>}
+          <p className="text-xs text-gray-500 mt-1">
+            変更すると即時に新しいアドレスがログインIDになります。パスワードは変わりません。「保存する」とは独立して、このボタンで即反映されます。
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
