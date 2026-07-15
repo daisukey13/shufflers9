@@ -265,10 +265,21 @@ export default function RegisterClient() {
                 </button>
               </form>
 
-              <div className="bg-purple-900/30 rounded-xl p-4 space-y-2">
-                <p className="text-xs text-gray-400">
-                  コードが届かない場合は迷惑メールフォルダをご確認ください。auメールをご利用の場合、「URL付きメール拒否」を有効にしていてもコードは届きます（本メールにURLは含まれません）。
-                </p>
+              <div className="bg-purple-900/30 rounded-xl p-4 space-y-3">
+                <div className="space-y-1.5 text-xs text-gray-400">
+                  <p className="font-medium text-gray-300">メールが届かないときは：</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li><span className="text-gray-300">迷惑メール（迷惑メッセージ）フォルダ</span>をご確認ください。見つかったら「迷惑メールではない」に指定すると次回から受信箱に届きます。</li>
+                    <li>
+                      au・docomo・softbank などの<span className="text-gray-300">キャリアメール</span>をご利用の場合、
+                      迷惑メールフィルターの<span className="text-gray-300">受信リスト設定</span>に
+                      <span className="text-purple-300 font-medium"> toyoura.online </span>
+                      を「ドメイン一致」で登録してから、下の「コードを再送する」をお試しください。
+                    </li>
+                    <li>それでも届かない場合はクラブ管理者にご連絡ください（管理者が代理で登録できます）。</li>
+                  </ol>
+                  <p className="text-gray-500">※ 確認メールにURLは含まれません。「URL付きメール拒否」を設定中でもコードは届きます。</p>
+                </div>
                 <button
                   type="button"
                   onClick={handleResend}
