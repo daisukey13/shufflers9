@@ -46,6 +46,7 @@ export default function ContactPage() {
             <p className="text-2xl">✅</p>
             <p className="text-green-400 font-semibold">送信が完了しました</p>
             <p className="text-gray-400 text-sm">お問い合わせありがとうございます。内容を確認後、ご連絡いたします。</p>
+            <p className="text-gray-500 text-xs">念のため、迷惑メールフォルダもご確認ください。</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
