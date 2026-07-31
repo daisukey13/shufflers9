@@ -25,17 +25,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
   }
 
+  if (!process.env.RESEND_API_KEY) {
+    console.error('Mail send error: RESEND_API_KEY is not set')
+    return NextResponse.json({ error: 'メールの送信に失敗しました' }, { status: 500 })
+  }
+
+  // 認証メールと同じ Resend 経由で送信（送信元は認証済みドメイン toyoura.online）
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.resend.com',
+    port: 465,
+    secure: true,
     auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
+      user: 'resend',
+      pass: process.env.RESEND_API_KEY,
     },
   })
 
   try {
     await transporter.sendMail({
-      from: process.env.GMAIL_USER,
+      from: '豊浦シャッフラーズクラブ <noreply@toyoura.online>',
       to: 'daisukeyud@gmail.com',
       subject: 'TSCフォームより',
       text: `お名前: ${name}\nメールアドレス: ${email}\n\nお問い合わせ内容:\n${message}`,
