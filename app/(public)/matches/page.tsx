@@ -69,6 +69,7 @@ export default async function MatchesPage() {
     pair2p2Avatar?: string | null
     comment1?: string | null
     comment2?: string | null
+    isHandicap?: boolean
   }
 
   const singlesMatches: MatchItem[] = singles
@@ -96,6 +97,7 @@ export default async function MatchesPage() {
       player2_rank: m.player2_rank,
       comment1: (m as any).comment1 ?? null,
       comment2: (m as any).comment2 ?? null,
+      isHandicap: (m as any).is_handicap === true,
     }))
 
   const doublesMatches: MatchItem[] = (doublesResult.data ?? [])

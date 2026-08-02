@@ -12,6 +12,7 @@ export default function RegisterSinglesPage() {
   const [myScore, setMyScore] = useState('')
   const [oppScore, setOppScore] = useState('')
   const [myComment, setMyComment] = useState('')
+  const [isHandicap, setIsHandicap] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -73,6 +74,7 @@ export default function RegisterSinglesPage() {
         player2_hc: player2Hc,
         player1_rank: player1Rank,
         player2_rank: player2Rank,
+        is_handicap: isHandicap,
       }),
     })
 
@@ -140,6 +142,21 @@ export default function RegisterSinglesPage() {
               />
             </div>
           </div>
+
+          <label className="flex items-start gap-3 cursor-pointer bg-purple-900/30 border border-purple-700/40 rounded-lg px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={isHandicap}
+              onChange={e => setIsHandicap(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-amber-500"
+            />
+            <span className="text-sm text-gray-300">
+              <span className="font-medium text-amber-300">ハンディキャップ戦</span>（両者合意）
+              <span className="block text-xs text-gray-500 mt-0.5">
+                実力差を埋めるスコア調整を行った試合。RPは両者を対等（勝ち＋・負け−を同幅）として計算します。
+              </span>
+            </span>
+          </label>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">

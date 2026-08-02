@@ -77,6 +77,11 @@ export default function MyPageMatchList({
               <div>
                 <p className="text-xs text-gray-400">
                   {dateStr}
+                  {isSingles && match.is_handicap && (
+                    <span className="ml-1.5 text-amber-300 bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 rounded">
+                      ハンデ戦
+                    </span>
+                  )}
                   {match.tournament_name && (
                     <span className="ml-1 text-purple-400">【{match.tournament_name}】</span>
                   )}

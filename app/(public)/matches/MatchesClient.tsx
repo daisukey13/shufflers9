@@ -41,6 +41,7 @@ type MatchItem = {
   pair2p2Avatar?: string | null
   comment1?: string | null
   comment2?: string | null
+  isHandicap?: boolean
 }
 
 type Tab = 'singles' | 'doubles' | 'tournament'
@@ -104,6 +105,7 @@ export default function MatchesClient({
     : tournamentMatches
 
   const isUpset = (match: MatchItem) => {
+    if (match.isHandicap) return false // ハンデ戦は実力差を埋めているので番狂わせ扱いしない
     if (!match.winnerId) return false
     const isP1Winner = match.winnerId === match.player1Id
     const winnerRank = isP1Winner ? match.player1_rank : match.player2_rank
@@ -185,6 +187,11 @@ export default function MatchesClient({
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     <p className="text-xs text-gray-400">{dateStr}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${color}`}>{label}</span>
+                    {match.isHandicap && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-medium">
+                        ハンデ戦
+                      </span>
+                    )}
                     {match.tournamentName && (
                       <Link
                         href={`/tournaments/${match.tournamentId}`}

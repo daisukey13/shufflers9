@@ -15,6 +15,7 @@ type SinglesMatch = {
   rating_change1: number
   rating_change2: number
   status: string
+  is_handicap?: boolean
   player1_id: string
   player2_id: string
   player1: { id: string; name: string } | null
@@ -500,6 +501,11 @@ export default function AdminMatchesClient({
                     {(m.status === 'retirement' || m.status === 'walkover') && (
                       <span className="text-xs text-yellow-400 bg-yellow-900/30 px-1.5 py-0.5 rounded">
                         {m.status === 'retirement' ? '途中棄権' : '不戦勝'}
+                      </span>
+                    )}
+                    {m.is_handicap && (
+                      <span className="text-xs text-amber-300 bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 rounded">
+                        ハンデ戦
                       </span>
                     )}
                   </div>

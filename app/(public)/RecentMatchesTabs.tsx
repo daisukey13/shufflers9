@@ -13,6 +13,7 @@ type SinglesMatch = {
   winner_id: string | null
   played_at: string
   label: string | null
+  isHandicap?: boolean
   rating_change1: number | null
   rating_change2: number | null
   bonus_points: number
@@ -75,7 +76,14 @@ export default function RecentMatchesTabs({
               return (
                 <div key={match.id} className="p-4 bg-purple-900/20 border border-purple-800/30 rounded-2xl">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs text-gray-400">{dateStr}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-gray-400">{dateStr}</p>
+                      {match.isHandicap && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          ハンデ戦
+                        </span>
+                      )}
+                    </div>
                     {match.label && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-purple-700/50 text-purple-300">
                         {match.label}

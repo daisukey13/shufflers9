@@ -26,6 +26,7 @@ export default function AdminMatchRegisterClient({
   const [player1Id, setPlayer1Id] = useState('')
   const [player2Id, setPlayer2Id] = useState('')
   const [specialWinnerId, setSpecialWinnerId] = useState('')
+  const [isHandicap, setIsHandicap] = useState(false)
 
   // ダブルス用
   const [pair1p1, setPair1p1] = useState('')
@@ -76,6 +77,7 @@ export default function AdminMatchRegisterClient({
     setScore2('')
     setSpecialWinnerId('')
     setResultType('normal')
+    setIsHandicap(false)
     setTournamentId('')
     setTournamentType('normal')
     setPlayedAt(toJSTDateTimeLocal(new Date()))
@@ -126,9 +128,10 @@ export default function AdminMatchRegisterClient({
         const { count: matchesP1 } = await supabase.from('singles_matches').select('*', { count: 'exact', head: true }).or(`player1_id.eq.${player1Id},player2_id.eq.${player1Id}`)
         const { count: matchesP2 } = await supabase.from('singles_matches').select('*', { count: 'exact', head: true }).or(`player1_id.eq.${player2Id},player2_id.eq.${player2Id}`)
 
+        // ハンディ戦は同レートを渡して期待勝率50%に固定（Kはマッチ数依存なので変動は正しく出る）
         const { data: elo, error: eloError } = await supabase.rpc('calc_elo', {
           rating_a: p1.rating,
-          rating_b: p2.rating,
+          rating_b: isHandicap ? p1.rating : p2.rating,
           score_a: s1,
           score_b: s2,
           matches_a: matchesP1 ?? 0,
@@ -142,6 +145,9 @@ export default function AdminMatchRegisterClient({
         }
 
         const eloResult = elo[0]
+        // 変動は change を実レートに適用（ハンディ時も正しく反映）
+        const newRating1 = p1.rating + eloResult.change_a
+        const newRating2 = p2.rating + eloResult.change_b
         const winnerId = s1 > s2 ? player1Id : s1 < s2 ? player2Id : null
 
         const { error: matchError } = await supabase.from('singles_matches').insert({
@@ -153,6 +159,7 @@ export default function AdminMatchRegisterClient({
           rating_change1: eloResult.change_a,
           rating_change2: eloResult.change_b,
           status: 'confirmed',
+          is_handicap: isHandicap,
           played_at: jstWallClockToISO(playedAt),
           tournament_id: tournamentType === 'tournament' && tournamentId ? tournamentId : null,
           player1_hc: player1Hc,
@@ -168,7 +175,7 @@ export default function AdminMatchRegisterClient({
         }
 
         await supabase.from('players').update({
-          rating: eloResult.new_rating_a,
+          rating: newRating1,
           wins: s1 > s2 ? p1.wins + 1 : p1.wins,
           losses: s1 < s2 ? p1.losses + 1 : p1.losses,
           total_score: (p1.total_score ?? 0) + s1,
@@ -176,7 +183,7 @@ export default function AdminMatchRegisterClient({
         }).eq('id', player1Id)
 
         await supabase.from('players').update({
-          rating: eloResult.new_rating_b,
+          rating: newRating2,
           wins: s2 > s1 ? p2.wins + 1 : p2.wins,
           losses: s2 < s1 ? p2.losses + 1 : p2.losses,
           total_score: (p2.total_score ?? 0) + s2,
@@ -670,6 +677,24 @@ export default function AdminMatchRegisterClient({
               </select>
             )}
           </div>
+        )}
+
+        {/* ハンディキャップ戦（通常シングルスのみ） */}
+        {matchType === 'singles' && resultType === 'normal' && tournamentType === 'normal' && (
+          <label className="flex items-start gap-3 cursor-pointer bg-purple-900/30 border border-purple-700/40 rounded-lg px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={isHandicap}
+              onChange={e => setIsHandicap(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-amber-500"
+            />
+            <span className="text-sm text-gray-300">
+              <span className="font-medium text-amber-300">ハンディキャップ戦</span>（両者合意）
+              <span className="block text-xs text-gray-500 mt-0.5">
+                RPは両者を対等（期待勝率50%）として計算します。
+              </span>
+            </span>
+          </label>
         )}
 
         <button

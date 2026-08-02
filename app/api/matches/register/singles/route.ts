@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
 
-  const { opponent_id, score1, score2, comment1, player1_hc, player2_hc, player1_rank, player2_rank } = await req.json()
+  const { opponent_id, score1, score2, comment1, player1_hc, player2_hc, player1_rank, player2_rank, is_handicap } = await req.json()
+  const isHandicap = is_handicap === true
 
   // 入力検証
   if (typeof opponent_id !== 'string' || !opponent_id) {
@@ -48,9 +49,12 @@ export async function POST(req: NextRequest) {
     .or(`player1_id.eq.${opp.id},player2_id.eq.${opp.id}`)
 
   // ELO計算
+  // ハンディ戦は「両者が対等になった」前提で期待勝率を50%に固定する。
+  // calc_elo の K はマッチ数のみで決まりレート値には依存しないため、
+  // 同じレートを渡すと期待値=0.5 となり、正しい（暫定込みの）K で変動が出る。
   const { data: elo, error: eloError } = await adminClient.rpc('calc_elo', {
     rating_a: me.rating,
-    rating_b: opp.rating,
+    rating_b: isHandicap ? me.rating : opp.rating, // ハンディ戦は同値=期待勝率50%
     score_a: score1,
     score_b: score2,
     matches_a: matchesMe ?? 0,
@@ -62,6 +66,9 @@ export async function POST(req: NextRequest) {
   }
 
   const eloResult = elo[0]
+  // 変動量は change_a/change_b を使い、実レートに適用する（ハンディ時も正しく反映）。
+  const newRatingMe = me.rating + eloResult.change_a
+  const newRatingOpp = opp.rating + eloResult.change_b
   const winnerId = score1 > score2 ? me.id : score1 < score2 ? opp.id : null
 
   // 試合登録
@@ -75,6 +82,7 @@ export async function POST(req: NextRequest) {
     rating_change2: eloResult.change_b,
     registered_by: me.id,
     status: 'confirmed',
+    is_handicap: isHandicap,
     player1_hc,
     player2_hc,
     player1_rank,
@@ -91,7 +99,7 @@ export async function POST(req: NextRequest) {
   const newTotalMatchesMe = (me.total_matches ?? 0) + 1
 
   await adminClient.from('players').update({
-    rating: eloResult.new_rating_a,
+    rating: newRatingMe,
     wins: newWinsMe,
     losses: newLossesMe,
     total_score: newTotalScoreMe,
@@ -105,7 +113,7 @@ export async function POST(req: NextRequest) {
   const newTotalMatchesOpp = (opp.total_matches ?? 0) + 1
 
   await adminClient.from('players').update({
-    rating: eloResult.new_rating_b,
+    rating: newRatingOpp,
     wins: newWinsOpp,
     losses: newLossesOpp,
     total_score: newTotalScoreOpp,
