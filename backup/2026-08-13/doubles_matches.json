@@ -126,5 +126,53 @@
     "registered_by": null,
     "played_at": "2026-06-26T10:38:21.254313+00:00",
     "created_at": "2026-06-26T10:38:21.254313+00:00"
+  },
+  {
+    "id": "fb806baa-518c-4c82-ad4f-9997d87044a1",
+    "pair1_player1_id": "38a60788-7bd1-480c-bd3c-b38afcdf7f3e",
+    "pair1_player2_id": "cfb97c95-0efe-4382-a850-616fc7363ec7",
+    "pair2_player1_id": "59d5de34-a9a7-43a2-b397-9ce824fbc668",
+    "pair2_player2_id": "3f92aeb7-eeec-4e52-88ba-82f882db4d16",
+    "score1": 15,
+    "score2": 12,
+    "winner_pair": 1,
+    "rating_change1": 19,
+    "rating_change2": -19,
+    "mode": "normal",
+    "registered_by": null,
+    "played_at": "2026-08-12T02:19:26.717504+00:00",
+    "created_at": "2026-08-12T02:19:26.717504+00:00"
+  },
+  {
+    "id": "8455e6f5-ea26-4d6b-a2b0-dd663acd4ebe",
+    "pair1_player1_id": "3f92aeb7-eeec-4e52-88ba-82f882db4d16",
+    "pair1_player2_id": "59d5de34-a9a7-43a2-b397-9ce824fbc668",
+    "pair2_player1_id": "cfb97c95-0efe-4382-a850-616fc7363ec7",
+    "pair2_player2_id": "38a60788-7bd1-480c-bd3c-b38afcdf7f3e",
+    "score1": 15,
+    "score2": 4,
+    "winner_pair": 1,
+    "rating_change1": 23,
+    "rating_change2": -23,
+    "mode": "normal",
+    "registered_by": null,
+    "played_at": "2026-08-12T02:26:24.008232+00:00",
+    "created_at": "2026-08-12T02:26:24.008232+00:00"
+  },
+  {
+    "id": "0bd75b07-4d05-4765-abd1-18ad5ee1d6d9",
+    "pair1_player1_id": "3f92aeb7-eeec-4e52-88ba-82f882db4d16",
+    "pair1_player2_id": "59d5de34-a9a7-43a2-b397-9ce824fbc668",
+    "pair2_player1_id": "38a60788-7bd1-480c-bd3c-b38afcdf7f3e",
+    "pair2_player2_id": "cfb97c95-0efe-4382-a850-616fc7363ec7",
+    "score1": 15,
+    "score2": 10,
+    "winner_pair": 1,
+    "rating_change1": 21,
+    "rating_change2": -21,
+    "mode": "normal",
+    "registered_by": null,
+    "played_at": "2026-08-12T02:33:42.897541+00:00",
+    "created_at": "2026-08-12T02:33:42.897541+00:00"
   }
 ]
