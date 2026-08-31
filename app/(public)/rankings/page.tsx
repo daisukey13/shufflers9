@@ -22,7 +22,7 @@ export default async function RankingsPage({
     getRecentRatingGrowth(),
   ])
 
-  const singlesRaw = allPlayers.filter(p => p.total_matches > 0)
+  const singlesRaw = allPlayers.filter(p => p.wins > 0 || p.losses > 0)
   const doublesRaw = allPlayers.filter(p => p.doubles_wins > 0 || p.doubles_losses > 0)
 
   const doublesSorted = [...(doublesRaw ?? [])].sort((a: Player, b: Player) => {
