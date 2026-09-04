@@ -1,0 +1,19 @@
+[
+  {
+    "id": 1,
+    "initial_rating": 1000,
+    "min_rating": 600,
+    "k_factor_beginner": 40,
+    "k_factor_intermediate": 32,
+    "k_factor_advanced": 24,
+    "beginner_threshold": 5,
+    "advanced_threshold": 30,
+    "initial_hc": 36,
+    "hc_min_matches": 5,
+    "hc_weight_winrate": 0.5,
+    "hc_weight_score": 0.3,
+    "hc_weight_experience": 0.2,
+    "hc_max_matches": 50,
+    "updated_at": "2026-04-05T08:18:11.788469+00:00"
+  }
+]
