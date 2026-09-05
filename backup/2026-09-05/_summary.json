@@ -1,13 +1,13 @@
 {
-  "date": "2026-08-28",
+  "date": "2026-09-05",
   "tables": {
-    "players": 16,
-    "singles_matches": 39,
+    "players": 17,
+    "singles_matches": 43,
     "doubles_matches": 11,
     "teams": 0,
     "team_members": 0,
     "teams_matches": 0,
-    "notices": 0,
+    "notices": 1,
     "ranking_config": 1,
     "tournaments": 0,
     "tournament_entries": 0,
