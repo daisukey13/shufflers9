@@ -1,5 +1,5 @@
 {
-  "date": "2026-08-30",
+  "date": "2026-09-07",
   "tables": {
     "players": 17,
     "singles_matches": 43,
@@ -7,7 +7,7 @@
     "teams": 0,
     "team_members": 0,
     "teams_matches": 0,
-    "notices": 0,
+    "notices": 1,
     "ranking_config": 1,
     "tournaments": 0,
     "tournament_entries": 0,
