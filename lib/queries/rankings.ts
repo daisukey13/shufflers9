@@ -72,6 +72,25 @@ export const doublesTie = (a: Player, b: Player) =>
   a.hc === b.hc &&
   (a.doubles_wins + a.doubles_losses) === (b.doubles_wins + b.doubles_losses)
 
+export const getDoublesPlayerRankings = unstable_cache(
+  async (): Promise<Player[]> => {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('is_active', true)
+      .eq('is_admin', false)
+      .or('doubles_wins.gt.0,doubles_losses.gt.0')
+      .order('doubles_rating', { ascending: false })
+      .order('hc', { ascending: false })
+
+    if (error) throw error
+    return data
+  },
+  ['doubles-player-rankings'],
+  { revalidate: 300, tags: ['players'] }
+)
+
 export async function getTeamRankings(): Promise<Team[]> {
   const supabase = await createClient()
   const { data, error } = await supabase

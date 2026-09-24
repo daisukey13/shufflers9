@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getPlayerRankings } from '@/lib/queries/rankings'
+import { getPlayerRankings, getDoublesPlayerRankings } from '@/lib/queries/rankings'
 import { getPlayers } from '@/lib/queries/players'
 import { getRecentAllMatches, getTotalMatchesCount, getRecentDoublesMatches } from '@/lib/queries/matches'
 import { getRecentNotices } from '@/lib/queries/notices'
@@ -20,12 +20,14 @@ export async function MonthlyModalSection() {
 
 // 統計 + トッププレーヤーをまとめて取得（getPlayerRankings を1回だけ呼ぶ）
 export async function StatsAndTopPlayersSection() {
-  const [allPlayers, players, totalMatchesCount] = await Promise.all([
+  const [allPlayers, players, doublesPlayers, totalMatchesCount] = await Promise.all([
     getPlayers(),
     getPlayerRankings(),
+    getDoublesPlayerRankings(),
     getTotalMatchesCount(),
   ])
-  const top5 = players.slice(0, 5)
+  const singlesTop5 = players.filter(p => p.wins + p.losses > 0).slice(0, 5)
+  const doublesTop5 = doublesPlayers.slice(0, 5)
   const avgRating = players.length > 0
     ? Math.round(players.reduce((a, p) => a + p.rating, 0) / players.length)
     : 1000
@@ -46,12 +48,20 @@ export async function StatsAndTopPlayersSection() {
         ))}
       </section>
 
-      {/* トッププレーヤー */}
+      {/* シングルス トッププレーヤー */}
+      <section className="px-4 mb-10 max-w-6xl mx-auto">
+        <h2 className="text-xl font-bold mb-8 flex items-center gap-2 text-amber-100 neon-gold">
+          🏆 シングルス トッププレーヤー
+        </h2>
+        <TopPlayersFlip players={singlesTop5} mode="singles" />
+      </section>
+
+      {/* ダブルス トッププレーヤー */}
       <section className="px-4 mb-14 max-w-6xl mx-auto">
         <h2 className="text-xl font-bold mb-8 flex items-center gap-2 text-amber-100 neon-gold">
-          🏆 トッププレーヤー
+          🏆 ダブルス トッププレーヤー
         </h2>
-        <TopPlayersFlip players={top5} />
+        <TopPlayersFlip players={doublesTop5} mode="doubles" />
       </section>
     </>
   )

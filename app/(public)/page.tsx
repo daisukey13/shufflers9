@@ -29,21 +29,25 @@ function StatsSkeleton() {
 
 function TopPlayersSkeleton() {
   return (
-    <section className="px-4 mb-14 max-w-6xl mx-auto">
-      <h2 className="text-xl font-bold mb-8 flex items-center gap-2 text-amber-100 neon-gold">
-        🏆 トッププレーヤー
-      </h2>
-      <div className="hidden sm:grid grid-cols-5 gap-4 items-end">
-        {[0, 1, 2, 3, 4].map(i => (
-          <div key={i} className="min-h-[10rem] rounded-2xl bg-blue-900/20 border border-yellow-600/10 animate-pulse" />
-        ))}
-      </div>
-      <div className="sm:hidden space-y-2">
-        {[0, 1, 2, 3, 4].map(i => (
-          <div key={i} className="h-16 rounded-2xl bg-blue-900/20 border border-yellow-600/10 animate-pulse" />
-        ))}
-      </div>
-    </section>
+    <>
+      {['シングルス', 'ダブルス'].map((label, ri) => (
+        <section key={label} className={`px-4 max-w-6xl mx-auto ${ri === 0 ? 'mb-10' : 'mb-14'}`}>
+          <h2 className="text-xl font-bold mb-8 flex items-center gap-2 text-amber-100 neon-gold">
+            🏆 {label} トッププレーヤー
+          </h2>
+          <div className="hidden sm:grid grid-cols-5 gap-4 items-end">
+            {[0, 1, 2, 3, 4].map(i => (
+              <div key={i} className="min-h-[10rem] rounded-2xl bg-blue-900/20 border border-yellow-600/10 animate-pulse" />
+            ))}
+          </div>
+          <div className="sm:hidden space-y-2">
+            {[0, 1, 2, 3, 4].map(i => (
+              <div key={i} className="h-16 rounded-2xl bg-blue-900/20 border border-yellow-600/10 animate-pulse" />
+            ))}
+          </div>
+        </section>
+      ))}
+    </>
   )
 }
 

@@ -9,8 +9,11 @@ type Player = {
   id: string
   name: string
   rating: number
+  doubles_rating: number
   wins: number
   losses: number
+  doubles_wins: number
+  doubles_losses: number
   hc: number | null
   avatar_url: string | null
   tournament_wins?: number
@@ -34,11 +37,12 @@ const sizeByRank = (rank: number) => {
 }
 
 // PC表示用のカードフリップ
-function FlipCard({ player, rank, flipped, delay }: {
+function FlipCard({ player, rank, flipped, delay, mode = 'singles' }: {
   player: Player
   rank: number
   flipped: boolean
   delay: number
+  mode?: 'singles' | 'doubles'
 }) {
   const S = sizeByRank(rank)
 
@@ -108,11 +112,11 @@ function FlipCard({ player, rank, flipped, delay }: {
           <div className="flex flex-col gap-1.5 w-full">
             <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full bg-blue-900/60 border border-amber-500/30 ${S.pill}`}>
               <span className="text-gray-400 text-xs">RP</span>
-              <span className="font-bold text-amber-300">{player.rating}</span>
+              <span className="font-bold text-amber-300">{mode === 'doubles' ? player.doubles_rating : player.rating}</span>
             </div>
             <div className={`flex items-center justify-center gap-1 px-2 py-1 rounded-full bg-green-900/40 border border-green-600/30 ${S.pill}`}>
               <span className="text-gray-400 text-xs">勝率</span>
-              <span className="font-bold text-green-400">{winRate(player.wins, player.losses)}%</span>
+              <span className="font-bold text-green-400">{mode === 'doubles' ? winRate(player.doubles_wins, player.doubles_losses) : winRate(player.wins, player.losses)}%</span>
             </div>
           </div>
         </Link>
@@ -121,7 +125,7 @@ function FlipCard({ player, rank, flipped, delay }: {
   )
 }
 
-export default function TopPlayersFlip({ players }: { players: Player[] }) {
+export default function TopPlayersFlip({ players, mode = 'singles' }: { players: Player[], mode?: 'singles' | 'doubles' }) {
   const top5 = players.slice(0, 5)
   const desktopOrder = [2, 0, 1, 3, 4]
   const [flipped, setFlipped] = useState<boolean[]>(Array(5).fill(false))
@@ -160,6 +164,7 @@ export default function TopPlayersFlip({ players }: { players: Player[] }) {
               rank={rank}
               flipped={flipped[pos]}
               delay={0}
+              mode={mode}
             />
           )
         })}
@@ -195,8 +200,8 @@ export default function TopPlayersFlip({ players }: { players: Player[] }) {
                 <p className="text-xs text-gray-400">HC {player.hc ?? 36}</p>
               </div>
               <div className="flex flex-col gap-1 items-end">
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/60 border border-amber-500/30 text-amber-300">RP {player.rating}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 border border-green-600/30 text-green-400">勝率 {winRate(player.wins, player.losses)}%</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/60 border border-amber-500/30 text-amber-300">RP {mode === 'doubles' ? player.doubles_rating : player.rating}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/40 border border-green-600/30 text-green-400">勝率 {mode === 'doubles' ? winRate(player.doubles_wins, player.doubles_losses) : winRate(player.wins, player.losses)}%</span>
               </div>
             </Link>
           )
