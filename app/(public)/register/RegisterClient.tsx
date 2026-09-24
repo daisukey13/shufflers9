@@ -72,8 +72,8 @@ export default function RegisterClient() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault()
     const token = code.trim()
-    if (!/^\d{6}$/.test(token)) {
-      setError('6桁の確認コードを入力してください')
+    if (!/^\d{8}$/.test(token)) {
+      setError('8桁の確認コードを入力してください')
       return
     }
     setVerifying(true)
@@ -238,7 +238,7 @@ export default function RegisterClient() {
                 <h2 className="text-lg font-bold text-white">確認コードを送信しました</h2>
                 <p className="text-sm text-gray-400">
                   <span className="text-purple-400 font-medium">{email}</span>{' '}
-                  宛に6桁の確認コードを送りました。メールに記載のコードを入力してください。
+                  宛に8桁の確認コードを送りました。メールに記載のコードを入力してください。
                 </p>
               </div>
 
@@ -248,9 +248,9 @@ export default function RegisterClient() {
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   value={code}
-                  onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                   required
-                  placeholder="123456"
+                  placeholder="12345678"
                   className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-3 text-center text-2xl tracking-[0.4em] font-mono text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 {resentNote && (
@@ -258,7 +258,7 @@ export default function RegisterClient() {
                 )}
                 <button
                   type="submit"
-                  disabled={verifying || code.length !== 6}
+                  disabled={verifying || code.length !== 8}
                   className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2 rounded-lg text-sm font-medium transition"
                 >
                   {verifying ? '確認中...' : '登録を完了する'}
