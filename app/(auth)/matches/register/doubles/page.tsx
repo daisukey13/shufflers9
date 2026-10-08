@@ -72,90 +72,23 @@ export default function RegisterDoublesPage() {
     setError(null)
 
     try {
-      const { data: p1 } = await supabase.from('players').select('doubles_rating, doubles_wins, doubles_losses, total_matches, wins, losses, total_score').eq('id', pair1p1).single()
-      const { data: p2 } = await supabase.from('players').select('doubles_rating, doubles_wins, doubles_losses, total_matches, wins, losses, total_score').eq('id', pair1p2).single()
-      const { data: p3 } = await supabase.from('players').select('doubles_rating, doubles_wins, doubles_losses, total_matches, wins, losses, total_score').eq('id', pair2p1).single()
-      const { data: p4 } = await supabase.from('players').select('doubles_rating, doubles_wins, doubles_losses, total_matches, wins, losses, total_score').eq('id', pair2p2).single()
-
-      if (!p1 || !p2 || !p3 || !p4) {
-        setError('プレーヤー情報の取得に失敗しました')
-        setLoading(false)
-        return
-      }
-
-      const pair1AvgRating = Math.round(((p1.doubles_rating ?? 1000) + (p2.doubles_rating ?? 1000)) / 2)
-      const pair2AvgRating = Math.round(((p3.doubles_rating ?? 1000) + (p4.doubles_rating ?? 1000)) / 2)
-
-      const { data: elo, error: eloError } = await supabase.rpc('calc_elo', {
-        rating_a: pair1AvgRating,
-        rating_b: pair2AvgRating,
-        score_a: s1,
-        score_b: s2,
-        matches_a: 0,
-        matches_b: 0,
+      // 4人分の成績更新は RLS の関係でサーバー側（adminClient）で行う
+      const res = await fetch('/api/matches/register/doubles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partner_id: pair1p2,
+          opp1_id: pair2p1,
+          opp2_id: pair2p2,
+          score1: s1,
+          score2: s2,
+        }),
       })
-
-      if (eloError || !elo?.[0]) {
-        setError('レーティング計算に失敗しました')
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(json.error ?? '登録に失敗しました')
         setLoading(false)
         return
-      }
-
-      const eloResult = elo[0]
-      const winnerPair = s1 > s2 ? 1 : 2
-
-      const { error: matchError } = await supabase.from('doubles_matches').insert({
-        pair1_player1_id: pair1p1,
-        pair1_player2_id: pair1p2,
-        pair2_player1_id: pair2p1,
-        pair2_player2_id: pair2p2,
-        score1: s1,
-        score2: s2,
-        winner_pair: winnerPair,
-        rating_change1: eloResult.change_a,
-        rating_change2: eloResult.change_b,
-        mode: 'normal',
-      })
-
-      if (matchError) {
-        setError('登録に失敗しました: ' + matchError.message)
-        setLoading(false)
-        return
-      }
-
-      for (const [pid, pl] of [[pair1p1, p1], [pair1p2, p2]] as [string, typeof p1][]) {
-        if (!pl) continue
-        await supabase.from('players').update({
-          doubles_rating: Math.max(600, (pl.doubles_rating ?? 1000) + eloResult.change_a),
-          doubles_wins: winnerPair === 1 ? (pl.doubles_wins ?? 0) + 1 : (pl.doubles_wins ?? 0),
-          doubles_losses: winnerPair === 2 ? (pl.doubles_losses ?? 0) + 1 : (pl.doubles_losses ?? 0),
-          total_matches: (pl.total_matches ?? 0) + 1,
-        }).eq('id', pid)
-      }
-
-      for (const [pid, pl] of [[pair2p1, p3], [pair2p2, p4]] as [string, typeof p3][]) {
-        if (!pl) continue
-        await supabase.from('players').update({
-          doubles_rating: Math.max(600, (pl.doubles_rating ?? 1000) + eloResult.change_b),
-          doubles_wins: winnerPair === 2 ? (pl.doubles_wins ?? 0) + 1 : (pl.doubles_wins ?? 0),
-          doubles_losses: winnerPair === 1 ? (pl.doubles_losses ?? 0) + 1 : (pl.doubles_losses ?? 0),
-          total_matches: (pl.total_matches ?? 0) + 1,
-        }).eq('id', pid)
-      }
-
-      for (const [pid, pl] of [
-        [pair1p1, p1], [pair1p2, p2], [pair2p1, p3], [pair2p2, p4]
-      ] as [string, typeof p1][]) {
-        if (!pl) continue
-        const { data: hcResult } = await supabase.rpc('calc_hc', {
-          p_wins: pl.wins ?? 0,
-          p_losses: pl.losses ?? 0,
-          p_total_score: pl.total_score ?? 0,
-          p_total_matches: (pl.total_matches ?? 0) + 1,
-        })
-        if (hcResult !== null) {
-          await supabase.from('players').update({ hc: hcResult }).eq('id', pid)
-        }
       }
 
       notifyStatsChanged()
