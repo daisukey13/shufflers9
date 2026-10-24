@@ -1,8 +1,8 @@
 {
-  "date": "2026-10-16",
+  "date": "2026-10-24",
   "tables": {
     "players": 20,
-    "singles_matches": 78,
+    "singles_matches": 91,
     "doubles_matches": 25,
     "teams": 0,
     "team_members": 0,
